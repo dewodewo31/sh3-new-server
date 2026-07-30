@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Gallery extends Model
+{
+    protected $guarded = [];
+    protected function casts(): array
+    {
+        return [
+            'is_featured' => 'boolean',
+            'sort_order' => 'integer',
+        ];
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+
+    public function album()
+    {
+        return $this->belongsTo(GalleryAlbum::class, 'gallery_album_id');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+}
