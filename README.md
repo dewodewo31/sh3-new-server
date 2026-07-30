@@ -1,58 +1,153 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SH3 Event Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistem manajemen event untuk komunitas lari SH3. Dibangun dengan Laravel 13 dan AdminLTE 3.
 
-## About Laravel
+## Persyaratan
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP ^8.3
+- Composer
+- MySQL / MariaDB (atau SQLite untuk development)
+- Node.js & NPM (untuk frontend assets)
+- Extension PHP: `BCMath`, `Ctype`, `Fileinfo`, `JSON`, `Mbstring`, `OpenSSL`, `PDO`, `Tokenizer`, `XML`, `GD` atau `Imagick`
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Instalasi
 
 ```bash
-composer require laravel/boost --dev
+# 1. Clone repository
+git clone <repo-url> sh3-server
+cd sh3-server
 
-php artisan boost:install
+# 2. Install PHP dependencies
+composer install
+
+# 3. Install frontend dependencies
+npm install
+
+# 4. Copy environment file
+cp .env.example .env
+
+# 5. Generate application key
+php artisan key:generate
+
+# 6. Konfigurasi database di .env
+#    Sesuaikan DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+# DB_CONNECTION=mysql
+# DB_DATABASE=db_server_new
+# DB_USERNAME=root
+# DB_PASSWORD=
+
+# 7. Buat database (jika belum ada)
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS db_server_new"
+
+# 8. Jalankan migrasi dan seeder
+php artisan migrate --seed
+
+# 9. Buat storage symlink
+php artisan storage:link
+
+# 10. Build frontend assets
+npm run build
+
+# 11. Jalankan development server
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Default Credentials (Seeder)
 
-## Contributing
+| Role | Email | Password |
+|------|-------|----------|
+| Admin Full Access | admin.full@sh3.com | password |
+| Admin Laman | admin.laman@sh3.com | password |
+| Admin Member | admin.member@sh3.com | password |
+| Admin BNH | admin.bnh@sh3.com | password |
+| Organizer | organizer@sh3.com | password |
+| Bendahara | bendahara@sh3.com | password |
+| Sponsor | sponsor@sh3.com | password |
+| Merchandise | merchandise@sh3.com | password |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Login di `/login`.
 
-## Code of Conduct
+## Struktur
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```
+app/
+├── Http/
+│   ├── Controllers/
+│   │   ├── Admin/       # Web admin controllers
+│   │   └── API/         # REST API controllers
+│   └── Requests/        # Form request validation
+├── Helpers/             # ImageHelper, QRCodeHelper
+├── Models/
+├── Repositories/        # Repository pattern
+└── Services/            # Business logic layer
+routes/
+├── api.php              # API routes (prefix: /api/v1)
+├── web.php              # Admin web routes (prefix: /admin)
+└── auth.php             # Login/logout routes
+```
 
-## Security Vulnerabilities
+## API Endpoints
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Semua endpoint API berada di prefix `/api/v1`.
 
-## License
+### Public (tanpa auth)
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/auth/register` | Registrasi peserta baru |
+| POST | `/auth/login` | Login (email + password) |
+| GET | `/events/upcoming` | Event mendatang |
+| GET | `/events` | Semua event |
+| GET | `/events/{id}` | Detail event |
+| GET | `/sponsors` | Daftar sponsor |
+| GET | `/organization` | Struktur organisasi |
+| GET | `/merchandise` | Daftar merchandise |
+| GET | `/merchandise/{id}` | Detail merchandise |
+
+### Authenticated (Bearer token)
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/auth/logout` | Logout |
+| GET | `/auth/me` | Profil user + peserta |
+| POST | `/events/{eventId}/register` | Daftar event |
+| GET | `/participants` | Data peserta |
+| GET | `/participants/{id}` | Detail peserta |
+| PUT | `/participants/{id}` | Update peserta |
+| GET | `/participants/{id}/events` | Event peserta |
+| GET | `/participants/{id}/attendance` | Absensi peserta |
+| POST | `/payments/create` | Buat pembayaran |
+| GET | `/payments/{id}` | Detail pembayaran |
+| GET | `/payments/history` | Riwayat pembayaran |
+| POST | `/attendance/check-in` | Check-in |
+| POST | `/attendance/check-out` | Check-out |
+| GET | `/attendance/{eventId}` | Absensi per event |
+| POST | `/attendance/scan` | Scan QR code |
+| POST | `/merchandise/order` | Order merchandise |
+
+## Fitur
+
+- **Manajemen Event** — CRUD event, jadwal, kategori, quota, publish/ongoing/completed
+- **Manajemen Peserta** — Registrasi via API (tanpa username/password), membership
+- **Pembayaran** — Konfirmasi/reject oleh bendahara
+- **Absensi** — Check-in/check-out dengan QR code
+- **Galeri** — Upload foto/video event
+- **Sponsor & Merchandise** — Manajemen sponsor dan penjualan merchandise
+- **Organisasi** — Struktur kepengurusan
+- **Role-based Access** — 8 level role untuk admin panel
+
+## Pengembangan
+
+```bash
+# Jalankan queue worker (untuk job)
+php artisan queue:work
+
+# Development dengan hot-reload
+npm run dev
+
+# Tests
+php artisan test
+
+# Code style
+./vendor/bin/pint
+```
