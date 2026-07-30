@@ -7,8 +7,9 @@ Sistem manajemen event untuk komunitas lari SH3. Dibangun dengan Laravel 13 dan 
 - PHP ^8.3
 - Composer
 - MySQL / MariaDB (atau SQLite untuk development)
+- Redis (untuk session, cache, dan queue)
 - Node.js & NPM (untuk frontend assets)
-- Extension PHP: `BCMath`, `Ctype`, `Fileinfo`, `JSON`, `Mbstring`, `OpenSSL`, `PDO`, `Tokenizer`, `XML`, `GD` atau `Imagick`
+- Extension PHP: `BCMath`, `Ctype`, `Fileinfo`, `JSON`, `Mbstring`, `OpenSSL`, `PDO`, `Tokenizer`, `XML`, `GD` atau `Imagick`, `redis`
 
 ## Instalasi
 
@@ -39,16 +40,20 @@ php artisan key:generate
 # 7. Buat database (jika belum ada)
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS db_server_new"
 
-# 8. Jalankan migrasi dan seeder
+# 8. Pastikan Redis sudah berjalan
+redis-cli ping
+# Harus response: PONG
+
+# 9. Jalankan migrasi dan seeder
 php artisan migrate --seed
 
-# 9. Buat storage symlink
+# 10. Buat storage symlink
 php artisan storage:link
 
-# 10. Build frontend assets
+# 11. Build frontend assets
 npm run build
 
-# 11. Jalankan development server
+# 12. Jalankan development server
 php artisan serve
 ```
 
@@ -124,6 +129,29 @@ Semua endpoint API berada di prefix `/api/v1`.
 | GET | `/attendance/{eventId}` | Absensi per event |
 | POST | `/attendance/scan` | Scan QR code |
 | POST | `/merchandise/order` | Order merchandise |
+
+## Redis
+
+Aplikasi menggunakan **Redis** untuk menyimpan session, cache, dan antrian queue — mengurangi beban MySQL dan meningkatkan performa.
+
+| Fungsi | Driver |
+|--------|--------|
+| Session | `redis` |
+| Cache | `redis` |
+| Queue | `redis` |
+
+Pastikan Redis berjalan sebelum menjalankan aplikasi:
+
+```bash
+redis-cli ping
+# PONG
+```
+
+Untuk queue worker (pemrosesan antrian):
+
+```bash
+php artisan queue:work
+```
 
 ## Fitur
 
