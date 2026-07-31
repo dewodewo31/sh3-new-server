@@ -9,9 +9,9 @@
         <div class="card-header">
             <div class="flex items-center gap-3">
                 @if($user->avatar)
-                    <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}" class="h-10 w-10 rounded-xl object-cover border border-gray-200">
+                    <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}" class="h-10 w-10 rounded-xl object-cover border border-gray-200 dark:border-slate-700">
                 @else
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-sm font-semibold text-indigo-700">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
                         {{ substr($user->name, 0, 1) }}
                     </div>
                 @endif
@@ -19,21 +19,21 @@
             </div>
         </div>
         <div class="card-body">
-            <dl class="divide-y divide-gray-100">
+            <dl class="divide-y divide-gray-100 dark:divide-slate-700/60">
                 <div class="flex justify-between py-3">
-                    <dt class="text-sm font-medium text-gray-500">Name</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ $user->name }}</dd>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Name</dt>
+                    <dd class="text-sm font-medium text-gray-900 dark:text-slate-100">{{ $user->name }}</dd>
                 </div>
                 <div class="flex justify-between py-3">
-                    <dt class="text-sm font-medium text-gray-500">Email</dt>
-                    <dd class="text-sm text-gray-900">{{ $user->email }}</dd>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Email</dt>
+                    <dd class="text-sm text-gray-900 dark:text-slate-100">{{ $user->email }}</dd>
                 </div>
                 <div class="flex justify-between py-3">
-                    <dt class="text-sm font-medium text-gray-500">Role</dt>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Role</dt>
                     <dd><span class="badge badge-indigo">{{ str_replace('_', ' ', $user->role) }}</span></dd>
                 </div>
                 <div class="flex justify-between py-3">
-                    <dt class="text-sm font-medium text-gray-500">Status</dt>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Status</dt>
                     <dd>
                         @if($user->is_active)
                             <span class="badge badge-success"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span> Active</span>
@@ -43,12 +43,12 @@
                     </dd>
                 </div>
                 <div class="flex justify-between py-3">
-                    <dt class="text-sm font-medium text-gray-500">Last Login</dt>
-                    <dd class="text-sm text-gray-900">{{ $user->last_login ? $user->last_login->format('d/m/Y H:i:s') : '-' }}</dd>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Last Login</dt>
+                    <dd class="text-sm text-gray-900 dark:text-slate-100">{{ $user->last_login ? $user->last_login->format('d/m/Y H:i:s') : '-' }}</dd>
                 </div>
                 <div class="flex justify-between py-3">
-                    <dt class="text-sm font-medium text-gray-500">Created</dt>
-                    <dd class="text-sm text-gray-900">{{ $user->created_at->format('d/m/Y H:i') }}</dd>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Created</dt>
+                    <dd class="text-sm text-gray-900 dark:text-slate-100">{{ $user->created_at->format('d/m/Y H:i') }}</dd>
                 </div>
             </dl>
         </div>
@@ -67,20 +67,20 @@
     <div class="card">
         <div class="card-header">
             <div class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                <svg class="w-5 h-5 text-gray-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
                 <h3 class="card-header-title">Activity Log</h3>
             </div>
         </div>
         <div class="p-0">
             @if($user->activityLogs->count())
-                <div class="divide-y divide-gray-100">
+                <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
                     @foreach($user->activityLogs as $log)
                     <div class="flex items-center justify-between px-6 py-3.5">
                         <div>
-                            <p class="text-sm text-gray-900">{{ $log->action }}</p>
-                            <p class="text-xs text-gray-400 font-mono">{{ $log->ip_address }}</p>
+                            <p class="text-sm text-gray-900 dark:text-slate-100">{{ $log->action }}</p>
+                            <p class="text-xs text-gray-400 dark:text-slate-500 font-mono">{{ $log->ip_address }}</p>
                         </div>
-                        <span class="text-xs text-gray-400">{{ $log->created_at->format('d/m/Y H:i') }}</span>
+                        <span class="text-xs text-gray-400 dark:text-slate-500">{{ $log->created_at->format('d/m/Y H:i') }}</span>
                     </div>
                     @endforeach
                 </div>

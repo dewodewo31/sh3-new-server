@@ -12,8 +12,8 @@
             Tambah User
         </a>
     </div>
-    <div class="table-wrap">
-        <table>
+    <div class="table-wrap w-full max-w-full overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700/80">
+        <table class="min-w-full whitespace-nowrap">
             <thead>
                 <tr>
                     <th>#</th>
@@ -29,7 +29,7 @@
                 @forelse($users as $user)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td class="font-medium text-gray-900">{{ $user->name }}</td>
+                    <td class="font-medium text-gray-900 dark:text-slate-100">{{ $user->name }}</td>
                     <td>{{ $user->email }}</td>
                     <td><span class="badge badge-indigo">{{ str_replace('_', ' ', $user->role) }}</span></td>
                     <td>

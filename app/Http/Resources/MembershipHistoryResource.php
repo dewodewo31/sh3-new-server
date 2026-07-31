@@ -12,6 +12,7 @@ class MembershipHistoryResource extends JsonResource
         return [
             'id' => $this->id,
             'membership_type' => $this->membership_type,
+            'membership_plan_name' => $this->plan?->name,
             'start_date' => $this->start_date,
             'end_date' => $this->end_date,
             'price' => $this->price,

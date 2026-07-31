@@ -42,12 +42,12 @@
                 <div class="form-group">
                     <label class="form-label">Avatar</label>
                     <div class="flex items-center gap-4">
-                        <label class="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 inline-flex items-center gap-2 transition-colors">
+                        <label class="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 inline-flex items-center gap-2 transition-colors dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/40">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
                             Pilih File
                             <input type="file" name="avatar" id="avatar" class="hidden">
                         </label>
-                        <span class="text-sm text-gray-400" id="avatar-filename">Tidak ada file dipilih</span>
+                        <span class="text-sm text-gray-400 dark:text-slate-500" id="avatar-filename">Tidak ada file dipilih</span>
                     </div>
                     @error('avatar') <p class="form-error">{{ $message }}</p> @enderror
                 </div>

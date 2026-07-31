@@ -1,13 +1,15 @@
 <?php
 
+use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\EventController;
+use App\Http\Controllers\API\MembershipController;
+use App\Http\Controllers\API\MerchandiseController;
+use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\OrganizationController;
 use App\Http\Controllers\API\ParticipantController;
 use App\Http\Controllers\API\PaymentController;
-use App\Http\Controllers\API\AttendanceController;
-use App\Http\Controllers\API\MerchandiseController;
 use App\Http\Controllers\API\SponsorController;
-use App\Http\Controllers\API\OrganizationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -40,11 +42,22 @@ Route::prefix('v1')->group(function () {
         Route::get('/payments/{id}', [PaymentController::class, 'show']);
         Route::get('/payments/history', [PaymentController::class, 'history']);
 
+        Route::get('/membership', [MembershipController::class, 'show']);
+        Route::get('/membership/history', [MembershipController::class, 'history']);
+        Route::get('/membership/plans', [MembershipController::class, 'plans']);
+        Route::post('/membership/subscribe', [MembershipController::class, 'subscribe']);
+        Route::post('/membership/cancel', [MembershipController::class, 'cancel']);
+
         Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn']);
         Route::post('/attendance/check-out', [AttendanceController::class, 'checkOut']);
         Route::get('/attendance/{eventId}', [AttendanceController::class, 'byEvent']);
         Route::post('/attendance/scan', [AttendanceController::class, 'scan']);
 
         Route::post('/merchandise/order', [MerchandiseController::class, 'order']);
+
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     });
 });

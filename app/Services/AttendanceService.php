@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\Event;
 use App\Models\Participant;
-use App\Repositories\EventParticipantRepository;
 use App\Repositories\AttendanceRepository;
+use App\Repositories\EventParticipantRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -15,6 +15,7 @@ class AttendanceService
         private EventParticipantRepository $eventParticipantRepository,
         private AttendanceRepository $attendanceRepository,
         private QRCodeService $qrCodeService,
+        private NotificationService $notificationService,
     ) {}
 
     public function checkIn(Event $event, Participant $participant, array $data = []): void
@@ -24,7 +25,7 @@ class AttendanceService
                 $event->id, $participant->id
             );
 
-            if (!$registration) {
+            if (! $registration) {
                 throw ValidationException::withMessages([
                     'participant' => ['Peserta tidak terdaftar di event ini.'],
                 ]);
@@ -38,7 +39,7 @@ class AttendanceService
                 ]);
             }
 
-            if (!$attendance) {
+            if (! $attendance) {
                 $attendance = $this->attendanceRepository->create([
                     'event_participant_id' => $registration->id,
                     'status' => 'present',
@@ -58,6 +59,14 @@ class AttendanceService
                 'is_attended' => true,
                 'check_in_at' => now(),
             ]);
+
+            $this->notificationService->notifyRoles(
+                ['admin_full_access', 'admin_laman'],
+                'Peserta check-in',
+                $participant->name.' check-in di event '.$event->title.'.',
+                'check',
+                route('admin.attendance.by-event', $event->id),
+            );
         });
     }
 
@@ -68,7 +77,7 @@ class AttendanceService
                 $event->id, $participant->id
             );
 
-            if (!$registration) {
+            if (! $registration) {
                 throw ValidationException::withMessages([
                     'participant' => ['Peserta tidak terdaftar di event ini.'],
                 ]);
@@ -76,7 +85,7 @@ class AttendanceService
 
             $attendance = $this->attendanceRepository->findByEventParticipant($registration->id);
 
-            if (!$attendance || !$attendance->check_in_time) {
+            if (! $attendance || ! $attendance->check_in_time) {
                 throw ValidationException::withMessages([
                     'participant' => ['Peserta belum melakukan check-in.'],
                 ]);
@@ -91,7 +100,7 @@ class AttendanceService
     {
         $decoded = $this->qrCodeService->decode($qrData);
 
-        if (!$decoded) {
+        if (! $decoded) {
             throw ValidationException::withMessages([
                 'qr_code' => ['QR Code tidak valid.'],
             ]);

@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Participant extends Model
 {
+    use HasFactory;
+
     protected $guarded = [];
+
     protected function casts(): array
     {
         return [
@@ -26,6 +31,17 @@ class Participant extends Model
     public function membershipHistories()
     {
         return $this->hasMany(MembershipHistory::class);
+    }
+
+    public function membershipPlan()
+    {
+        return $this->belongsTo(MembershipPlan::class, 'membership_type', 'key');
+    }
+
+    public function membershipTypeLabel(): string
+    {
+        return $this->membershipPlan?->name
+            ?? Str::title(str_replace('_', ' ', $this->membership_type));
     }
 
     public function eventParticipants()

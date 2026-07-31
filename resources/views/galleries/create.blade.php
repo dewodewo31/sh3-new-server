@@ -49,9 +49,9 @@
                     <div class="flex items-center h-full pt-6">
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="is_featured" value="1" class="sr-only peer" {{ old('is_featured') ? 'checked' : '' }}>
-                            <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 peer-focus:ring-2 peer-focus:ring-indigo-200 transition-colors"></div>
-                            <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-4 transition-transform"></div>
-                            <span class="ml-3 text-sm font-medium text-gray-700">Featured</span>
+                            <div class="w-9 h-5 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-indigo-600 peer-focus:ring-2 peer-focus:ring-indigo-200 transition-colors"></div>
+                            <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white dark:bg-slate-800 rounded-full shadow peer-checked:translate-x-4 transition-transform"></div>
+                            <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Featured</span>
                         </label>
                     </div>
                 </div>

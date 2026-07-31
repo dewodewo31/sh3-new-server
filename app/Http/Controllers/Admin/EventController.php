@@ -16,9 +16,11 @@ class EventController extends Controller
 
     public function index()
     {
-        $events = $this->eventRepository->paginateWithCategory();
+        $filters = request()->only(['search', 'category_id', 'status']);
+        $events = $this->eventRepository->search($filters);
+        $categories = $this->categoryRepository->findActive();
 
-        return view('events.index', compact('events'));
+        return view('events.index', compact('events', 'categories', 'filters'));
     }
 
     public function create()

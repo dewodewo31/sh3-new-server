@@ -33,7 +33,7 @@ class ParticipantRepository extends BaseRepository
 
     public function paginateWithMembership(int $perPage = 15)
     {
-        return $this->model->with('membershipHistories')
+        return $this->model->with(['membershipHistories', 'membershipPlan'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }

@@ -9,7 +9,8 @@ use Illuminate\Validation\ValidationException;
 class MerchandiseService
 {
     public function __construct(
-        private MerchandiseRepository $merchandiseRepository
+        private MerchandiseRepository $merchandiseRepository,
+        private NotificationService $notificationService,
     ) {}
 
     public function createOrder(Merchandise $merchandise, array $data): void
@@ -31,6 +32,14 @@ class MerchandiseService
         ]);
 
         $merchandise->decrement('stock', $data['quantity']);
+
+        $this->notificationService->notifyRoles(
+            ['merchandise', 'admin_full_access'],
+            'Order merchandise baru',
+            $data['customer_name'].' memesan '.$merchandise->name.' ('.$data['quantity'].' pcs).',
+            'cart',
+            route('admin.merchandise.index'),
+        );
     }
 
     public function confirmPayment(Merchandise $merchandise, int $orderId): void

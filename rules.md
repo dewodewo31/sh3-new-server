@@ -240,6 +240,88 @@ Maintain a consistent UI.
 
 ---
 
+# Responsive Layout & Table Rules
+
+Apply these rules to every page that has tables or wide content. See `docs/13 - Responsive Layout & Table Rules.md` for full detail.
+
+## Layout
+
+Never
+
+* Create a page with a horizontal scrollbar
+* Let the page exceed the viewport
+* Use fixed widths such as `w-[1400px]`, `min-w-screen`
+
+Always
+
+* Keep every page inside the browser viewport
+* Use `max-w-full`, `w-full`, `min-w-0`, and `overflow-hidden` on parent containers when needed
+* Make content responsive on Mobile, Tablet, Laptop, and Desktop
+* Use responsive Flexbox and Grid
+
+## Table
+
+Every table MUST be wrapped as:
+
+```html
+<div class="w-full overflow-x-auto rounded-2xl border border-slate-200">
+    <table class="min-w-full whitespace-nowrap">
+        ...
+    </table>
+</div>
+```
+
+Rules
+
+* Use `overflow-x-auto` on the parent (never `overflow-x-hidden` on a table parent)
+* Use `whitespace-nowrap` on table content
+* Use `min-w-full` or `min-w-max` as needed
+* Keep `thead` readable
+* Add row hover effect
+* Use sticky header for large datasets
+* Use subtle zebra striping when needed
+* Keep tables horizontally scrollable on small devices
+
+## Form
+
+* Input, select, and textarea must use `w-full`
+* Avoid fixed widths
+* Use responsive grids: `grid-cols-1`, `md:grid-cols-2`, `xl:grid-cols-3`
+
+## Card
+
+* Cards use `w-full`
+* Never let a card exceed its parent
+* Use `overflow-hidden` for images or long content
+
+## Container
+
+Use one of these structures:
+
+```html
+<div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    ...
+</div>
+```
+
+```html
+<div class="mx-auto w-full max-w-7xl px-6">
+    ...
+</div>
+```
+
+## Overflow
+
+* No element may cause the body to scroll horizontally
+* Only overly-wide content itself may have a horizontal scrollbar
+* Body and main layout must always fit the viewport
+
+## Output
+
+Apply these rules automatically to any page that has a table, without being asked again.
+
+---
+
 # Security Rules
 
 Always

@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\Event;
 use App\Models\Participant;
-use App\Repositories\EventRepository;
 use App\Repositories\EventParticipantRepository;
+use App\Repositories\EventRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -15,6 +15,8 @@ class EventService
         private EventRepository $eventRepository,
         private EventParticipantRepository $eventParticipantRepository,
         private MembershipService $membershipService,
+        private QRCodeService $qrCodeService,
+        private NotificationService $notificationService,
     ) {}
 
     public function registerParticipant(Event $event, Participant $participant, ?int $paymentId = null): void
@@ -44,12 +46,12 @@ class EventService
                 $registrationType = 'membership';
                 $amount = 0;
                 $isMembershipFree = true;
-            } elseif (!$event->price || $event->price == 0) {
+            } elseif (! $event->price || $event->price == 0) {
                 $registrationType = 'free';
                 $amount = 0;
             }
 
-            $this->eventParticipantRepository->create([
+            $registration = $this->eventParticipantRepository->create([
                 'event_id' => $event->id,
                 'participant_id' => $participant->id,
                 'registration_type' => $registrationType,
@@ -59,7 +61,23 @@ class EventService
                 'payment_id' => $paymentId,
             ]);
 
+            $this->qrCodeService->generate($registration);
+
             $participant->increment('total_events_participated');
+
+            $this->notificationService->notifyAdmins(
+                'Peserta baru mendaftar',
+                $participant->name.' mendaftar di event '.$event->title.'.',
+                'user-plus',
+                route('admin.events.show', $event->id),
+            );
+
+            $this->notificationService->notifyParticipant(
+                $participant,
+                'Pendaftaran berhasil',
+                'Anda berhasil mendaftar di event '.$event->title.'.',
+                'check',
+            );
         });
     }
 
@@ -70,7 +88,7 @@ class EventService
                 $event->id, $participant->id
             );
 
-            if (!$registration) {
+            if (! $registration) {
                 throw ValidationException::withMessages([
                     'event' => ['Pendaftaran tidak ditemukan.'],
                 ]);
@@ -90,6 +108,13 @@ class EventService
         }
 
         $event->update(['status' => 'publish']);
+
+        $this->notificationService->notifyAdmins(
+            'Event dipublikasikan',
+            'Event '.$event->title.' telah dipublikasikan.',
+            'megaphone',
+            route('admin.events.show', $event->id),
+        );
     }
 
     public function updateEventStatus(): void

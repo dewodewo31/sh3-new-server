@@ -16,35 +16,35 @@
             <div class="card-body">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Category</span>
-                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $event->category->name ?? '-' }}</p>
+                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Category</span>
+                        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-slate-100">{{ $event->category->name ?? '-' }}</p>
                     </div>
                     <div>
-                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Start</span>
-                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $event->start_date->format('d/m/Y H:i') }}</p>
+                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Start</span>
+                        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-slate-100">{{ $event->start_date->format('d/m/Y H:i') }}</p>
                     </div>
                     <div>
-                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400">End</span>
-                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $event->end_date->format('d/m/Y H:i') }}</p>
+                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">End</span>
+                        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-slate-100">{{ $event->end_date->format('d/m/Y H:i') }}</p>
                     </div>
                     <div>
-                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Registration</span>
-                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $event->registration_start_date->format('d/m/Y') }} - {{ $event->registration_end_date->format('d/m/Y') }}</p>
+                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Registration</span>
+                        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-slate-100">{{ $event->registration_start_date->format('d/m/Y') }} - {{ $event->registration_end_date->format('d/m/Y') }}</p>
                     </div>
                     <div>
-                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Location</span>
-                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $event->location ?? '-' }}</p>
+                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Location</span>
+                        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-slate-100">{{ $event->location ?? '-' }}</p>
                     </div>
                     <div>
-                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Quota</span>
-                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $event->quota ?? 'Unlimited' }} <span class="text-gray-500">({{ $event->remainingQuota() }} tersisa)</span></p>
+                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Quota</span>
+                        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-slate-100">{{ $event->quota ?? 'Unlimited' }} <span class="text-gray-500 dark:text-slate-400">({{ $event->remainingQuota() }} tersisa)</span></p>
                     </div>
                     <div>
-                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Price</span>
-                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $event->price ? 'Rp '.number_format($event->price, 0, ',', '.') : 'Gratis' }}</p>
+                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Price</span>
+                        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-slate-100">{{ $event->price ? 'Rp '.number_format($event->price, 0, ',', '.') : 'Gratis' }}</p>
                     </div>
                     <div>
-                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Free for members</span>
+                        <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Free for members</span>
                         <p class="mt-1">
                             @if($event->is_free_for_members)
                                 <span class="badge badge-success">Ya</span>
@@ -54,15 +54,15 @@
                         </p>
                     </div>
                 </div>
-                <hr class="my-6 border-gray-100">
+                <hr class="my-6 border-gray-100 dark:border-slate-700/60">
                 <div>
-                    <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Description</span>
-                    <p class="mt-2 text-sm text-gray-700 leading-relaxed">{{ $event->description ?? 'Tidak ada deskripsi.' }}</p>
+                    <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Description</span>
+                    <p class="mt-2 text-sm text-gray-700 leading-relaxed dark:text-slate-300">{{ $event->description ?? 'Tidak ada deskripsi.' }}</p>
                 </div>
-                <hr class="my-6 border-gray-100">
+                <hr class="my-6 border-gray-100 dark:border-slate-700/60">
                 <div>
-                    <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Address</span>
-                    <p class="mt-2 text-sm text-gray-700">{{ $event->address ?? '-' }}</p>
+                    <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Address</span>
+                    <p class="mt-2 text-sm text-gray-700 dark:text-slate-300">{{ $event->address ?? '-' }}</p>
                 </div>
             </div>
         </div>
@@ -76,10 +76,10 @@
             </div>
             <div class="p-0">
                 @if($event->eventParticipants->count())
-                    <div class="divide-y divide-gray-100">
+                    <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
                         @foreach($event->eventParticipants as $ep)
                         <div class="flex items-center justify-between px-6 py-3.5">
-                            <span class="text-sm text-gray-900">{{ $ep->participant->name ?? '#' . $ep->participant_id }}</span>
+                            <span class="text-sm text-gray-900 dark:text-slate-100">{{ $ep->participant->name ?? '#' . $ep->participant_id }}</span>
                             <span class="badge {{ $ep->payment_status === 'confirmed' ? 'badge-success' : 'badge-warning' }}">{{ $ep->payment_status }}</span>
                         </div>
                         @endforeach
@@ -98,11 +98,11 @@
             <div class="card-header">
                 <h3 class="card-header-title">Schedule</h3>
             </div>
-            <div class="divide-y divide-gray-100">
+            <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
                 @foreach($event->schedules as $s)
                 <div class="flex items-center gap-4 px-6 py-3.5">
-                    <span class="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-indigo-50 text-xs font-semibold text-indigo-700">{{ $s->start_time->format('H:i') }}</span>
-                    <span class="text-sm text-gray-900">{{ $s->title }}</span>
+                    <span class="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-indigo-50 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{{ $s->start_time->format('H:i') }}</span>
+                    <span class="text-sm text-gray-900 dark:text-slate-100">{{ $s->title }}</span>
                 </div>
                 @endforeach
             </div>

@@ -24,7 +24,7 @@
                         @error('email') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Password <span class="text-gray-400 font-normal">(kosongkan jika tidak diubah)</span></label>
+                        <label class="form-label">Password <span class="text-gray-400 font-normal dark:text-slate-500">(kosongkan jika tidak diubah)</span></label>
                         <input type="password" name="password" id="password" class="form-input @error('password') error @enderror">
                         @error('password') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
@@ -49,16 +49,16 @@
                     <label class="form-label">Avatar</label>
                     @if($user->avatar)
                     <div class="mb-3">
-                        <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}" class="w-16 h-16 rounded-xl object-cover border border-gray-200">
+                        <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}" class="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-700">
                     </div>
                     @endif
                     <div class="flex items-center gap-4">
-                        <label class="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 inline-flex items-center gap-2 transition-colors">
+                        <label class="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 inline-flex items-center gap-2 transition-colors dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/40">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
                             Pilih File
                             <input type="file" name="avatar" id="avatar" class="hidden">
                         </label>
-                        <span class="text-sm text-gray-400" id="avatar-filename">Tidak ada file dipilih</span>
+                        <span class="text-sm text-gray-400 dark:text-slate-500" id="avatar-filename">Tidak ada file dipilih</span>
                     </div>
                     @error('avatar') <p class="form-error">{{ $message }}</p> @enderror
                 </div>

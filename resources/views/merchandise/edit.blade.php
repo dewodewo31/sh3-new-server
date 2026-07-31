@@ -38,7 +38,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Size Options (JSON)</label>
-                    <input type="text" name="size_options" value="{{ old('size_options', $item->size_options) }}" placeholder='["S","M","L","XL"]' class="form-input @error('size_options') error @enderror">
+                    <input type="text" name="size_options" value="{{ old('size_options', json_encode($item->size_options)) }}" placeholder='["S","M","L","XL"]' class="form-input @error('size_options') error @enderror">
                     @error('size_options') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="form-group">

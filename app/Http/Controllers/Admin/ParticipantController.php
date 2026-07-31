@@ -33,7 +33,7 @@ class ParticipantController extends Controller
 
     public function show(int $id)
     {
-        $participant = $this->participantRepository->findById($id, ['membershipHistories', 'eventParticipants.event']);
+        $participant = $this->participantRepository->findById($id, ['membershipHistories.plan', 'eventParticipants.event', 'membershipPlan']);
 
         return view('participants.show', compact('participant'));
     }

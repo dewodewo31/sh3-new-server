@@ -13,8 +13,9 @@
 9. Modul Sponsor
 10. Modul Struktur Organisasi
 11. Modul Attendance & QR Code
-12. API Endpoints
-13. Tech Stack
+12. Modul Membership
+13. API Endpoints
+14. Tech Stack
 
 ---
 
@@ -356,48 +357,47 @@ CREATE TABLE event_participants (
 
 ### **Membership Rules**
 
+> Detail lengkap: lihat `docs/12 — Membership Module.md`.
+
 php
 
 ```
 // app/Services/MembershipService.php
 class MembershipService
 {
-    public function checkMembershipEligibility($participant)
+    // Harga per tipe membership
+    public const PRICES = [
+        'tahunan' => 400000,
+        'setengah_tahun' => 250000,
+        'mingguan' => 10000,
+    ];
+
+    public function checkEligibility($participant)
     {
-        $today = now()->toDateString();
-
-        if ($participant->membership_type == 'tahunan' &&
-            $participant->membership_end_date >= $today) {
-            return 'free';
+        if ($participant->membership_type === 'none') {
+            return 'paid';
         }
 
-        if ($participant->membership_type == 'setengah_tahun' &&
-            $participant->membership_end_date >= $today) {
-            return 'free';
-        }
-
-        if ($participant->membership_type == 'mingguan' &&
-            $participant->membership_end_date >= $today) {
+        if ($participant->membership_end_date && $participant->membership_end_date >= now()->toDateString()) {
             return 'free';
         }
 
         return 'paid';
     }
 
-    public function autoRenewal($participantId)
+    public function grant($participant, $type)
     {
-        // Logic auto renewal 7 hari sebelum expired
+        // Admin memberi membership langsung (status active)
     }
 
-    public function calculateMembershipPrice($type, $duration)
+    public function requestSubscription($participant, $type, $paymentMethod)
     {
-        $prices = [
-            'tahunan' => 500000,
-            'setengah_tahun' => 300000,
-            'mingguan' => 50000
-        ];
+        // Peserta membeli via API (history pending + payment pending)
+    }
 
-        return $prices[$type] ?? 0;
+    public function activate($history)
+    {
+        // Dipanggil saat pembayaran dikonfirmasi bendahara
     }
 }
 ```
@@ -861,9 +861,20 @@ http
 GET /api/v1/participants
 GET /api/v1/participants/{id}
 PUT /api/v1/participants/{id}
-POST /api/v1/participants/membership
-GET /api/v1/participants/events
-GET /api/v1/participants/attendance
+GET /api/v1/participants/{id}/events
+GET /api/v1/participants/{id}/attendance
+```
+
+### **Membership API**
+
+http
+
+```
+GET /api/v1/membership
+GET /api/v1/membership/plans
+GET /api/v1/membership/history
+POST /api/v1/membership/subscribe
+POST /api/v1/membership/cancel
 ```
 
 ### **Event API**

@@ -12,8 +12,8 @@
             Tambah Anggota
         </a>
     </div>
-    <div class="table-wrap">
-        <table>
+    <div class="table-wrap w-full max-w-full overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700/80">
+        <table class="min-w-full whitespace-nowrap">
             <thead>
                 <tr>
                     <th>#</th>
@@ -29,7 +29,7 @@
                 @forelse($members as $member)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td class="font-medium text-gray-900">{{ $member->name }}</td>
+                    <td class="font-medium text-gray-900 dark:text-gray-100">{{ $member->name }}</td>
                     <td>{{ $member->position }}</td>
                     <td>{{ $member->sort_order }}</td>
                     <td>

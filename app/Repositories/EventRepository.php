@@ -45,6 +45,32 @@ class EventRepository extends BaseRepository
             ->paginate($perPage);
     }
 
+    public function search(array $filters = [], int $perPage = 15)
+    {
+        $query = $this->model->with('category');
+
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+
+        if (! empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        return $query->orderBy('created_at', 'desc')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
     public function findEventsByCategory(int $categoryId)
     {
         return $this->model->where('category_id', $categoryId)->get();

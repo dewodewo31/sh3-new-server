@@ -124,11 +124,20 @@ Semua endpoint API berada di prefix `/api/v1`.
 | POST | `/payments/create` | Buat pembayaran |
 | GET | `/payments/{id}` | Detail pembayaran |
 | GET | `/payments/history` | Riwayat pembayaran |
+| GET | `/membership` | Status membership user (aktif/expired + riwayat) |
+| GET | `/membership/plans` | Daftar paket & harga membership |
+| GET | `/membership/history` | Riwayat membership user |
+| POST | `/membership/subscribe` | Ajukan pembelian membership (menghasilkan payment pending) |
+| POST | `/membership/cancel` | Batalkan membership |
 | POST | `/attendance/check-in` | Check-in |
 | POST | `/attendance/check-out` | Check-out |
 | GET | `/attendance/{eventId}` | Absensi per event |
 | POST | `/attendance/scan` | Scan QR code |
 | POST | `/merchandise/order` | Order merchandise |
+| GET | `/notifications` | Notifikasi user (20 terbaru) |
+| GET | `/notifications/unread-count` | Jumlah notifikasi belum dibaca |
+| POST | `/notifications/{id}/read` | Tandai notifikasi dibaca |
+| POST | `/notifications/read-all` | Tandai semua notifikasi dibaca |
 
 ## Redis
 
@@ -157,12 +166,14 @@ php artisan queue:work
 
 - **Manajemen Event** — CRUD event, jadwal, kategori, quota, publish/ongoing/completed
 - **Manajemen Peserta** — Registrasi via API (tanpa username/password), membership
+- **Membership** — 3 tipe membership (tahunan, setengah tahun, mingguan), pemberian langsung oleh admin, pembelian via API dengan konfirmasi bendahara, riwayat & statistik di halaman `/admin/memberships`
 - **Pembayaran** — Konfirmasi/reject oleh bendahara
 - **Absensi** — Check-in/check-out dengan QR code
 - **Galeri** — Upload foto/video event
 - **Sponsor & Merchandise** — Manajemen sponsor dan penjualan merchandise
 - **Organisasi** — Struktur kepengurusan
 - **Role-based Access** — 8 level role untuk admin panel
+- **Notifikasi Real-time** — broadcast via Reverb (WebSocket) ke admin web dan peserta mobile; tersimpan di database dengan status read/unread
 
 ## Pengembangan
 

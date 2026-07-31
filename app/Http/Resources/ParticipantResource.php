@@ -24,6 +24,7 @@ class ParticipantResource extends JsonResource
             'blood_type' => $this->blood_type,
             'jersey_size' => $this->jersey_size,
             'membership_type' => $this->membership_type,
+            'membership_plan_name' => $this->membershipPlan?->name,
             'membership_start_date' => $this->membership_start_date,
             'membership_end_date' => $this->membership_end_date,
             'is_active' => $this->is_active,

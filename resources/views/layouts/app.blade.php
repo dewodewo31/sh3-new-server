@@ -7,46 +7,55 @@
     <title>@yield('title', 'Dashboard') - {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <script>
+        (function () {
+            var stored = localStorage.getItem('sh3-theme');
+            var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (dark) document.documentElement.classList.add('dark');
+        })();
+    </script>
+    @stack('head')
 </head>
-<body class="bg-gray-50 font-sans antialiased">
-    <div class="flex min-h-screen" x-data="{ sidebarOpen: false }">
+<body class="overflow-x-clip bg-slate-50 font-sans antialiased dark:bg-slate-900">
+    <div class="flex min-h-screen w-full overflow-x-clip" x-data="{ sidebarOpen: false, toastVisible: false }">
         @auth
             @include('includes.sidebar')
         @endauth
 
-        <div class="flex flex-1 flex-col transition-all duration-200">
+        <div class="flex min-w-0 flex-1 flex-col transition-all duration-200">
             @auth
                 @include('includes.navbar')
             @endauth
 
-            <main class="flex-1 p-6 lg:p-8">
-                @if (session('success'))
-                    <div class="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 text-sm text-emerald-800 shadow-sm" role="alert">
-                        <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span>{{ session('success') }}</span>
-                        <button type="button" class="ml-auto rounded-lg p-1 text-emerald-500 transition-colors hover:bg-emerald-100" onclick="this.parentElement.remove()">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
+            <main class="w-full min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+                <div class="mx-auto w-full min-w-0 max-w-7xl">
+                    {{-- Breadcrumb --}}
+                    @hasSection('breadcrumb')
+                        <div class="animate-fade-in">
+                            @yield('breadcrumb')
+                        </div>
+                    @endif
+
+                    {{-- Page header --}}
+                    <div class="page-header animate-fade-in @hasSection('breadcrumb') mt-4 @endif">
+                        <div>
+                            <h1>@yield('title', 'Dashboard')</h1>
+                            <p>@yield('subtitle', '&nbsp;')</p>
+                        </div>
+                        @hasSection('actions')
+                            <div class="flex flex-wrap items-center gap-2.5">
+                                @yield('actions')
+                            </div>
+                        @endif
                     </div>
-                @endif
 
-                @if (session('error'))
-                    <div class="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-3.5 text-sm text-red-800 shadow-sm" role="alert">
-                        <svg class="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-                        <span>{{ session('error') }}</span>
-                        <button type="button" class="ml-auto rounded-lg p-1 text-red-500 transition-colors hover:bg-red-100" onclick="this.parentElement.remove()">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
+                    {{-- Flash alerts --}}
+                    @include('includes.alerts')
+
+                    {{-- Page content --}}
+                    <div class="animate-slide-up" style="animation-delay: 50ms">
+                        @yield('content')
                     </div>
-                @endif
-
-                <div class="page-header animate-fade-in">
-                    <h1>@yield('title', 'Dashboard')</h1>
-                    <p>@yield('subtitle', '&nbsp;')</p>
-                </div>
-
-                <div class="animate-slide-up" style="animation-delay: 50ms">
-                    @yield('content')
                 </div>
             </main>
 
@@ -55,6 +64,9 @@
             @endauth
         </div>
     </div>
+
+    {{-- Toast placeholder --}}
+    @include('includes.toast')
 
     @stack('scripts')
 </body>

@@ -12,8 +12,8 @@
             Tambah Peserta
         </a>
     </div>
-    <div class="table-wrap">
-        <table>
+    <div class="table-wrap w-full max-w-full overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700/80">
+        <table class="min-w-full whitespace-nowrap">
             <thead>
                 <tr>
                     <th>#</th>
@@ -30,13 +30,13 @@
                 @forelse($participants as $p)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td class="font-medium text-gray-900">{{ $p->name }}</td>
+                    <td class="font-medium text-gray-900 dark:text-slate-100">{{ $p->name }}</td>
                     <td>{{ $p->email }}</td>
                     <td>{{ $p->phone ?? '-' }}</td>
                     <td>
                         @if($p->membership_type !== 'none')
-                            <span class="badge badge-success">{{ str_replace('_', ' ', $p->membership_type) }}</span>
-                            <small class="block text-gray-400 mt-0.5">s/d {{ $p->membership_end_date?->format('d/m/Y') }}</small>
+                            <span class="badge badge-success">{{ $p->membershipTypeLabel() }}</span>
+                            <small class="block text-gray-400 mt-0.5 dark:text-slate-500">s/d {{ $p->membership_end_date?->format('d/m/Y') }}</small>
                         @else
                             <span class="badge badge-secondary">None</span>
                         @endif

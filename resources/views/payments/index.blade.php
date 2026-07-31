@@ -8,8 +8,8 @@
     <div class="card-header">
         <h3 class="card-header-title">Daftar Pembayaran</h3>
     </div>
-    <div class="table-wrap">
-        <table>
+    <div class="table-wrap w-full max-w-full overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700/80">
+        <table class="min-w-full whitespace-nowrap">
             <thead>
                 <tr>
                     <th>#</th>
@@ -27,11 +27,11 @@
                 @forelse($payments as $payment)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td class="font-medium text-gray-900">{{ $payment->invoice_number }}</td>
+                    <td class="font-medium text-gray-900 dark:text-slate-100">{{ $payment->invoice_number }}</td>
                     <td>{{ $payment->participant->name ?? '-' }}</td>
                     <td>{{ ucwords(str_replace('_', ' ', $payment->payment_type)) }}</td>
                     <td>Rp {{ number_format($payment->amount, 0, ',', '.') }}</td>
-                    <td><span class="font-medium text-gray-900">{{ strtoupper($payment->payment_method) }}</span></td>
+                    <td><span class="font-medium text-gray-900 dark:text-slate-100">{{ strtoupper($payment->payment_method) }}</span></td>
                     <td>
                         @php
                             $statusClasses = ['confirmed' => 'badge-success', 'pending' => 'badge-warning', 'rejected' => 'badge-danger', 'refunded' => 'badge-info'];

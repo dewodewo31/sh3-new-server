@@ -12,8 +12,8 @@
             Tambah Sponsor
         </a>
     </div>
-    <div class="table-wrap">
-        <table>
+    <div class="table-wrap w-full max-w-full overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700/80">
+        <table class="min-w-full whitespace-nowrap">
             <thead>
                 <tr>
                     <th>#</th>
@@ -29,7 +29,7 @@
                 @forelse($sponsors as $sponsor)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td class="font-medium text-gray-900">{{ $sponsor->name }}</td>
+                    <td class="font-medium text-gray-900 dark:text-gray-100">{{ $sponsor->name }}</td>
                     <td>
                         @php
                             $tierClasses = ['platinum' => 'badge-indigo', 'gold' => 'badge-warning', 'silver' => 'badge-secondary', 'bronze' => 'badge-danger', 'media_partner' => 'badge-info'];

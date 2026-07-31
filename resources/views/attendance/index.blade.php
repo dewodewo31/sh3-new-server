@@ -8,8 +8,8 @@
     <div class="card-header">
         <h3 class="card-header-title">Attendance: {{ $event->title }}</h3>
     </div>
-    <div class="table-wrap">
-        <table>
+    <div class="table-wrap w-full max-w-full overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700/80">
+        <table class="min-w-full whitespace-nowrap">
             <thead>
                 <tr>
                     <th>#</th>
@@ -24,7 +24,7 @@
                 @forelse($attendances as $attendance)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td class="font-medium text-gray-900">{{ $attendance->eventParticipant->participant->name ?? '-' }}</td>
+                    <td class="font-medium text-gray-900 dark:text-slate-100">{{ $attendance->eventParticipant->participant->name ?? '-' }}</td>
                     <td>{{ $attendance->check_in_time?->format('d/m/Y H:i:s') ?? '-' }}</td>
                     <td>{{ $attendance->check_out_time?->format('d/m/Y H:i:s') ?? '-' }}</td>
                     <td>
