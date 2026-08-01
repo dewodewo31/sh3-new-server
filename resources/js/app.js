@@ -1,6 +1,11 @@
+import Alpine from 'alpinejs';
 import './bootstrap';
 import './notification-bell';
 import './theme';
+
+window.Alpine = Alpine;
+
+Alpine.start();
 
 document.addEventListener('keydown', (event) => {
     const target = event.target;

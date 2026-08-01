@@ -1,0 +1,1001 @@
+{
+  "info": {
+    "_postman_id": "sh3-api-collection",
+    "name": "SH3 Running Club API",
+    "description": "Collection API SH3 Running Club (Revision 1).\n\nBase URL: `{{base_url}}/api/v1`\n\nSemua endpoint di dalam folder berautentikasi memakai header `Authorization: Bearer {{token}}` (kecuali Auth publik).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Budi Santoso\",\n    \"email\": \"budi@example.com\",\n    \"phone\": \"08123456789\",\n    \"gender\": \"male\",\n    \"date_of_birth\": \"2000-01-01\",\n    \"address\": \"Jl. Merdeka No. 1\",\n    \"emergency_contact\": \"Siti\",\n    \"emergency_phone\": \"08987654321\",\n    \"medical_conditions\": null,\n    \"blood_type\": \"O\",\n    \"jersey_size\": \"L\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Registrasi user + participant. Response: `201` + `token`."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"budi@example.com\",\n    \"password\": \"password\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login. Set `token` dari response untuk environment variabel."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"budi@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "forgot-password"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"budi@example.com\",\n    \"token\": \"reset-token-dari-email\",\n    \"password\": \"password-baru\",\n    \"password_confirmation\": \"password-baru\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "reset-password"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/events",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events"]
+            }
+          }
+        },
+        {
+          "name": "Upcoming Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/events/upcoming",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events", "upcoming"]
+            }
+          }
+        },
+        {
+          "name": "Show Event",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/events/{{event_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events", "{{event_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Event (admin/organizer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"category_id\": 1,\n    \"title\": \"New Event\",\n    \"description\": \"Deskripsi event baru\",\n    \"location\": \"GBK\",\n    \"address\": \"Senayan, Jakarta\",\n    \"start_date\": \"2026-09-01 06:00:00\",\n    \"end_date\": \"2026-09-01 09:00:00\",\n    \"registration_start_date\": \"2026-08-01 00:00:00\",\n    \"registration_end_date\": \"2026-08-30 00:00:00\",\n    \"quota\": 100,\n    \"price\": 150000,\n    \"is_free_for_members\": true,\n    \"status\": \"publish\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/events",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events"]
+            }
+          }
+        },
+        {
+          "name": "Update Event (admin/organizer)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"category_id\": 1,\n    \"title\": \"Updated Title\",\n    \"description\": \"Deskripsi event\",\n    \"location\": \"GBK\",\n    \"address\": \"Senayan, Jakarta\",\n    \"start_date\": \"2026-09-01 06:00:00\",\n    \"end_date\": \"2026-09-01 09:00:00\",\n    \"registration_start_date\": \"2026-08-01 00:00:00\",\n    \"registration_end_date\": \"2026-08-30 00:00:00\",\n    \"quota\": 100,\n    \"price\": 150000,\n    \"is_free_for_members\": true,\n    \"status\": \"publish\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/events/{{event_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events", "{{event_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Event (admin/organizer)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/events/{{event_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events", "{{event_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Register Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/events/{{event_id}}/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events", "{{event_id}}", "register"]
+            },
+            "description": "Pendaftaran event untuk participant yang sedang login. Free → langsung confirmed, paid → pending."
+          }
+        },
+        {
+          "name": "Event Participants (admin/organizer)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/events/{{event_id}}/participants",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events", "{{event_id}}", "participants"]
+            }
+          }
+        },
+        {
+          "name": "Event QR Codes (admin/organizer)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/events/{{event_id}}/qr",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "events", "{{event_id}}", "qr"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Merchandise",
+      "item": [
+        {
+          "name": "List Merchandise",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/merchandise",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "merchandise"]
+            }
+          }
+        },
+        {
+          "name": "Show Merchandise",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/merchandise/{{merchandise_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "merchandise", "{{merchandise_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Order Merchandise",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"merchandise_id\": 1,\n    \"customer_name\": \"Andi\",\n    \"customer_contact\": \"08123456789\",\n    \"size\": \"M\",\n    \"quantity\": 2\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/merchandise/order",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "merchandise", "order"]
+            },
+            "description": "Membuat order merchandise. Stok berkurang, payment `pending`."
+          }
+        },
+        {
+          "name": "My Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/merchandise/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "merchandise", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Order Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/merchandise/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "merchandise", "orders", "{{order_id}}"]
+            },
+            "description": "Detail order milik sendiri. Order milik user lain → `404`."
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/merchandise/orders/{{order_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "merchandise", "orders", "{{order_id}}", "cancel"]
+            },
+            "description": "Batalkan order pending, stok dikembalikan. Order paid tidak bisa dibatalkan."
+          }
+        },
+        {
+          "name": "Upload Payment Proof",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "payment_proof", "type": "file", "src": null }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/merchandise/orders/{{order_id}}/payment",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "merchandise", "orders", "{{order_id}}", "payment"]
+            },
+            "description": "Upload bukti bayar (image, max 5MB)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"payment_type\": \"membership\",\n    \"payment_method\": \"bank_transfer\",\n    \"amount\": 400000,\n    \"description\": \"Membership tahunan\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/create",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payments", "create"]
+            }
+          }
+        },
+        {
+          "name": "Payment Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/{{payment_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payments", "{{payment_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Payment History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payments", "history"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Payment (admin/bendahara)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/confirm/{{payment_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payments", "confirm", "{{payment_id}}"]
+            },
+            "description": "Konfirmasi pembayaran oleh admin_full_access / bendahara."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Membership",
+      "item": [
+        {
+          "name": "Membership Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/membership",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "membership"]
+            }
+          }
+        },
+        {
+          "name": "Membership Plans",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/membership/plans",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "membership", "plans"]
+            }
+          }
+        },
+        {
+          "name": "Membership History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/membership/history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "membership", "history"]
+            }
+          }
+        },
+        {
+          "name": "Subscribe Membership",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"membership_type\": \"tahunan\",\n    \"payment_method\": \"transfer\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/membership/subscribe",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "membership", "subscribe"]
+            },
+            "description": "Subscribe membership → history + payment `pending`. Konfirmasi bendahara mengaktifkan."
+          }
+        },
+        {
+          "name": "Cancel Membership",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/membership/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "membership", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organization",
+      "item": [
+        {
+          "name": "List Organization",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/organization?search=&level=&year=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "organization"],
+              "query": [
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "level", "value": "", "disabled": true },
+                { "key": "year", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Show Organization",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/organization/{{organization_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "organization", "{{organization_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Organization Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/organization/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "organization", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Organization Tree",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/organization/tree",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "organization", "tree"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Check-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"event_id\": 1,\n    \"participant_id\": 1,\n    \"method\": \"qr_code\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/check-in",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance", "check-in"]
+            }
+          }
+        },
+        {
+          "name": "Check-out",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"event_id\": 1,\n    \"participant_id\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/check-out",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance", "check-out"]
+            }
+          }
+        },
+        {
+          "name": "Scan QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"qr_code\": \"SH3-1-1-ABC12345\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/scan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance", "scan"]
+            }
+          }
+        },
+        {
+          "name": "Attendance by Event",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/{{event_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance", "{{event_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Attendance Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/report?event_id=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance", "report"],
+              "query": [
+                { "key": "event_id", "value": "1", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sync Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"records\": [\n        {\n            \"event_id\": 1,\n            \"participant_id\": 1,\n            \"type\": \"check_in\",\n            \"method\": \"qr_code\"\n        }\n    ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/sync-up",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance", "sync-up"]
+            },
+            "description": "Sinkronisasi batch data attendance offline."
+          }
+        },
+        {
+          "name": "Sync Down",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/sync-down?event_id=1&since=2026-08-01T00:00:00Z",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance", "sync-down"],
+              "query": [
+                { "key": "event_id", "value": "1", "disabled": true },
+                { "key": "since", "value": "2026-08-01T00:00:00Z", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Budi Santoso\",\n    \"email\": \"budi.new@example.com\",\n    \"phone\": \"08123456789\",\n    \"gender\": \"male\",\n    \"date_of_birth\": \"1995-05-10\",\n    \"address\": \"Jl. Baru No. 5\",\n    \"emergency_contact\": \"Siti\",\n    \"emergency_phone\": \"08987654321\",\n    \"medical_conditions\": null,\n    \"blood_type\": \"O\",\n    \"jersey_size\": \"L\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Upload Photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "photo", "type": "file", "src": null }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/profile/photo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "profile", "photo"]
+            },
+            "description": "Upload foto profil (image, max 2MB)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Participants",
+      "item": [
+        {
+          "name": "List Participants",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/participants",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "participants"]
+            }
+          }
+        },
+        {
+          "name": "Show Participant",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/participants/{{participant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "participants", "{{participant_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Participant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Budi Santoso\",\n    \"phone\": \"08123456789\",\n    \"gender\": \"male\",\n    \"date_of_birth\": \"1995-05-10\",\n    \"address\": \"Jl. Baru No. 5\",\n    \"emergency_contact\": \"Siti\",\n    \"emergency_phone\": \"08987654321\",\n    \"medical_conditions\": null,\n    \"blood_type\": \"O\",\n    \"jersey_size\": \"L\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/participants/{{participant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "participants", "{{participant_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Participant Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/participants/{{participant_id}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "participants", "{{participant_id}}", "events"]
+            }
+          }
+        },
+        {
+          "name": "Participant Attendance",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/participants/{{participant_id}}/attendance",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "participants", "{{participant_id}}", "attendance"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/unread-count",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications", "unread-count"]
+            }
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/read",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications", "{{notification_id}}", "read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications", "read-all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sponsors",
+      "item": [
+        {
+          "name": "List Sponsors",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sponsors",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sponsors"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

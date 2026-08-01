@@ -153,7 +153,7 @@
                         </span>
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <p class="text-sm text-slate-700 dark:text-slate-300">{!! $activity['title'] !!}</p>
-                            <span class="text-xs text-slate-400 dark:text-slate-500">{{ $activity['time']->diffForHumans() }}</span>
+                            <span class="text-xs text-slate-400 dark:text-slate-500">{{ $activity['time'] ? $activity['time']->diffForHumans() : '' }}</span>
                         </div>
                         <p class="mt-0.5 truncate text-xs text-slate-400 dark:text-slate-500">{{ $activity['description'] }}</p>
                     </li>

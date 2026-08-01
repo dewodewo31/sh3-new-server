@@ -23,7 +23,7 @@
         <kbd class="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[10px] font-medium text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500 lg:inline-block">/</kbd>
     </form>
 
-    <div class="flex-1 sm:flex-none"></div>
+    <div class="flex-1"></div>
 
     {{-- Right actions --}}
     <div class="flex items-center gap-1.5 sm:gap-2">

@@ -109,7 +109,7 @@ class DashboardController extends Controller
                     'type' => 'attendance',
                     'title' => 'Check-in <b>berhasil</b>',
                     'description' => $attendance->eventParticipant->participant->name ?? '-',
-                    'time' => $attendance->check_in_time,
+                    'time' => $attendance->check_in_time ?? $attendance->created_at,
                 ]);
             });
 

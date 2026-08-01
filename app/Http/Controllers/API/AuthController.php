@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ForgotPasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\ResetPasswordRequest;
 use App\Models\Participant;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -91,6 +95,50 @@ class AuthController extends Controller
     {
         return response()->json([
             'user' => auth()->user()->load('participants'),
+        ]);
+    }
+
+    public function refresh(): JsonResponse
+    {
+        $user = auth()->user();
+
+        $token = $this->authService->refreshToken($user);
+
+        $this->userService->logActivity($user, 'refresh');
+
+        return response()->json([
+            'message' => 'Token berhasil diperbarui.',
+            'token' => $token,
+        ]);
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        $status = $this->authService->sendResetLink($request->validated());
+
+        if ($status !== Password::RESET_LINK_SENT) {
+            throw ValidationException::withMessages([
+                'email' => [__($status)],
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Link reset password telah dikirim ke email Anda.',
+        ]);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $status = $this->authService->resetPassword($request->validated());
+
+        if ($status !== Password::PASSWORD_RESET) {
+            throw ValidationException::withMessages([
+                'email' => [__($status)],
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Password berhasil direset.',
         ]);
     }
 }

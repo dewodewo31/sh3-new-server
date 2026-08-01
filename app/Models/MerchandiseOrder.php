@@ -2,10 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class MerchandiseOrder extends Model
 {
+    use HasFactory;
+
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_PAID = 'paid';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
     protected $guarded = [];
     protected function casts(): array
     {
@@ -28,5 +37,12 @@ class MerchandiseOrder extends Model
     public function payment()
     {
         return $this->belongsTo(Payment::class);
+    }
+
+    public function markAsPaid(): void
+    {
+        if ($this->payment_status === self::STATUS_PENDING) {
+            $this->update(['payment_status' => self::STATUS_PAID]);
+        }
     }
 }

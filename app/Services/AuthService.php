@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthService
@@ -17,13 +18,13 @@ class AuthService
     {
         $user = $this->userRepository->findByEmail($credentials['email']);
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
             ]);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             throw ValidationException::withMessages([
                 'email' => ['Akun Anda telah dinonaktifkan.'],
             ]);
@@ -47,5 +48,28 @@ class AuthService
     public function revokeAllTokens(User $user): void
     {
         $user->tokens()->delete();
+    }
+
+    public function refreshToken(User $user): string
+    {
+        $user->currentAccessToken()->delete();
+
+        return $this->generateToken($user);
+    }
+
+    public function sendResetLink(array $credentials): string
+    {
+        return Password::sendResetLink($credentials);
+    }
+
+    public function resetPassword(array $credentials): string
+    {
+        return Password::reset(
+            $credentials,
+            function (User $user, string $password) {
+                $user->update(['password' => $password]);
+                $user->tokens()->delete();
+            }
+        );
     }
 }
