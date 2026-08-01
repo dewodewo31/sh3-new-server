@@ -40,4 +40,9 @@ class EventParticipant extends Model
     {
         return $this->hasOne(Attendance::class);
     }
+
+    public function markAsPaid(): void
+    {
+        $this->update(['payment_status' => 'confirmed']);
+    }
 }

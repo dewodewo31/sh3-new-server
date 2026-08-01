@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\CategoryController;
 use App\Http\Controllers\API\EventController;
+use App\Http\Controllers\API\GalleryController;
 use App\Http\Controllers\API\MembershipController;
 use App\Http\Controllers\API\MerchandiseController;
 use App\Http\Controllers\API\NotificationController;
@@ -26,10 +28,14 @@ Route::prefix('v1')->group(function () {
     Route::get('/events/upcoming', [EventController::class, 'upcoming']);
     Route::get('/events', [EventController::class, 'index']);
     Route::get('/events/{id}', [EventController::class, 'show']);
+    Route::get('/events/{id}/participants', [EventController::class, 'participants']);
+    Route::get('/galleries', [GalleryController::class, 'index']);
 
     Route::get('/sponsors', [SponsorController::class, 'index']);
+    Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/organization/stats', [OrganizationController::class, 'stats']);
     Route::get('/organization/tree', [OrganizationController::class, 'tree']);
+    Route::get('/organization/years', [OrganizationController::class, 'years']);
     Route::get('/organization', [OrganizationController::class, 'index']);
     Route::get('/organization/{id}', [OrganizationController::class, 'show'])->whereNumber('id');
     Route::get('/merchandise', [MerchandiseController::class, 'index']);
@@ -38,12 +44,12 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/events/{eventId}/register', [EventController::class, 'register']);
+        Route::get('/my-events', [EventController::class, 'myEvents']);
 
         Route::middleware('role:admin_full_access,organizer')->group(function () {
             Route::post('/events', [EventController::class, 'store']);
             Route::put('/events/{id}', [EventController::class, 'update']);
             Route::delete('/events/{id}', [EventController::class, 'destroy']);
-            Route::get('/events/{id}/participants', [EventController::class, 'participants']);
             Route::get('/events/{id}/qr', [EventController::class, 'qrCodes']);
         });
 

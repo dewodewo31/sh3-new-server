@@ -41,4 +41,9 @@ class OrganizationController extends Controller
     {
         return response()->json(['data' => $this->organizationMemberRepository->tree()]);
     }
+
+    public function years(): JsonResponse
+    {
+        return response()->json(['data' => $this->organizationMemberRepository->years()]);
+    }
 }

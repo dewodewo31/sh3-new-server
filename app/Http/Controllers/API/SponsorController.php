@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\SponsorResource;
 use App\Repositories\SponsorRepository;
 use Illuminate\Http\JsonResponse;
 
@@ -16,6 +17,6 @@ class SponsorController extends Controller
     {
         $sponsors = $this->sponsorRepository->findActive();
 
-        return response()->json(['data' => $sponsors]);
+        return response()->json(['data' => SponsorResource::collection($sponsors)]);
     }
 }

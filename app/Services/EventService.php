@@ -119,13 +119,13 @@ class EventService
 
     public function updateEventStatus(): void
     {
-        $this->eventRepository->model
+        Event::query()
             ->where('status', 'publish')
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now())
             ->update(['status' => 'ongoing']);
 
-        $this->eventRepository->model
+        Event::query()
             ->whereIn('status', ['publish', 'ongoing'])
             ->where('end_date', '<', now())
             ->update(['status' => 'completed']);

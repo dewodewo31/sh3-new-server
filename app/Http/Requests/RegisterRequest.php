@@ -30,6 +30,8 @@ class RegisterRequest extends FormRequest
             'medical_conditions' => ['nullable', 'string'],
             'blood_type' => ['nullable', 'string', 'max:5'],
             'jersey_size' => ['nullable', Rule::in(['XS', 'S', 'M', 'L', 'XL', 'XXL'])],
+            'password' => ['nullable', 'string', 'min:6'],
+            'password_confirmation' => ['nullable', 'string', 'same:password'],
         ];
     }
 }

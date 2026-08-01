@@ -14,6 +14,14 @@
         </div>
         <div class="card-body">
             <dl class="divide-y divide-gray-100 dark:divide-slate-700/60">
+                @if($participant->user?->avatar)
+                <div class="flex justify-between py-3 items-center">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Foto Profil</dt>
+                    <dd>
+                        <img src="{{ asset('storage/'.$participant->user->avatar) }}" alt="{{ $participant->name }}" class="w-16 h-16 rounded-full object-cover border border-gray-200 dark:border-slate-700">
+                    </dd>
+                </div>
+                @endif
                 <div class="flex justify-between py-3">
                     <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Nama</dt>
                     <dd class="text-sm font-medium text-gray-900 dark:text-slate-100">{{ $participant->name }}</dd>
@@ -41,6 +49,18 @@
                 <div class="flex justify-between py-3">
                     <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Jersey Size</dt>
                     <dd class="text-sm font-medium text-gray-900 dark:text-slate-100">{{ $participant->jersey_size ?? '-' }}</dd>
+                </div>
+                <div class="flex justify-between py-3">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Emergency Contact</dt>
+                    <dd class="text-sm text-gray-900 dark:text-slate-100">{{ $participant->emergency_contact ?? '-' }}</dd>
+                </div>
+                <div class="flex justify-between py-3">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Emergency Phone</dt>
+                    <dd class="text-sm text-gray-900 dark:text-slate-100">{{ $participant->emergency_phone ?? '-' }}</dd>
+                </div>
+                <div class="flex justify-between py-3">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Medical Conditions</dt>
+                    <dd class="text-sm text-gray-900 dark:text-slate-100">{{ $participant->medical_conditions ?? '-' }}</dd>
                 </div>
                 <div class="flex justify-between py-3">
                     <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Membership</dt>

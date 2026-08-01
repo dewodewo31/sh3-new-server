@@ -47,7 +47,7 @@ class AuthController extends Controller
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
-                'password' => Str::random(60),
+                'password' => $data['password'] ?? Str::random(60),
                 'role' => 'participant',
                 'is_active' => true,
             ]);

@@ -16,6 +16,7 @@
 12. Modul Membership
 13. API Endpoints
 14. Tech Stack
+15. Changelog & Perbaikan (lihat `14 — Changelog & Fixes.md`)
 
 ---
 
@@ -845,13 +846,34 @@ text
 http
 
 ```
-POST /api/v1/auth/register
+POST /api/v1/auth/register     # password opsional (min 6); dipakai login bila dikirim
 POST /api/v1/auth/login
 POST /api/v1/auth/logout
 POST /api/v1/auth/refresh
 POST /api/v1/auth/forgot-password
 POST /api/v1/auth/reset-password
 ```
+
+**`POST /auth/register`** — payload yang didukung:
+
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "secret123",
+  "password_confirmation": "secret123",
+  "phone": "08123456789",
+  "gender": "male",
+  "date_of_birth": "2000-10-31",
+  "blood_type": "O",
+  "emergency_contact": "Dewo",
+  "emergency_phone": "082131231233",
+  "medical_conditions": "Debu",
+  "jersey_size": "L"
+}
+```
+
+Semua field selain `name` dan `email` bersifat opsional. Token & user dikembalikan di `res.data.token` / `res.data.user`.
 
 ### **Participant API**
 
@@ -864,6 +886,22 @@ PUT /api/v1/participants/{id}
 GET /api/v1/participants/{id}/events
 GET /api/v1/participants/{id}/attendance
 ```
+
+Response peserta kini menyertakan `hash_id`:
+- Member (membership aktif): `0022` (format `%04d`).
+- Non-member: `NM-0044` (prefix `NM-`).
+
+### **Profile API**
+
+http
+
+```
+GET  /api/v1/profile
+PUT  /api/v1/profile
+POST /api/v1/profile/photo   # multipart, field "avatar"
+```
+
+`PUT /profile` menerima: `name`, `phone`, `gender`, `date_of_birth`, `blood_type`, `emergency_contact`, `emergency_phone`, `medical_conditions`.
 
 ### **Membership API**
 
@@ -882,14 +920,44 @@ POST /api/v1/membership/cancel
 http
 
 ```
-GET /api/v1/events
-GET /api/v1/events/{id}
-POST /api/v1/events
-PUT /api/v1/events/{id}
-DELETE /api/v1/events/{id}
-POST /api/v1/events/{id}/register
-GET /api/v1/events/{id}/participants
-GET /api/v1/events/{id}/qr
+GET /api/v1/events                      # publish + ongoing + completed (tanpa draft)
+GET /api/v1/events/{id}                 # detail + galleries (array URL foto) + registered_count
+GET /api/v1/events/{id}/participants    # daftar peserta (PUBLIK)
+GET /api/v1/events/upcoming
+GET /api/v1/my-events                   # auth: event diikuti user + status order
+POST /api/v1/events/{id}/register       # auth: daftar event
+POST /api/v1/events                     # auth: admin_full_access, organizer
+PUT /api/v1/events/{id}                 # auth: admin_full_access, organizer
+DELETE /api/v1/events/{id}              # auth: admin_full_access, organizer
+GET /api/v1/events/{id}/qr              # auth: admin_full_access, organizer
+```
+
+### **Gallery API**
+
+http
+
+```
+GET /api/v1/galleries        # semua foto event (type=image), URL penuh + thumb + info event
+```
+
+### **Category API**
+
+http
+
+```
+GET /api/v1/categories       # kategori aktif + events_count
+```
+
+### **Organization API**
+
+http
+
+```
+GET /api/v1/organization          # struktur organisasi
+GET /api/v1/organization/{id}     # detail anggota
+GET /api/v1/organization/stats    # statistik
+GET /api/v1/organization/tree     # pohon organisasi (termasuk period_start/end)
+GET /api/v1/organization/years    # daftar tahun periode
 ```
 
 ### **Payment API**

@@ -48,18 +48,19 @@ class EventApiTest extends TestCase
         ], $overrides));
     }
 
-    public function test_list_events_only_shows_published(): void
+    public function test_list_events_only_shows_public(): void
     {
         $this->createEvent(['status' => 'publish']);
         $this->createEvent(['status' => 'draft']);
         $this->createEvent(['status' => 'ongoing']);
+        $this->createEvent(['status' => 'completed']);
 
         $response = $this->getJson('/api/v1/events');
 
         $response->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.status', 'publish')
-            ->assertJsonStructure(['data' => [['id', 'title', 'category']]]);
+            ->assertJsonCount(3, 'data')
+            ->assertJsonStructure(['data' => [['id', 'title', 'category']]])
+            ->assertJsonMissing(['status' => 'draft']);
     }
 
     public function test_show_event_returns_detail(): void
@@ -155,16 +156,28 @@ class EventApiTest extends TestCase
             ->assertCreated();
     }
 
-    public function test_participants_requires_admin_role(): void
+    public function test_participants_is_public(): void
     {
         $event = $this->createEvent();
+        $participant = Participant::factory()->create();
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'free',
+            'amount' => 0,
+            'payment_status' => 'confirmed',
+            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+        ]);
 
-        $this->getJson('/api/v1/events/'.$event->id.'/participants')->assertUnauthorized();
+        $this->getJson('/api/v1/events/'.$event->id.'/participants')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.participant.id', $participant->id);
 
         $participantUser = User::factory()->create(['role' => 'participant']);
         Sanctum::actingAs($participantUser);
 
-        $this->getJson('/api/v1/events/'.$event->id.'/participants')->assertForbidden();
+        $this->getJson('/api/v1/events/'.$event->id.'/participants')->assertOk();
     }
 
     public function test_admin_can_view_participants(): void

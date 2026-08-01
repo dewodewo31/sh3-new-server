@@ -89,7 +89,26 @@ routes/
 ├── api.php              # API routes (prefix: /api/v1)
 ├── web.php              # Admin web routes (prefix: /admin)
 └── auth.php             # Login/logout routes
+frontend-sh3/            # Frontend publik (Next.js 16, React 19, Tailwind v4)
 ```
+
+## Frontend Publik (Next.js)
+
+Frontend situs publik (landing page, daftar event, register member, galeri, merchandise) berada di `frontend-sh3/`.
+
+```bash
+cd frontend-sh3
+npm install
+cp .env.example .env   # sesuaikan NEXT_PUBLIC_API_URL & NEXT_PUBLIC_BASE_ASSET_URL
+npm run dev            # http://localhost:3000
+```
+
+Konfigurasi env frontend:
+
+| Variable | Nilai | Keterangan |
+|----------|-------|------------|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000/api/v1` | Base URL API backend |
+| `NEXT_PUBLIC_BASE_ASSET_URL` | `http://localhost:8000/storage` | Base URL file storage (foto, galeri) |
 
 ## API Endpoints
 
@@ -99,13 +118,20 @@ Semua endpoint API berada di prefix `/api/v1`.
 
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| POST | `/auth/register` | Registrasi peserta baru |
+| POST | `/auth/register` | Registrasi peserta baru (password opsional, wajib jika lewat frontend register) |
 | POST | `/auth/login` | Login (email + password) |
 | GET | `/events/upcoming` | Event mendatang |
-| GET | `/events` | Semua event |
-| GET | `/events/{id}` | Detail event |
+| GET | `/events` | Semua event (publish + ongoing + completed, tanpa draft) |
+| GET | `/events/{id}` | Detail event (termasuk `galleries`, `sponsors`, `registered_count`, `creator`) |
+| GET | `/events/{id}/participants` | Daftar peserta event (publik) |
+| GET | `/categories` | Daftar kategori event + jumlah event |
+| GET | `/galleries` | Semua foto galeri event (URL penuh + thumb) |
 | GET | `/sponsors` | Daftar sponsor |
 | GET | `/organization` | Struktur organisasi |
+| GET | `/organization/stats` | Statistik organisasi |
+| GET | `/organization/tree` | Struktur pohon organisasi |
+| GET | `/organization/years` | Daftar tahun periode organisasi |
+| GET | `/organization/{id}` | Detail anggota organisasi |
 | GET | `/merchandise` | Daftar merchandise |
 | GET | `/merchandise/{id}` | Detail merchandise |
 
@@ -116,6 +142,7 @@ Semua endpoint API berada di prefix `/api/v1`.
 | POST | `/auth/logout` | Logout |
 | GET | `/auth/me` | Profil user + peserta |
 | POST | `/events/{eventId}/register` | Daftar event |
+| GET | `/my-events` | Event yang diikuti user + status order |
 | GET | `/participants` | Data peserta |
 | GET | `/participants/{id}` | Detail peserta |
 | PUT | `/participants/{id}` | Update peserta |
@@ -190,3 +217,45 @@ php artisan test
 # Code style
 ./vendor/bin/pint
 ```
+
+## Changelog Terbaru
+
+### 2026-08-01 — Perbaikan API, Galeri, Register Member & Scan QR
+
+**API Public Baru**
+- `GET /events/{id}/participants` — dipindah dari grup autentikasi menjadi **publik** (untuk menampilkan peserta event). QR codes tetap dilindungi (`/events/{id}/qr`).
+- `GET /galleries` — `GalleryController` baru; mengembalikan semua foto (`type=image`) dengan URL penuh, thumb, info event & album.
+- `GET /categories` — `CategoryController` baru; kategori aktif + `events_count`.
+- `GET /organization/years` — daftar tahun periode organisasi.
+
+**Event**
+- `EventRepository::findPublic()` — `GET /events` kini menampilkan `publish` + `ongoing` + `completed` (draft disembunyikan).
+- `EventResource` diperkaya: `image_url`, `banner_url`, `registered_count`, `creator`, dan `galleries` (array URL foto, diurutkan featured → sort_order).
+- `EventController::show()` memuat relasi `galleries`.
+- `EventService::updateEventStatus()` diperbaiki dari akses property protected → `Event::query()` (transisi status publish/ongoing/completed kini berfungsi).
+- `EventParticipant::markAsPaid()` — ditambahkan sehingga konfirmasi pembayaran event tidak error rollback.
+
+**Member / Participant**
+- `Participant` mendapat accessor `hash_id` + `$appends` → member `%04d` (mis. `0022`), non-member `NM-%04d` (mis. `NM-0044`); di-expose di `ParticipantResource`.
+- `RegisterRequest` menerima `password` & `password_confirmation` opsional (min. 6 karakter).
+- `AuthController::register()` memakai password yang dikirim user (fallback random jika kosong).
+- Form Registrasi Member (`members/register`) diselaraskan dengan form Data Diri (`members/detail`): label "Nama Lengkap", urutan field Gender sebelum Tanggal Lahir, dan field `gender`/`blood_type`/`emergency_*`/`medical_conditions` bersifat opsional.
+- Halaman admin `participants/show` menampilkan Foto Profil, Emergency Contact, Emergency Phone, dan Medical Conditions (sesuai data input frontend).
+
+**Merchandise & Sponsor**
+- `MerchandiseResource` & `SponsorResource` baru — response index/show kini terstruktur.
+- `MerchandiseService` — validasi size hanya dijalankan jika `size_options` terisi.
+
+**Organisasi**
+- `OrganizationMemberRepository::tree()` menambahkan `period_start`/`period_end`.
+- `OrganizationMemberRepository::years()` baru untuk filter periode.
+
+**Scan QR Attendance (admin)**
+- Scanner lebih responsif: `fps` 10 → 20, `qrbox` dinamis 80% viewfinder, native `BarcodeDetector` (`useBarCodeDetectorIfSupported`), video constraint 1280x720, cooldown antar-scan 3 dtk → 1,5 dtk. Akurasi membaca QR dari foto/screen meningkat.
+
+**Frontend (Next.js)**
+- Halaman event detail (`/events/finished` & `/events/upcoming`) menampilkan seksi **Galeri** di bagian bawah berisi foto event (lightbox + navigasi).
+- Halaman galeri publik (`/gallery`) terhubung ke `GET /galleries` dengan MasonryGallery.
+- `galleryService.js` dibuat; komponen Footer SVG diperbaiki.
+
+Lihat juga `docs/` untuk dokumentasi per modul yang lebih detail.

@@ -197,9 +197,24 @@
                     this.scanner = new Html5Qrcode('qr-reader');
                     await this.scanner.start(
                         { facingMode: 'environment' },
-                        { fps: 10, qrbox: { width: 220, height: 220 } },
+                        {
+                            fps: 20,
+                            qrbox: (viewfinderWidth, viewfinderHeight) => {
+                                const min = Math.min(viewfinderWidth, viewfinderHeight);
+                                return { width: min * 0.8, height: min * 0.8 };
+                            },
+                            aspectRatio: 1.0,
+                            videoConstraints: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 },
+                            },
+                            experimentalFeatures: {
+                                useBarCodeDetectorIfSupported: true,
+                            },
+                        },
                         (decodedText) => {
-                            if (!this.processing && Date.now() - this.lastScanAt > 3000) {
+                            if (!this.processing && Date.now() - this.lastScanAt > 1500) {
                                 this.processQr(decodedText);
                             }
                         },

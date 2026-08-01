@@ -25,7 +25,8 @@ class MerchandiseService
                 ]);
             }
 
-            if (! in_array($data['size'], $merchandise->size_options ?? [], true)) {
+            if (! empty($merchandise->size_options)
+                && ! in_array($data['size'], $merchandise->size_options, true)) {
                 throw ValidationException::withMessages([
                     'size' => ['Ukuran tidak tersedia untuk merchandise ini.'],
                 ]);

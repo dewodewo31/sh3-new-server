@@ -24,6 +24,14 @@ class EventRepository extends BaseRepository
             ->get();
     }
 
+    public function findPublic(array $relations = ['category'])
+    {
+        return $this->model->with($relations)
+            ->whereIn('status', ['publish', 'ongoing', 'completed'])
+            ->orderBy('start_date')
+            ->get();
+    }
+
     public function findUpcoming(array $relations = ['category'])
     {
         return $this->model->with($relations)

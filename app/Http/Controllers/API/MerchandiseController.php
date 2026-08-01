@@ -6,6 +6,7 @@ use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MerchandiseOrderRequest;
 use App\Http\Requests\UploadPaymentRequest;
+use App\Http\Resources\MerchandiseResource;
 use App\Repositories\MerchandiseOrderRepository;
 use App\Repositories\MerchandiseRepository;
 use App\Services\MerchandiseService;
@@ -23,14 +24,14 @@ class MerchandiseController extends Controller
     {
         $merchandise = $this->merchandiseRepository->findAvailable();
 
-        return response()->json(['data' => $merchandise]);
+        return response()->json(['data' => MerchandiseResource::collection($merchandise)]);
     }
 
     public function show(int $id): JsonResponse
     {
         $item = $this->merchandiseRepository->findById($id);
 
-        return response()->json(['data' => $item]);
+        return response()->json(['data' => new MerchandiseResource($item)]);
     }
 
     public function order(MerchandiseOrderRequest $request): JsonResponse

@@ -94,6 +94,8 @@ class OrganizationMemberRepository extends BaseRepository
                     'position' => $member->position,
                     'level' => $member->level,
                     'sort_order' => $member->sort_order,
+                    'period_start' => $member->period_start?->toDateString(),
+                    'period_end' => $member->period_end?->toDateString(),
                     'children' => $build($member->id),
                 ])
                 ->values()
@@ -101,6 +103,24 @@ class OrganizationMemberRepository extends BaseRepository
         };
 
         return $build(null);
+    }
+
+    public function years(): array
+    {
+        return $this->model
+            ->whereNotNull('period_start')
+            ->selectRaw('YEAR(period_start) as start_year')
+            ->union(
+                $this->model->newQuery()
+                    ->whereNotNull('period_end')
+                    ->selectRaw('YEAR(period_end) as start_year')
+            )
+            ->pluck('start_year')
+            ->unique()
+            ->sortDesc()
+            ->values()
+            ->map(fn ($year) => (int) $year)
+            ->all();
     }
 
     public function findByIdWithHolder(int $id)

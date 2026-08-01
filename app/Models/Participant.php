@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -11,6 +12,8 @@ class Participant extends Model
     use HasFactory;
 
     protected $guarded = [];
+
+    protected $appends = ['hash_id'];
 
     protected function casts(): array
     {
@@ -71,5 +74,14 @@ class Participant extends Model
         }
 
         return $this->membership_end_date && $this->membership_end_date >= now()->toDateString();
+    }
+
+    protected function hashId(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->isMembershipActive()
+                ? sprintf('%04d', $this->id)
+                : 'NM-'.sprintf('%04d', $this->id),
+        );
     }
 }
