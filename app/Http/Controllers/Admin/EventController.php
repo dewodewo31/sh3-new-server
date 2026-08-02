@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EventRequest;
 use App\Repositories\CategoryRepository;
@@ -35,6 +36,12 @@ class EventController extends Controller
         $data = $request->validated();
         $data['created_by'] = auth()->id();
 
+        foreach (['image', 'banner'] as $field) {
+            if ($request->hasFile($field)) {
+                $data[$field] = ImageHelper::upload($request->file($field), 'events');
+            }
+        }
+
         $this->eventRepository->create($data);
 
         return redirect()->route('admin.events.index')->with('success', 'Event berhasil dibuat');
@@ -61,6 +68,15 @@ class EventController extends Controller
         $data = $request->validated();
         $data['updated_by'] = auth()->id();
 
+        foreach (['image', 'banner'] as $field) {
+            if ($request->hasFile($field)) {
+                if ($event->{$field}) {
+                    ImageHelper::delete($event->{$field});
+                }
+                $data[$field] = ImageHelper::upload($request->file($field), 'events');
+            }
+        }
+
         $this->eventRepository->update($event, $data);
 
         return redirect()->route('admin.events.index')->with('success', 'Event berhasil diupdate');
@@ -69,6 +85,11 @@ class EventController extends Controller
     public function destroy(int $id)
     {
         $event = $this->eventRepository->findById($id);
+        foreach (['image', 'banner'] as $field) {
+            if ($event->{$field}) {
+                ImageHelper::delete($event->{$field});
+            }
+        }
         $this->eventRepository->delete($event);
 
         return redirect()->route('admin.events.index')->with('success', 'Event berhasil dihapus');

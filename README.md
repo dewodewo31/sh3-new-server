@@ -110,6 +110,362 @@ Konfigurasi env frontend:
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000/api/v1` | Base URL API backend |
 | `NEXT_PUBLIC_BASE_ASSET_URL` | `http://localhost:8000/storage` | Base URL file storage (foto, galeri) |
 
+## Instalasi Produksi (End-to-End)
+
+Panduan lengkap men-deploy sistem ke **server produksi** agar seluruh fitur berjalan: backend (Laravel + API), panel admin (Blade), frontend publik (Next.js), **queue worker**, **scheduler**, **notifikasi real-time (Reverb)**, **storage gambar**, dan perubahan status event otomatis.
+
+> **Catatan**: seluruh command dijalankan sebagai user deploy (`www-data` atau user non-root dengan permission baca-tulis pada direktori project). Sesuaikan nama domain (`sh3.example.com`) pada semua contoh di bawah.
+
+### 0. Topologi
+
+```
+Browser
+   ├── https://sh3.example.com    → Nginx → Laravel app (php-fpm)        [backend + admin panel]
+   ├── https://app.sh3.example.com→ Nginx → Next.js (port 3000)         [frontend publik]
+   └── wss://   :8080             → Reverb (WebSocket)                  [notif real-time]
+   └── Redis :6379                →  session, cache, queue
+   └── MySQL/MariaDB               →  database
+```
+
+### 1. Persyaratan Server
+
+- **Ubuntu/Debian** (LTS)
+- PHP **^8.3** + extensions: `bcmath ctype fileinfo json mbstring openssl pdo tokenizer xml gd redis pcntl`
+- Composer **^2**
+- MySQL 8 / MariaDB 10+
+- **Redis** 7 (session, cache, queue)
+- Node.js **>= 18** dan npm (untuk frontend + Reverb)
+
+Install (Ubuntu) contoh:
+
+```bash
+sudo apt update
+sudo apt install -y php8.3-cli php8.3-fpm php8.3-mysql php8.3-gd \
+  php8.3-xml php8.3-mbstring php8.3-curl php8.3-zip php8.3-intl \
+  unzip nginx redis-server mysql-server supervisor curl git
+sudo apt install -y php8.3-redis
+curl -fsSL https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+### 2. Directory & Permission
+
+```bash
+sudo mkdir -p /var/www
+sudo chown -R $USER:$USER /var/www
+cd /var/www
+
+git clone <repo-url> sh3-server
+cd sh3-server
+
+mkdir -p storage/framework/{sessions,views,cache}
+sudo chown -R $USER:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+```
+
+### 3. Backend — Environment
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Set minimal berikut di `.env` (sesuaikan nilai):
+
+```ini
+APP_NAME="SH3 Event Management"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://sh3.example.com        # WAJIB domain HTTPS (dipakai untuk URL storage gambar)
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=db_server_new
+DB_USERNAME=sh3_user
+DB_PASSWORD=STRONG-PASS
+
+SESSION_DRIVER=redis
+SESSION_LIFETIME=120
+
+FILESYSTEM_DISK=public                 # simpan file ke disk 'public' agar bisa diakses URL
+
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=832654
+REVERB_APP_KEY=<REVERB_APP_KEY>
+REVERB_APP_SECRET=<REVERB_APP_SECRET>
+REVERB_HOST=sh3.example.com            # host publik tempat WebSocket diakses
+REVERB_PORT=8080
+REVERB_SCHEME=http                     # https jika di belakang TLS proxy
+
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
+
+MAIL_MAILER=smtp                       # atau gunakan 'log' untuk development
+MAIL_HOST=<smtp-host>
+MAIL_PORT=587
+MAIL_USERNAME=<user>
+MAIL_PASSWORD=<pass>
+MAIL_FROM_ADDRESS="no-reply@sh3.example.com"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+> **PENTING**: `APP_URL` menentukan basis URL file storage (`APP_URL/storage/...`). Jika salah, gambar akan 403/404 (lihat bug upload gambar di Changelog). HTTPS diperlukan agar browser bisa memuat konten.
+
+
+### 4. Dependencies & Instalasi
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --seed                # buat database terlebih dahulu
+php artisan storage:link                  # symlink public/storage -> storage/app/public
+```
+
+Buat user database dan database (jika belum):
+
+```bash
+mysql -uroot <<'SQL'
+CREATE DATABASE IF NOT EXISTS db_server_new
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'sh3_user'@'localhost' IDENTIFIED BY 'STRONG-PASS';
+GRANT ALL PRIVILEGES ON db_server_new.* TO 'sh3_user'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+```
+
+### 5. Cache Config & Storage
+
+```bash
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+php artisan migrate --force
+php artisan storage:link
+chmod -R 775 storage bootstrap/cache
+```
+
+### 6. Frontend Publik (Next.js)
+
+```bash
+cd frontend-sh3
+npm ci --omit=dev
+cp .env.example .env
+# .env frontend:
+#   NEXT_PUBLIC_API_URL=https://sh3.example.com/api/v1
+#   NEXT_PUBLIC_BASE_ASSET_URL=https://sh3.example.com/storage
+npm run build
+```
+
+Jalankan (untuk production):
+
+```bash
+npm start -- -H 127.0.0.1 -p 3000   # Jalankan lewat PM2/systemd agar persisten
+```
+
+### 7. Queue Worker & Scheduler (Supervisor)
+
+Perlu diingat proses berjalan terus-menerus adalah **kunci** fitur notifikasi (tabel `notifications`), job, dan scheduler. Tanpa worker, notifikasi yang di-enqueue TIDAK akan masuk ke panel admin (lihat Changelog). Buat file supervisor:
+
+`/etc/supervisor/conf.d/sh3-queue.conf`:
+
+```ini
+[program:sh3-queue]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/sh3-server/artisan queue:work --queue=default --sleep=2 --tries=3
+autostart=true
+autorestart=true
+stopasgroup=true
+numprocs=4
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/www/sh3-server/storage/logs/queue.log
+```
+
+`/etc/supervisor/conf.d/sh3-reverb.conf`:
+
+```ini
+[program:sh3-reverb]
+command=php /var/www/sh3-server/artisan reverb:start --no-interaction
+directory=/var/www/sh3-server
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/www/sh3-server/storage/logs/reverb.log
+```
+
+`/etc/supervisor/conf.d/sh3-scheduler.conf`:
+
+```ini
+[program:sh3-scheduler]
+command=php /var/www/sh3-server/artisan schedule:work
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/www/sh3-server/storage/logs/scheduler.log
+```
+
+Aktifkan & mulai:
+
+```bash
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl status
+```
+
+> **Scheduler** perlu diaktifkan untuk **transisi status event otomatis** (publish → ongoing → completed) dan job terjadwal lainnya. Bila belum ada, tambahkan di `routes/console.php`:
+
+```php
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::call(fn () => app(\App\Services\EventService::class)->updateEventStatus())
+    ->everyMinute();
+```
+
+Jalankan pula cron (jika tidak memakai `schedule:work`, sebagai alternatif):
+
+```bash
+* * * * * cd /var/www/sh3-server && php artisan schedule:run >> /dev/null 2>&1
+```
+
+### 8. Nginx — Backend Laravel
+
+`/etc/nginx/sites-available/sh3-backend` (domain `sh3.example.com` = backend + panel + storage):
+
+```nginx
+server {
+    listen 80;
+    server_name sh3.example.com;
+
+    root /var/www/sh3-server/public;
+    index index.php;
+
+    client_max_body_size 20m;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # Reverb (WebSocket) proxy (jika tidak expose port 8080 langsung)
+    location /reverb/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+    }
+
+    location ~ /\.(?!well-known).* { deny all; }
+}
+```
+
+Aktifkan:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/sh3-backend /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+> Tambahkan blok `listen 443 ssl` dan `certbot certonly --nginx -d sh3.example.com` untuk HTTPS (Lihat Langkah 10).
+
+### 9. Nginx — Frontend Next.js
+
+`/etc/nginx/sites-available/sh3-frontend` (domain `app.sh3.example.com` → Next.js port 3000):
+
+```nginx
+server {
+    listen 80;
+    server_name app.sh3.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+> Jika Anda menjalankan Next.js dengan `next start` di port 3000 (satu proses), pastikan di-restart melalui manager proses (systemd) dan auto-start. Next.js **next start secara default tidak mendukung multi-instance**, gunakan satu instance atau `standalone` + PM2 cluster.
+
+### 10. TLS/HTTPS (Let's Encrypt)
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot certonly --nginx -d sh3.example.com -d app.sh3.example.com
+sudo certbot renew --dry-run
+```
+
+Setelah sertifikat ada, tambahkan `listen 443 ssl;` + sertifikat dan `server_name ...;` di masing-masing config, atau pakai `certbot --nginx` untuk auto-edit.
+
+### 11. Verifikasi Instalasi
+
+```bash
+# 1) PHP-FPM + aplikasi
+curl -I https://sh3.example.com/up           # 200 (GET health check)
+
+# 2) Storage symlink          
+ls -la sh3-server/public/storage            # symlink -> ../storage/app/public
+
+# 3) Redis
+redis-cli ping                              # PONG
+
+# 4) Queue worker
+sudo tail -f -n 20 /var/www/sh3-server/storage/logs/queue.log
+
+# 5) Reverb WebSocket
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/   # 200
+
+# 6) File storage dapat diakses
+curl -s -o /dev/null -w "%{http_code}\n" \
+  https://sh3.example.com/storage/galleries/events/city-run-sudirman/foto-1.jpg   # 200
+
+# 7) Notifikasi Real-time
+# Buka panel admin → buat data peserta di API → notif harus muncul tanpa refresh.
+
+# 8) Test end-to-end: user beli tiket event di frontend → notif muncul di /admin/dashboard
+```
+
+### 12. Checklist Fitur
+
+| Fitur | Dependensi yang wajib aktif |
+|--------|-----------------------------|
+| Login panel & role | PHP extension `redis` + session redis + FPM |
+| Gambar upload | `storage:link` + `APP_URL` benar + disk `public` |
+| Queue / job | Supervisor `sh3-queue` berjalan |
+| Notifikasi DB | queue worker + koneksi Redis |
+| Notif real-time | Reverb + nginx proxy `wss` |
+| Transisi status event | Scheduler (`:updateEventStatus`) |
+| Galeri / merchandise / sponsor | storage gambar + API URL benar |
+| Pembayaran konfirmasi | queue worker (event `PaymentService`) |
+| Frontend publik API | `NEXT_PUBLIC_API_URL` + CORS benar |
+
+---
+
 ## API Endpoints
 
 Semua endpoint API berada di prefix `/api/v1`.

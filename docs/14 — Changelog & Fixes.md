@@ -2,6 +2,31 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-02 — Fix Upload Gambar Event (403 Forbidden)
+
+### Masalah
+
+- Data event yang dibuat/brownfields menyimpan **temp path upload** (`/tmp/php...`) pada kolom `image` dan `banner`,
+  bukan path public disk.
+- Akibatnya URL `Storage::disk('public')->url()` menghasilkan `${APP_URL}/storage/tmp/php...` yang tidak ada di disk,
+  sehingga browser & Next.js `/optimizer` (Image Optimization) menerima kode **HTTP 403 (Forbidden)**.
+
+### Perbaikan (Backend — Admin Event)
+
+- **`Admin\EventController::store()`** — kini memanggil `ImageHelper::upload($request->file($field), 'events')`
+  untuk `image` & `banner` sebelum disimpan (sebelumnya dilewatkan mentah sebagai `UploadedFile`, menyimpan temp path).
+- **`Admin\EventController::update()`** — menghapus file lama via `ImageHelper::delete()` jika field di-upload ulang,
+  lalu menyimpan file baru ke public disk.
+- **`Admin\EventController::destroy()`** — menghapus file `image` & `banner` saat event dihapus.
+- Pola sinkron dengan `Admin\GalleryController`.
+
+### Perbaikan Data
+- Kolom `image` & `banner` record event `id=43` yang menunjuk ke file temp yang sudah tidak ada dikosongkan (`NULL`)
+  untuk menghentikan HTTP 403 pada halaman depan.
+- Untuk memulihkan gambar event ini, upload ulang `image`/`banner` lewat admin (kini tersimpan dengan benar).
+
+---
+
 ## 2026-08-01 — Perbaikan API, Galeri, Register Member & Scan QR
 
 ### API — Public

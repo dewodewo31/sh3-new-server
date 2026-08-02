@@ -16,7 +16,8 @@
 12. Modul Membership
 13. API Endpoints
 14. Tech Stack
-15. Changelog & Perbaikan (lihat `14 — Changelog & Fixes.md`)
+15. Modul Notification
+16. Changelog & Perbaikan (lihat `14 — Changelog & Fixes.md`)
 
 ---
 
@@ -999,12 +1000,13 @@ GET /api/v1/merchandise/orders
 
 ### **Backend**
 
-- **Framework**: Laravel 10/11
-- **Language**: PHP 8.2+
-- **Database**: MySQL 8.0
+- **Framework**: Laravel 13
+- **Language**: PHP 8.3
+- **Database**: MySQL / MariaDB (SQLite untuk dev)
 - **Cache**: Redis
-- **Queue**: Redis/Beanstalkd
-- **Authentication**: Laravel Sanctum/JWT
+- **Queue**: Redis (session/cache/queue)
+- **Authentication**: Laravel Sanctum
+- **Realtime**: Laravel Reverb (WebSocket) untuk notifikasi
 
 ### **Frontend Admin**
 
@@ -1016,18 +1018,17 @@ GET /api/v1/merchandise/orders
 
 ### **Frontend Public/API**
 
-- **Framework**: React.js/Vue.js (Optional)
-- **State Management**: Redux/Pinia (Optional)
+- **Framework**: Next.js 16 + React 19 + Tailwind CSS v4
+- **State Management**: React Context (AuthContext)
 - **HTTP Client**: Axios
 
 ### **Additional Libraries**
 
 - **QR Code**: simplesoftwareio/simple-qrcode
-- **Excel**: Maatwebsite/Laravel-Excel
-- **PDF**: Barryvdh/Laravel-DomPDF
-- **Payment**: Midtrans/Xendit SDK
-- **Image Processing**: Intervention Image
-- **API Documentation**: Swagger/Postman
+- **Invoice/PDF**: @react-pdf/renderer, jspdf (frontend)
+- **Payment**: konfirmasi manual oleh bendahara (belum payment gateway realtime)
+- **Image Processing**: ImageDriver (GD/Imagick)
+- **API Documentation**: Postman collection (`docs/postman/`)
 
 ### **Development Tools**
 
@@ -1135,18 +1136,17 @@ text
 
 ```
 users ───┬─── participants
-         │        │
-         ├─── events ──┬── event_participants ── attendances
+         │          ├─── membership_histories
+         │          └─── membership_plans
+         ├─── events ──┬── event_participants ── attendances ── attendance_logs
          │              │        │
-         └─── categories         ├── payments
-                                 │
-                                 ├── galleries
-                                 │
-                                 ├── event_sponsors ── sponsors
-                                 │
-                                 ├── merchandise_orders ── merchandise
-                                 │
-                                 └── event_schedules
+         │              │        └── payments (morph)
+         │              ├── galleries ── gallery_albums
+         │              ├── event_sponsors ── sponsors
+         │              ├── merchandise_orders ── merchandise
+         │              └── event_schedules
+         ├─── user_activity_logs
+         └─── notifications
 ```
 
 ---
