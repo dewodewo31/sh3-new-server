@@ -18,6 +18,10 @@ use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect('/admin/dashboard');
+    }
+
     return redirect('/login');
 });
 

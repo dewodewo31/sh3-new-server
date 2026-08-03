@@ -2,6 +2,65 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-03 — Fix Klik Notifikasi Admin Terlempar ke Login (Host Mismatch)
+
+### Masalah
+
+- Saat admin mengklik notifikasi di `/admin/notifications`, browser selalu di-redirect ke `/login`.
+- Bukan karena role/permission (RoleMiddleware hanya `abort(403)` bila role tidak punya akses),
+  melainkan karena **mismatch host** antara cookie session dan URL tujuan notifikasi.
+- Notifikasi menyimpan URL absolut yang digenerate via `route('admin.*')` saat pembuatan
+  (mis. `app/Services/EventService.php`, `app/Services/PaymentService.php`), berdasar `APP_URL=http://localhost:8000`.
+- Admin login di `http://127.0.0.1:8000` dengan `SESSION_DOMAIN=null` → cookie session terikat host `127.0.0.1`.
+  Saat klik notifikasi, browser berpindah ke `http://localhost:8000/admin/...` (host berbeda),
+  cookie `127.0.0.1` tidak ikut terkirim → sesi dianggap belum login → redirect ke `/login`.
+
+### Perbaikan
+
+- Pastikan **host yang dipakai konsisten** antara `APP_URL` dan host login di browser.
+- **Opsi A (pakai `127.0.0.1`):** ubah `.env` → `APP_URL=http://127.0.0.1:8000`, jalankan
+  `php artisan config:clear`, hapus cookie/login ulang, lalu login via `127.0.0.1:8000`.
+- **Opsi B (pakai `localhost`):** selalu buka admin di `http://localhost:8000/admin`, bukan `127.0.0.1`;
+  hapus cookie `127.0.0.1` di browser.
+
+> Catatan: di produksi `APP_URL` harus domain HTTPS yang sama dengan domain login agar URL storage,
+> route, dan sesi tetap konsisten (lihat juga bug upload gambar).
+
+---
+
+## 2026-08-03 — Fix Upload Gambar Tidak Tampil (Broken `storage:link` Symlink)
+
+### Masalah
+
+- Semua gambar yang di-upload (backend `payment_proof`, frontend foto profil user/avatar)
+  tidak bisa ditampilkan — browser menerima HTTP 404 untuk semua URL `/storage/...`.
+- Akar penyebab: symlink `public/storage` sebelumnya mengarah ke `storage/app\public`
+  (backslash `\` alih-alih path separator), sehingga target symlink tidak ditemukan di Linux.
+- Baik Blade views (`asset('storage/' . $path)`) maupun API frontend (`ImageHelper::getUrl()` /
+  `Storage::disk('public')->url()`) menghasilkan URL yang melewati symlink `public/storage`
+  yang broken — semua request gambar 404.
+- Selain itu, route `/` secara unconditional redirect ke `/login`, menyebabkan loop redirect
+  bagi authenticated user yang mengakses `/login` secara langsung.
+
+### Perbaikan
+
+- **`public/storage`** — symlink direcreate ulang via `php artisan storage:link`, sekarang
+  mengarah ke `storage/app/public` dengan benar.
+- **`routes/web.php`** — route `/` sekarang memeriksa status autentikasi:
+  - authenticated → redirect ke `/admin/dashboard`
+  - unauthenticated → redirect ke `/login`
+  (sebelumnya unconditional redirect ke `/login` yang menyebabkan loop bagi user yang sudah login)
+
+### Verifikasi
+
+- `curl -I http://127.0.0.1:8000/storage/payments/<file>` → HTTP 200
+- `curl -I http://127.0.0.1:8000/storage/avatars/<file>` → HTTP 200
+- Frontend (`http://127.0.0.1:3000`) juga berhasil memuat gambar via API URL yang sama.
+
+---
+
+---
+
 ## 2026-08-02 — Fix Upload Gambar Event (403 Forbidden)
 
 ### Masalah

@@ -1098,6 +1098,9 @@ php artisan key:generate
 # Run migrations and seeders
 php artisan migrate --seed
 
+# Create storage symlink (required for uploaded images to be served)
+php artisan storage:link
+
 # Run development server
 php artisan serve
 npm run dev
