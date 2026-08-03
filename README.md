@@ -6,7 +6,7 @@ Sistem manajemen event untuk komunitas lari SH3. Dibangun dengan Laravel 13 dan 
 
 - PHP ^8.3
 - Composer
-- MySQL / MariaDB (atau SQLite untuk development)
+- MySQL / MariaDB
 - Redis (untuk session, cache, dan queue)
 - Node.js & NPM (untuk frontend assets)
 - Extension PHP: `BCMath`, `Ctype`, `Fileinfo`, `JSON`, `Mbstring`, `OpenSSL`, `PDO`, `Tokenizer`, `XML`, `GD` atau `Imagick`, `redis`
@@ -575,6 +575,15 @@ php artisan test
 ```
 
 ## Changelog Terbaru
+
+### 2026-08-03 — Fix Klik Notifikasi Admin Terlempar ke Login (Host Mismatch)
+
+- **Masalah**: klik notifikasi di `/admin/notifications` selalu redirect ke `/login`.
+- **Akibat**: notifikasi menyimpan URL absolut hasil `route('admin.*')` berdasar `APP_URL=http://localhost:8000`,
+  sedangkan admin login di `http://127.0.0.1:8000`. Cookie session (terikat host, `SESSION_DOMAIN=null`)
+  tidak terkirim ke host `localhost:8000` saat notifikasi diklik → sesi hilang → redirect ke login.
+- **Solusi**: pakai satu host yang sama antara `APP_URL` dan host browser. Lihat detail di
+  `docs/14 — Changelog & Fixes.md` dan `docs/15 — Notification Module.md`.
 
 ### 2026-08-01 — Perbaikan API, Galeri, Register Member & Scan QR
 

@@ -186,7 +186,7 @@ Daftar *skill* (fitur) dirinci di `README.md` dan `docs/`. Prioritas ringkas:
 | Auth | Laravel Sanctum |
 | Realtime | Laravel Reverb (WebSocket) |
 | QR | simplesoftwareio/simple-qrcode |
-| Database | MySQL / MariaDB (SQLite dev) |
+| Database | MySQL / MariaDB |
 | Cache/Queue | Redis |
 | Frontend Publik | Next.js 16, React 19, Tailwind v4 |
 | Admin Template | AdminLTE 3, Bootstrap 5 |

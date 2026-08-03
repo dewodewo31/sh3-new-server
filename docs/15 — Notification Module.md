@@ -54,3 +54,21 @@ Response item:
 - `app/Http/Controllers/Admin/NotificationController.php`
 - `database/migrations/...create_notifications_table.php`
 - Broadcast: `routes/channels.php` + **Laravel Reverb** (WebSocket)
+
+## Catatan Penting — URL Notifikasi & Sesi (Host Mismatch)
+
+URL tujuan di dalam notifikasi (`data.url`) digenerate secara **absolut** memakai `route('admin.*')`
+(mis. `admin.events.show`, `admin.payments.show`) saat notification dibuat, dan di-render bulat-bulat
+di `resources/views/notifications/index.blade.php` sebagai `<a href="{{ $url }}">` lalu dikunjungi
+via `window.location.href = url`.
+
+Karena URL tersebut **absolut** dan miliki host `APP_URL`, bila host browser login (`127.0.0.1`)
+tidak sama dengan `APP_URL` (`localhost`), cookie session (terikat host, `SESSION_DOMAIN=null`)
+tidak terkirim ke host tujuan → Laravel menganggap belum login → di-redirect ke `/login`.
+
+Praktik yang benar:
+
+- Gunakan satu host yang sama antara `APP_URL` di `.env` dan host yang dibuka di browser
+  (`http://localhost:8000` atau `http://127.0.0.1:8000`, jangan dicampur).
+- Di produksi, `APP_URL` harus sama dengan domain HTTPS yang dipakai login.
+- Setelah mengubah `APP_URL`, jalankan `php artisan config:clear` lalu login ulang.

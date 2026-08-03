@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     domains: ["127.0.0.1", "localhost"],
     dangerouslyAllowLocalIP: true,

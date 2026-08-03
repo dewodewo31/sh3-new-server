@@ -141,4 +141,4 @@ Skenario manual yang disarankan:
 ## Catatan Implementasi
 
 - `tests/TestCase.php` menonaktifkan middleware CSRF (`PreventRequestForgery`) dan memaksa `queue.default=sync` sehingga notifikasi database tersimpan sinkron saat test.
-- Test berjalan di environment yang memakai MySQL (config cache); bila `php artisan config:clear` dijalankan, pastikan driver sqlite terpasang (`pdo_sqlite`) atau sesuaikan `phpunit.xml`.
+- Test berjalan di environment yang memakai MySQL (config cache).

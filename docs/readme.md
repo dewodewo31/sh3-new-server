@@ -1002,7 +1002,7 @@ GET /api/v1/merchandise/orders
 
 - **Framework**: Laravel 13
 - **Language**: PHP 8.3
-- **Database**: MySQL / MariaDB (SQLite untuk dev)
+- **Database**: MySQL / MariaDB
 - **Cache**: Redis
 - **Queue**: Redis (session/cache/queue)
 - **Authentication**: Laravel Sanctum
