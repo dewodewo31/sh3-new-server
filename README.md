@@ -2,6 +2,8 @@
 
 Sistem manajemen event untuk komunitas lari SH3. Dibangun dengan Laravel 13 dan AdminLTE 3.
 
+**Modul Lengkap**: Authentication, User Management, Participant, Membership, Category, Event, Attendance & QR Code, Gallery, Merchandise, Payment, Sponsor, Organization, Notifications Real-time.
+
 ## Persyaratan
 
 - PHP ^8.3
@@ -31,11 +33,11 @@ cp .env.example .env
 php artisan key:generate
 
 # 6. Konfigurasi database di .env
-#    Sesuaikan DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD
-# DB_CONNECTION=mysql
-# DB_DATABASE=db_server_new
-# DB_USERNAME=root
-# DB_PASSWORD=
+Sesuaikan DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+DB_CONNECTION=mysql
+DB_DATABASE=db_server_new
+DB_USERNAME=root
+DB_PASSWORD=
 
 # 7. Buat database (jika belum ada)
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS db_server_new"
@@ -80,21 +82,26 @@ app/
 │   ├── Controllers/
 │   │   ├── Admin/       # Web admin controllers
 │   │   └── API/         # REST API controllers
-│   └── Requests/        # Form request validation
+│   └── Requests/        # 24 form request validation
 ├── Helpers/             # ImageHelper, QRCodeHelper
-├── Models/
-├── Repositories/        # Repository pattern
-└── Services/            # Business logic layer
+├── Models/              # 18 models
+├── Repositories/        # 15 repositories (BaseRepository pattern)
+├── Services/            # 10 service classes (business logic layer)
+└── DTO/                 # EventDTO, ParticipantDTO, PaymentDTO, UserDTO
+resources/views/
+├── admin/               # AdminLTE 3 blade views per module
+└── layouts/             # Layout master
 routes/
 ├── api.php              # API routes (prefix: /api/v1)
 ├── web.php              # Admin web routes (prefix: /admin)
 └── auth.php             # Login/logout routes
 frontend-sh3/            # Frontend publik (Next.js 16, React 19, Tailwind v4)
+docs/                    # 15 dokumen modul + PRD
 ```
 
 ## Frontend Publik (Next.js)
 
-Frontend situs publik (landing page, daftar event, register member, galeri, merchandise) berada di `frontend-sh3/`.
+Frontend situs publik (landing page, daftar event, register member, galeri, merchandise, sponsor, struktur organisasi) berada di `frontend-sh3/`.
 
 ```bash
 cd frontend-sh3
@@ -109,6 +116,25 @@ Konfigurasi env frontend:
 |----------|-------|------------|
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000/api/v1` | Base URL API backend |
 | `NEXT_PUBLIC_BASE_ASSET_URL` | `http://localhost:8000/storage` | Base URL file storage (foto, galeri) |
+
+Halaman Frontend:
+
+| Route | Halaman |
+|-------|---------|
+| `/` | Landing page |
+| `/about` | Tentang SH3 |
+| `/events` | Daftar event |
+| `/events/upcoming` | Detail event mendatang |
+| `/events/finished` | Detail event selesai |
+| `/events/register` | Form registrasi event |
+| `/events/members` | Event khusus member |
+| `/gallery` | Galeri publik (Masonry) |
+| `/members/register` | Registrasi member baru |
+| `/members/detail` | Profil member |
+| `/merchandise` | Daftar merchandise |
+| `/merchandise/order` | Order merchandise |
+| `/sponsor` | Daftar sponsor |
+| `/structure` | Struktur organisasi |
 
 ## Instalasi Produksi (End-to-End)
 
@@ -474,11 +500,13 @@ Semua endpoint API berada di prefix `/api/v1`.
 
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| POST | `/auth/register` | Registrasi peserta baru (password opsional, wajib jika lewat frontend register) |
+| POST | `/auth/register` | Registrasi peserta baru (password opsional) |
 | POST | `/auth/login` | Login (email + password) |
+| POST | `/auth/forgot-password` | Kirim link reset password |
+| POST | `/auth/reset-password` | Reset password |
 | GET | `/events/upcoming` | Event mendatang |
 | GET | `/events` | Semua event (publish + ongoing + completed, tanpa draft) |
-| GET | `/events/{id}` | Detail event (termasuk `galleries`, `sponsors`, `registered_count`, `creator`) |
+| GET | `/events/{id}` | Detail event (galleries, sponsors, registered_count, creator) |
 | GET | `/events/{id}/participants` | Daftar peserta event (publik) |
 | GET | `/categories` | Daftar kategori event + jumlah event |
 | GET | `/galleries` | Semua foto galeri event (URL penuh + thumb) |
@@ -488,18 +516,26 @@ Semua endpoint API berada di prefix `/api/v1`.
 | GET | `/organization/tree` | Struktur pohon organisasi |
 | GET | `/organization/years` | Daftar tahun periode organisasi |
 | GET | `/organization/{id}` | Detail anggota organisasi |
-| GET | `/merchandise` | Daftar merchandise |
+| GET | `/merchandise` | Daftar merchandise (tersedia) |
 | GET | `/merchandise/{id}` | Detail merchandise |
 
-### Authenticated (Bearer token)
+### Authenticated (Bearer token / Sanctum)
 
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| POST | `/auth/logout` | Logout |
+| POST | `/auth/logout` | Logout (revoke token) |
 | GET | `/auth/me` | Profil user + peserta |
+| POST | `/auth/refresh` | Refresh token |
+| GET | `/profile` | Detail profil peserta |
+| PUT | `/profile` | Update profil peserta |
+| POST | `/profile/photo` | Upload foto profil |
 | POST | `/events/{eventId}/register` | Daftar event |
 | GET | `/my-events` | Event yang diikuti user + status order |
-| GET | `/participants` | Data peserta |
+| POST | `/events` | Buat event (admin_full_access, organizer) |
+| PUT | `/events/{id}` | Update event (admin_full_access, organizer) |
+| DELETE | `/events/{id}` | Hapus event (admin_full_access, organizer) |
+| GET | `/events/{id}/qr` | QR code peserta per event (admin/organizer) |
+| GET | `/participants` | Daftar peserta |
 | GET | `/participants/{id}` | Detail peserta |
 | PUT | `/participants/{id}` | Update peserta |
 | GET | `/participants/{id}/events` | Event peserta |
@@ -507,20 +543,61 @@ Semua endpoint API berada di prefix `/api/v1`.
 | POST | `/payments/create` | Buat pembayaran |
 | GET | `/payments/{id}` | Detail pembayaran |
 | GET | `/payments/history` | Riwayat pembayaran |
-| GET | `/membership` | Status membership user (aktif/expired + riwayat) |
+| POST | `/payments/confirm/{id}` | Konfirmasi pembayaran (admin_full_access, bendahara) |
+| GET | `/membership` | Status membership user (aktif/expired) |
 | GET | `/membership/plans` | Daftar paket & harga membership |
 | GET | `/membership/history` | Riwayat membership user |
-| POST | `/membership/subscribe` | Ajukan pembelian membership (menghasilkan payment pending) |
+| POST | `/membership/subscribe` | Ajukan pembelian membership |
 | POST | `/membership/cancel` | Batalkan membership |
 | POST | `/attendance/check-in` | Check-in |
 | POST | `/attendance/check-out` | Check-out |
-| GET | `/attendance/{eventId}` | Absensi per event |
 | POST | `/attendance/scan` | Scan QR code |
+| POST | `/attendance/sync-up` | Sinkronisasi offline (upload) |
+| GET | `/attendance/sync-down` | Sinkronisasi offline (download) |
+| GET | `/attendance/report` | Laporan absensi |
+| GET | `/attendance/{eventId}` | Absensi per event |
 | POST | `/merchandise/order` | Order merchandise |
+| GET | `/merchandise/orders` | Daftar order user |
+| GET | `/merchandise/orders/{id}` | Detail order |
+| POST | `/merchandise/orders/{id}/cancel` | Batalkan order |
+| POST | `/merchandise/orders/{id}/payment` | Upload bukti bayar order |
 | GET | `/notifications` | Notifikasi user (20 terbaru) |
 | GET | `/notifications/unread-count` | Jumlah notifikasi belum dibaca |
 | POST | `/notifications/{id}/read` | Tandai notifikasi dibaca |
 | POST | `/notifications/read-all` | Tandai semua notifikasi dibaca |
+
+## Admin Routes
+
+Semua route admin berada di prefix `/admin` (wajib login session-based).
+
+| Method | Route | Role |
+|--------|-------|------|
+| GET | `/admin/dashboard` | Semua authenticated |
+| GET | `/admin/notifications` | Semua authenticated |
+| GET | `/admin/notifications/unread-count` | Semua authenticated |
+| POST | `/admin/notifications/{id}/read` | Semua authenticated |
+| POST | `/admin/notifications/read-all` | Semua authenticated |
+| GET/POST/PUT/DELETE | `/admin/users` | admin_full_access |
+| PUT | `/admin/users/{id}/toggle-active` | admin_full_access |
+| GET/POST/PUT/DELETE | `/admin/membership-plans` | admin_full_access |
+| GET/POST/PUT/DELETE | `/admin/participants` | admin_full_access, admin_member |
+| GET/POST | `/admin/memberships` | admin_full_access, admin_member, bendahara |
+| POST | `/admin/memberships/{id}/cancel` | admin_full_access, admin_member, bendahara |
+| GET/POST/PUT/DELETE | `/admin/events` | admin_full_access, organizer |
+| PUT | `/admin/events/{id}/publish` | admin_full_access, organizer |
+| GET/POST/PUT/DELETE | `/admin/categories` | admin_full_access, admin_laman |
+| GET/POST/PUT/DELETE | `/admin/galleries` | admin_full_access, admin_laman |
+| GET/POST/PUT/DELETE | `/admin/organization` | admin_full_access, admin_laman |
+| GET/POST/PUT/DELETE | `/admin/sponsors` | admin_full_access, admin_laman, sponsor |
+| GET/POST/PUT/DELETE | `/admin/merchandise` | admin_full_access, admin_laman, merchandise |
+| GET | `/admin/payments` | admin_full_access, bendahara |
+| GET | `/admin/payments/{id}` | admin_full_access, bendahara |
+| PUT | `/admin/payments/{id}/confirm` | admin_full_access, bendahara |
+| PUT | `/admin/payments/{id}/reject` | admin_full_access, bendahara |
+| GET | `/admin/attendance/event/{eventId}` | admin_full_access, admin_laman |
+| GET | `/admin/attendance/report` | admin_full_access, admin_laman |
+| GET/POST | `/admin/attendance/scan` | admin_full_access, admin_laman |
+| POST | `/admin/attendance/event-participant/{id}/generate-qr` | admin_full_access, admin_laman |
 
 ## Redis
 
@@ -547,16 +624,58 @@ php artisan queue:work
 
 ## Fitur
 
-- **Manajemen Event** — CRUD event, jadwal, kategori, quota, publish/ongoing/completed
-- **Manajemen Peserta** — Registrasi via API (tanpa username/password), membership
-- **Membership** — 3 tipe membership (tahunan, setengah tahun, mingguan), pemberian langsung oleh admin, pembelian via API dengan konfirmasi bendahara, riwayat & statistik di halaman `/admin/memberships`
-- **Pembayaran** — Konfirmasi/reject oleh bendahara
-- **Absensi** — Check-in/check-out dengan QR code
-- **Galeri** — Upload foto/video event
-- **Sponsor & Merchandise** — Manajemen sponsor dan penjualan merchandise
-- **Organisasi** — Struktur kepengurusan
-- **Role-based Access** — 8 level role untuk admin panel
-- **Notifikasi Real-time** — broadcast via Reverb (WebSocket) ke admin web dan peserta mobile; tersimpan di database dengan status read/unread
+### 1. Manajemen Event
+CRUD event, jadwal, kategori, quota, upload banner/image. Status flow: `draft → publish → ongoing → completed` (transisi otomatis via scheduler). Registrasi event: free, paid, atau free untuk member. QR code otomatis per registrasi. Peserta dapat melihat event mendatang, detail dengan galeri & sponsor.
+
+### 2. Manajemen Peserta
+Registrasi via API (password opsional, fallback random). Data lengkap: nama, email, phone, gender, tanggal lahir, alamat, kontak darurat, golongan darah, ukuran jersey, kondisi medis. Hash ID: member `0001`, non-member `NM-0001`. Foto profil via user avatar.
+
+### 3. Membership
+Paket membership **dinamis** via tabel `membership_plans` (CRUD admin). Seed awal: Tahunan (12 bln, Rp400k), Setengah Tahun (6 bln, Rp250k), Mingguan (7 hari, Rp10k). Pemberian langsung oleh admin atau pembelian via API (menghasilkan payment pending, aktivasi setelah konfirmasi bendahara). Auto-renewal (7 hari sebelum expiry), cancel, statistik (total, aktif, pending, expired, revenue).
+
+### 4. Pembayaran (Polymorphic)
+Sistem pembayaran polymorphic — satu tabel `payments` melayani `EventParticipant` (registrasi event), `MerchandiseOrder` (order merchandise), dan `MembershipHistory` (membership). Method: transfer, cash, qris. Status: pending → confirmed/rejected/refunded. Upload bukti bayar. Konfirmasi/reject oleh bendahara.
+
+### 5. Absensi & QR Code
+Check-in/check-out via QR scan. Format QR: `SH3-{event_id}-{participant_id}-{8char_hash}`. Dukungan self-scan dan admin-scan. Mode offline: `syncUp`/`syncDown` API. Tracking latitude/longitude. Scanner admin: 20fps, native BarcodeDetector, cooldown 1,5 detik. Generate QR per peserta event dari panel admin.
+
+### 6. Galeri
+Upload foto/video per event. Featured image, sort_order, thumbnail. Album galeri (GalleryAlbum). API publik mengembalikan foto dengan URL penuh + thumb + info event. Masonry gallery + lightbox di frontend.
+
+### 7. Sponsor & Merchandise
+Sponsor: tiers platinum/gold/silver/bronze, logo, website, tahun, many-to-many dengan event. Merchandise: nama, deskripsi, price, size_options (JSON), stock, image, status. Order merchandise via API (auto-create payment, stock decrement, cancel restore stock).
+
+### 8. Organisasi
+Struktur kepengurusan hierarkis (parent-child). Active/inactive, periode jabatan (start/end), sort_order. API: index, show, stats, tree (pohon), years (filter tahun).
+
+### 9. Manajemen User & Role
+8 level role: admin_full_access, admin_laman, admin_member, admin_bnh, organizer, bendahara, sponsor, merchandise, participant. CRUD user, toggle active/inactive, avatar upload. User activity logging (login, logout, CRUD).
+
+### 10. Kategori Event
+Kategori: nama, deskripsi, icon, slug, distance_km, sort_order, is_active. Seed: Long Run, Short Run, Major Events, Super Long. API dengan `events_count`.
+
+### 11. Notifikasi Real-time
+Broadcast via Laravel Reverb (WebSocket). Tersimpan di database dengan status read/unread. Notifikasi untuk admin (registrasi baru, pembayaran, order, check-in, membership) dan peserta (registrasi sukses, konfirmasi/reject payment, aktivasi membership). Queueable (ShouldQueue). Badge unread di panel admin.
+
+### 12. Responsive Layout
+Seluruh halaman admin mengikuti aturan responsive: container max-w-7xl, table overflow-x-auto, form w-full, card w-full, tanpa horizontal scroll.
+
+## Arsitektur
+
+```
+Layered Architecture:
+
+Presentation Layer     → Blade views, API Resources, Middleware, Form Requests
+Business Layer         → Controllers, Services (10), DTO (4)
+Data Layer             → Repositories (15), Models (18), Migrations (22), Seeders
+```
+
+- Business logic **hanya** di Services — Controller tidak mengandung logika bisnis.
+- Database query **hanya** di Repositories — Service tidak mengandung query langsung.
+- 15 Repositories mewarisi `BaseRepository` (all, find, create, update, delete, paginate).
+- 10 Services: Auth, User, Event, Membership, Payment, Merchandise, Attendance, QRCode, Notification, Sidebar.
+- 18 Models dengan Eloquent Relationships lengkap.
+- 22 Migration files mencakup seluruh tabel.
 
 ## Pengembangan
 
@@ -575,6 +694,8 @@ php artisan test
 ```
 
 ## Changelog Terbaru
+
+Lihat `docs/14 — Changelog & Fixes.md` untuk changelog lengkap.
 
 ### 2026-08-03 — Fix Klik Notifikasi Admin Terlempar ke Login (Host Mismatch)
 

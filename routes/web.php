@@ -68,9 +68,12 @@ Route::middleware(['auth'])->group(function () {
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
             Route::resource('categories', CategoryController::class);
-            Route::resource('sponsors', SponsorController::class);
             Route::resource('galleries', GalleryController::class);
             Route::resource('organization', OrganizationController::class);
+        });
+
+        Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman,sponsor'])->group(function () {
+            Route::resource('sponsors', SponsorController::class);
         });
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman,merchandise'])->group(function () {
