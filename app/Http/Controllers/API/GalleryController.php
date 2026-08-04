@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\GalleryResource;
 use App\Models\Gallery;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class GalleryController extends Controller
 {
@@ -18,26 +19,50 @@ class GalleryController extends Controller
             ->orderBy('id')
             ->get();
 
-        $data = $galleries->map(fn (Gallery $gallery) => [
-            'id' => $gallery->id,
-            'event_id' => $gallery->event_id,
-            'album_id' => $gallery->gallery_album_id,
-            'title' => $gallery->title,
-            'description' => $gallery->description,
-            'url' => ImageHelper::getUrl($gallery->file_path),
-            'thumb' => $gallery->thumbnail_path
-                ? ImageHelper::getUrl($gallery->thumbnail_path)
-                : ImageHelper::getUrl($gallery->file_path),
-            'type' => $gallery->type,
-            'is_featured' => $gallery->is_featured,
-            'event' => $gallery->event ? [
-                'id' => $gallery->event->id,
-                'title' => $gallery->event->title,
-                'category' => $gallery->event->category?->name,
-                'status' => $gallery->event->status,
-            ] : null,
+        return response()->json([
+            'data' => GalleryResource::collection($galleries),
+        ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => ['nullable', 'exists:events,id'],
+            'gallery_album_id' => ['nullable', 'exists:gallery_albums,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'source' => ['required', 'in:local,gdrive'],
+            'type' => ['nullable', 'in:image,video'],
+            'is_featured' => ['boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        return response()->json(['data' => $data]);
+        if ($validated['source'] === 'local') {
+            $request->validate([
+                'file' => ['required', 'file', 'max:10240'],
+            ]);
+        } else {
+            $request->validate([
+                'google_drive_url' => ['required', 'string'],
+            ]);
+        }
+
+        $galleryService = app(\App\Services\GalleryService::class);
+
+        if ($validated['source'] === 'local') {
+            $gallery = $galleryService->storeLocal(
+                array_merge($validated, ['type' => $validated['type'] ?? 'image']),
+                $request->file('file')
+            );
+        } else {
+            $gallery = $galleryService->storeGoogleDrive(
+                array_merge($validated, ['type' => $validated['type'] ?? 'image'])
+            );
+        }
+
+        return response()->json([
+            'message' => 'Gallery uploaded successfully.',
+            'data' => new GalleryResource($gallery->load(['event.category', 'album'])),
+        ], 201);
     }
 }

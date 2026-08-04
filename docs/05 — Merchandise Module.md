@@ -23,6 +23,8 @@ CREATE TABLE merchandise (
 );
 ```
 
+> **Catatan:** Tidak ada kolom `category`. Status menggunakan ENUM `status` (available|sold_out|discontinued), bukan boolean `is_active`. Migration: `2024_01_01_000009_create_merchandise_table.php`.
+
 ### Tabel `merchandise_orders`
 
 ```sql
@@ -43,6 +45,8 @@ CREATE TABLE merchandise_orders (
     FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE RESTRICT
 );
 ```
+
+> `payment_status` menggunakan `ENUM(pending|paid|cancelled)`, bukan `pending|paid|shipped|delivered|cancelled` seperti versi PRD. Tidak ada kolom `order_date` — timestamps dipakai.
 
 ## Order Flow (API)
 

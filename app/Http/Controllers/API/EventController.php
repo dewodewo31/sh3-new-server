@@ -61,6 +61,14 @@ class EventController extends Controller
         return response()->json(['message' => 'Event berhasil dihapus']);
     }
 
+    public function cancel(int $id): JsonResponse
+    {
+        $event = $this->eventRepository->findById($id);
+        $this->eventService->cancelEvent($event);
+
+        return response()->json(['message' => 'Event berhasil dibatalkan']);
+    }
+
     public function register(Request $request, int $eventId): JsonResponse
     {
         $event = $this->eventRepository->findById($eventId);

@@ -51,7 +51,9 @@ class EventResource extends JsonResource
                         ['sort_order', 'asc'],
                         ['id', 'asc'],
                     ])
-                    ->map(fn ($gallery) => ImageHelper::getUrl($gallery->file_path))
+                    ->map(fn ($gallery) => $gallery->source === 'gdrive'
+                        ? $gallery->google_drive_url
+                        : ImageHelper::getUrl($gallery->file_path))
                     ->values();
             }, []),
             'created_at' => $this->created_at,

@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ParticipantRequest;
 use App\Repositories\ParticipantRepository;
+use App\Services\UserService;
 
 class ParticipantController extends Controller
 {
     public function __construct(
         private ParticipantRepository $participantRepository,
+        private UserService $userService,
     ) {}
 
     public function index()
@@ -26,7 +28,9 @@ class ParticipantController extends Controller
 
     public function store(ParticipantRequest $request)
     {
-        $this->participantRepository->create($request->validated());
+        $participant = $this->participantRepository->create($request->validated());
+
+        $this->userService->logActivity(auth()->user(), 'create_participant', ['participant_id' => $participant->id, 'name' => $participant->name]);
 
         return redirect()->route('admin.participants.index')->with('success', 'Peserta berhasil ditambahkan');
     }
@@ -50,6 +54,8 @@ class ParticipantController extends Controller
         $participant = $this->participantRepository->findById($id);
         $this->participantRepository->update($participant, $request->validated());
 
+        $this->userService->logActivity(auth()->user(), 'update_participant', ['participant_id' => $participant->id, 'name' => $participant->name]);
+
         return redirect()->route('admin.participants.index')->with('success', 'Data peserta berhasil diupdate');
     }
 
@@ -57,6 +63,8 @@ class ParticipantController extends Controller
     {
         $participant = $this->participantRepository->findById($id);
         $this->participantRepository->delete($participant);
+
+        $this->userService->logActivity(auth()->user(), 'delete_participant', ['participant_id' => $id, 'name' => $participant->name]);
 
         return redirect()->route('admin.participants.index')->with('success', 'Peserta berhasil dihapus');
     }

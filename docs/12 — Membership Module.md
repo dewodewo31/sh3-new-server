@@ -58,7 +58,7 @@ File: `app/Http/Controllers/Admin/MembershipPlanController.php`, `app/Repositori
 CREATE TABLE membership_histories (
     id INT PRIMARY KEY AUTO_INCREMENT,
     participant_id INT NOT NULL,
-    membership_type ENUM('tahunan', 'setengah_tahun', 'mingguan') NOT NULL,
+    membership_type VARCHAR(50) NOT NULL,               -- key dari membership_plans
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     price DECIMAL(15,2) NOT NULL,
@@ -68,6 +68,8 @@ CREATE TABLE membership_histories (
     FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
 );
 ```
+
+> `membership_type` adalah VARCHAR (diubah dari ENUM oleh migration `2026_07_31_100001`). `status` menyertakan `pending` (default) — ditambahkan oleh migration `2026_07_31_000001`. Constants model: `STATUS_PENDING`, `STATUS_ACTIVE`, `STATUS_EXPIRED`, `STATUS_CANCELLED`, `MEMBERSHIP_TAHUNAN`, `MEMBERSHIP_SETENGAH_TAHUN`, `MEMBERSHIP_MINGGUAN`.
 
 Field membership pada `participants` (kolom denormalisasi untuk status aktif saat ini):
 

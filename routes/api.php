@@ -31,17 +31,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/events/{id}/participants', [EventController::class, 'participants']);
     Route::get('/galleries', [GalleryController::class, 'index']);
 
-    Route::get('/sponsors', [SponsorController::class, 'index']);
-    Route::get('/categories', [CategoryController::class, 'index']);
-    Route::get('/organization/stats', [OrganizationController::class, 'stats']);
-    Route::get('/organization/tree', [OrganizationController::class, 'tree']);
-    Route::get('/organization/years', [OrganizationController::class, 'years']);
-    Route::get('/organization', [OrganizationController::class, 'index']);
-    Route::get('/organization/{id}', [OrganizationController::class, 'show'])->whereNumber('id');
-    Route::get('/merchandise', [MerchandiseController::class, 'index']);
-    Route::get('/merchandise/{id}', [MerchandiseController::class, 'show'])->whereNumber('id');
-
     Route::middleware('auth:sanctum')->group(function () {
+        Route::middleware('role:admin_full_access,admin_laman,admin_bnh')->group(function () {
+            Route::post('/admin/galleries', [GalleryController::class, 'store']);
+        });
 
         Route::post('/events/{eventId}/register', [EventController::class, 'register']);
         Route::get('/my-events', [EventController::class, 'myEvents']);
@@ -50,6 +43,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/events', [EventController::class, 'store']);
             Route::put('/events/{id}', [EventController::class, 'update']);
             Route::delete('/events/{id}', [EventController::class, 'destroy']);
+            Route::post('/events/{id}/cancel', [EventController::class, 'cancel']);
             Route::get('/events/{id}/qr', [EventController::class, 'qrCodes']);
         });
 

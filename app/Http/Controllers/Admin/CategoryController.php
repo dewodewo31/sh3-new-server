@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CategoryRequest;
 use App\Repositories\CategoryRepository;
+use App\Services\UserService;
 
 class CategoryController extends Controller
 {
     public function __construct(
         private CategoryRepository $categoryRepository,
+        private UserService $userService,
     ) {}
 
     public function index()
@@ -26,7 +28,9 @@ class CategoryController extends Controller
 
     public function store(CategoryRequest $request)
     {
-        $this->categoryRepository->create($request->validated());
+        $category = $this->categoryRepository->create($request->validated());
+
+        $this->userService->logActivity(auth()->user(), 'create_category', ['category_id' => $category->id, 'name' => $category->name]);
 
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil dibuat');
     }
@@ -43,6 +47,8 @@ class CategoryController extends Controller
         $category = $this->categoryRepository->findById($id);
         $this->categoryRepository->update($category, $request->validated());
 
+        $this->userService->logActivity(auth()->user(), 'update_category', ['category_id' => $category->id, 'name' => $category->name]);
+
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil diupdate');
     }
 
@@ -50,6 +56,8 @@ class CategoryController extends Controller
     {
         $category = $this->categoryRepository->findById($id);
         $this->categoryRepository->delete($category);
+
+        $this->userService->logActivity(auth()->user(), 'delete_category', ['category_id' => $id, 'name' => $category->name]);
 
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil dihapus');
     }

@@ -55,6 +55,8 @@ CREATE TABLE attendance_logs (
 - `is_attended` (bool)
 - `check_in_at`, `check_out_at`
 - `qr_code`
+- `registration_type` (free|paid|membership)
+- `payment_status` (pending|confirmed|rejected|refunded)
 
 ## QR Code Format
 

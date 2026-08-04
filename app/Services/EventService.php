@@ -28,6 +28,24 @@ class EventService
                 ]);
             }
 
+                if ($event->status === Event::STATUS_CANCELLED) {
+                throw ValidationException::withMessages([
+                    'event' => ['Event ini sudah dibatalkan dan tidak menerima pendaftaran.'],
+                ]);
+            }
+
+            if ($event->registration_start_date > now()) {
+                throw ValidationException::withMessages([
+                    'event' => ['Pendaftaran untuk event ini belum dibuka.'],
+                ]);
+            }
+
+            if ($event->registration_end_date < now()) {
+                throw ValidationException::withMessages([
+                    'event' => ['Pendaftaran untuk event ini sudah ditutup.'],
+                ]);
+            }
+
             $existing = $this->eventParticipantRepository->findByEventAndParticipant(
                 $event->id, $participant->id
             );
@@ -101,13 +119,13 @@ class EventService
 
     public function publishEvent(Event $event): void
     {
-        if ($event->status !== 'draft') {
+        if ($event->status !== Event::STATUS_DRAFT) {
             throw ValidationException::withMessages([
                 'status' => ['Hanya event dengan status draft yang bisa dipublikasi.'],
             ]);
         }
 
-        $event->update(['status' => 'publish']);
+        $event->update(['status' => Event::STATUS_PUBLISH]);
 
         $this->notificationService->notifyAdmins(
             'Event dipublikasikan',
@@ -117,17 +135,41 @@ class EventService
         );
     }
 
+    public function cancelEvent(Event $event): void
+    {
+        if ($event->status === Event::STATUS_CANCELLED) {
+            throw ValidationException::withMessages([
+                'status' => ['Event sudah dibatalkan sebelumnya.'],
+            ]);
+        }
+
+        if (in_array($event->status, [Event::STATUS_COMPLETED, Event::STATUS_ONGOING], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Event yang sedang atau sudah selesai tidak bisa dibatalkan.'],
+            ]);
+        }
+
+        $event->update(['status' => Event::STATUS_CANCELLED]);
+
+        $this->notificationService->notifyAdmins(
+            'Event dibatalkan',
+            'Event '.$event->title.' telah dibatalkan.',
+            'x-circle',
+            route('admin.events.show', $event->id),
+        );
+    }
+
     public function updateEventStatus(): void
     {
         Event::query()
-            ->where('status', 'publish')
+            ->where('status', Event::STATUS_PUBLISH)
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now())
-            ->update(['status' => 'ongoing']);
+            ->update(['status' => Event::STATUS_ONGOING]);
 
         Event::query()
-            ->whereIn('status', ['publish', 'ongoing'])
+            ->whereIn('status', [Event::STATUS_PUBLISH, Event::STATUS_ONGOING])
             ->where('end_date', '<', now())
-            ->update(['status' => 'completed']);
+            ->update(['status' => Event::STATUS_COMPLETED]);
     }
 }

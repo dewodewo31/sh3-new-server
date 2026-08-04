@@ -14,10 +14,10 @@ CREATE TABLE payments (
     paymentable_id INT,
     amount DECIMAL(15,2) NOT NULL,
     payment_method ENUM('transfer','cash','qris') DEFAULT 'transfer',
-    payment_proof VARCHAR(255) NULL,      -- path bukti bayar
+    payment_proof VARCHAR(255) NULL,
     status ENUM('pending','confirmed','rejected','refunded') DEFAULT 'pending',
-    confirmed_by INT NULL,                -- user_id bendahara
-    paid_at TIMESTAMP NULL,
+    confirmed_by INT NULL,
+    paid_at DATETIME NULL,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     FOREIGN KEY (participant_id) REFERENCES participants(id),
@@ -25,7 +25,7 @@ CREATE TABLE payments (
 );
 ```
 
-> **Polymorphic relation:** `morphOne(Payment::class, 'paymentable')` pada `EventParticipant`, `MerchandiseOrder`, dan `MembershipHistory`. `payment_type` menunjukkan jenis pembayaran.
+> **Polymorphic relation:** `morphTo(Payment::class, 'paymentable')` pada model Payment. `paymentable_type` + `paymentable_id` menyimpan referensi ke `EventParticipant`, `MerchandiseOrder`, atau `MembershipHistory`. Tidak ada kolom individual `event_id`/`merchandise_id` — tabel ini sudah polymorphic sejak awal.
 
 ## Flow
 

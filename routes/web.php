@@ -64,6 +64,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware([RoleMiddleware::class.':admin_full_access,organizer'])->group(function () {
             Route::resource('events', EventController::class);
             Route::put('/events/{id}/publish', [EventController::class, 'publish'])->name('events.publish');
+            Route::post('/events/{id}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
         });
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {

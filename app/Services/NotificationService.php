@@ -18,6 +18,8 @@ class NotificationService
                 'admin_bnh',
                 'organizer',
                 'bendahara',
+                'sponsor',
+                'merchandise',
             ])
             ->get();
 

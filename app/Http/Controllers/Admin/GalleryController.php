@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\GalleryRequest;
 use App\Repositories\GalleryRepository;
 use App\Repositories\EventRepository;
+use App\Services\GalleryService;
 
 class GalleryController extends Controller
 {
     public function __construct(
         private GalleryRepository $galleryRepository,
         private EventRepository $eventRepository,
+        private GalleryService $galleryService,
     ) {}
 
     public function index()
@@ -24,30 +26,63 @@ class GalleryController extends Controller
     public function create()
     {
         $events = $this->eventRepository->all();
+        $albums = \App\Models\GalleryAlbum::all();
 
-        return view('galleries.create', compact('events'));
+        return view('galleries.create', compact('events', 'albums'));
     }
 
-    public function store(\App\Http\Requests\GalleryRequest $request)
+    public function store(GalleryRequest $request)
     {
         $data = $request->validated();
         $data['created_by'] = auth()->id();
 
-        if ($request->hasFile('file')) {
-            $data['file_path'] = ImageHelper::upload($request->file('file'), 'galleries');
-        }
-        unset($data['file']);
+        $source = $request->input('source', 'local');
 
-        $this->galleryRepository->create($data);
+        if ($source === 'local') {
+            $gallery = $this->galleryService->storeLocal($data, $request->file('file'));
+        } else {
+            $gallery = $this->galleryService->storeGoogleDrive($data);
+        }
 
         return redirect()->route('admin.galleries.index')->with('success', 'Gallery berhasil ditambahkan');
     }
 
-    public function destroy(int $id)
+    public function show(int $id)
     {
         $gallery = $this->galleryRepository->findById($id);
-        ImageHelper::delete($gallery->file_path);
-        $this->galleryRepository->delete($gallery);
+
+        return view('galleries.show', compact('gallery'));
+    }
+
+    public function edit(int $id)
+    {
+        $gallery = $this->galleryRepository->findById($id);
+        $events = $this->eventRepository->all();
+        $albums = \App\Models\GalleryAlbum::all();
+
+        return view('galleries.edit', compact('gallery', 'events', 'albums'));
+    }
+
+    public function update(int $id, GalleryRequest $request)
+    {
+        $data = $request->validated();
+        $data['created_by'] = auth()->id();
+
+        $source = $request->input('source', 'local');
+
+        if ($source === 'local' && $request->hasFile('file')) {
+            $gallery = $this->galleryService->update($id, array_merge($data, ['file' => $request->file('file')]));
+        } else {
+            unset($data['file']);
+            $gallery = $this->galleryService->update($id, $data);
+        }
+
+        return redirect()->route('admin.galleries.index')->with('success', 'Gallery berhasil diperbarui');
+    }
+
+    public function destroy(int $id)
+    {
+        $this->galleryService->delete($id);
 
         return redirect()->route('admin.galleries.index')->with('success', 'Gallery berhasil dihapus');
     }

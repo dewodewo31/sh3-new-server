@@ -28,7 +28,9 @@ class UserController extends Controller
 
     public function store(UserRequest $request)
     {
-        $this->userService->createUser($request->validated());
+        $user = $this->userService->createUser($request->validated());
+
+        $this->userService->logActivity(auth()->user(), 'create_user', ['user_id' => $user->id, 'email' => $user->email]);
 
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dibuat');
     }
@@ -52,6 +54,8 @@ class UserController extends Controller
         $user = $this->userRepository->findById($id);
         $this->userService->updateUser($user, $request->validated());
 
+        $this->userService->logActivity(auth()->user(), 'update_user', ['user_id' => $user->id, 'email' => $user->email]);
+
         return redirect()->route('admin.users.index')->with('success', 'User berhasil diupdate');
     }
 
@@ -60,13 +64,19 @@ class UserController extends Controller
         $user = $this->userRepository->findById($id);
         $this->userRepository->delete($user);
 
+        $this->userService->logActivity(auth()->user(), 'delete_user', ['user_id' => $id, 'email' => $user->email]);
+
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus');
     }
 
     public function toggleActive(int $id)
     {
         $user = $this->userRepository->findById($id);
+        $oldStatus = $user->is_active;
         $this->userService->toggleActive($user);
+
+        $newStatus = !$oldStatus;
+        $this->userService->logActivity(auth()->user(), 'toggle_user_active', ['user_id' => $user->id, 'was_active' => $oldStatus, 'now_active' => $newStatus]);
 
         return redirect()->back()->with('success', 'Status user berhasil diubah');
     }

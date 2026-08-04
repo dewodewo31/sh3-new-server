@@ -2,6 +2,49 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-04 — Sinkronisasi Implementasi & Dokumentasi
+
+### Scheduler & Console Commands
+
+- **app/Console/Commands/** (4 file baru):
+  - `UpdateEventStatus.php` — `events:update-status`, transisi event draft→publish→ongoing→completed berdasarkan tanggal.
+  - `MembershipExpiration.php` — `membership:expire`, menandai membership histories yang expired (daily 00:00).
+  - `MembershipAutoRenewal.php` — `membership:auto-renew`, auto-renew participants dengan membership akan kedaluwarsa dalam 7 hari (daily 01:00).
+  - `NotificationCleanup.php` — `notifications:cleanup --days=30`, hapus notifikasi lebih dari 30 hari (daily 02:00).
+- **bootstrap/app.php** — menambahkan `->withSchedule(...)` dengan 4 jadwal task.
+
+### Notification
+
+- **app/Services/NotificationService.php::notifyAdmins()** — memperbaiki daftar role admin dengan menambahkan `sponsor` dan `merchandise` (sebelumnya hanya sampai `bendahara`).
+
+### Event — Cancel Flow
+
+- **app/Models/Event.php** — menambahkan konstanta status: `STATUS_DRAFT`, `STATUS_PUBLISH`, `STATUS_ONGOING`, `STATUS_COMPLETED`, `STATUS_CANCELLED`.
+- **app/Services/EventService.php**:
+  - Method baru `cancelEvent(Event $event)` — membatalkan event (validasi tidak cancelled/ongoing/completed), mengirim notifikasi ke admin.
+  - `updateEventStatus()` — menggunakan konstanta Event, bukan magic string.
+  - `publishEvent()` — menggunakan konstanta Event.
+  - `registerEvent()` — validasi baru: cek `registration_start_date` (belum dibuka) dan `registration_end_date` (sudah ditutup) dengan pengecualian validation.
+- **app/Http/Controllers/API/EventController.php** — method baru `cancel(int $id)`.
+- **app/Http/Controllers/Admin/EventController.php**:
+  - `publish()` — memakai `EventService::publishEvent()` (dengan error handling validation).
+  - Method baru `cancel(int $id)`.
+- **routes/api.php** — route baru `POST /api/v1/events/{id}/cancel`.
+- **routes/web.php** — route baru `POST admin/events/{id}/cancel`.
+
+### Activity Logging
+
+- **app/Http/Controllers/Admin/UserController.php** — menambahkan `logActivity()` pada store, update, destroy, toggleActive.
+- **app/Http/Controllers/Admin/EventController.php** — menambahkan `logActivity()` pada store, update, destroy, publish, cancel.
+- **app/Http/Controllers/Admin/CategoryController.php** — menambahkan `logActivity()` pada store, update, destroy.
+- **app/Http/Controllers/Admin/ParticipantController.php** — menambahkan `logActivity()` pada store, update, destroy.
+
+### Dokumentasi
+
+- **docs/17 — Implementation Sync.md** — memperbarui tabel inventory (Console Commands: 4, Scheduler: 4), bagian Notifications, dan Known Limitations.
+
+---
+
 ## 2026-08-03 — Fix Klik Notifikasi Admin Terlempar ke Login (Host Mismatch)
 
 ### Masalah

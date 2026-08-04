@@ -1,6 +1,6 @@
 # 01 — Arsitektur & Authentication
 
-# Layered Architecture
+## Layered Architecture
 
 ```
 PRESENTATION LAYER
@@ -8,23 +8,40 @@ PRESENTATION LAYER
 APPLICATION LAYER
   Controllers → Services → Requests → Resources
 DOMAIN LAYER
-  Models → Enums → DTOs → Domain Events/Jobs
+  Models → DTOs
 INFRASTRUCTURE LAYER
   Database (MySQL) → Queue → Mail → Notification
 ```
 
-# Authentication
+## Authentication
 
-- Admin Login: Web session-based via /auth
-- Participant Login: API token-based (POST /api/participant/login)
+- Admin login: web session-based melalui `GET/POST /login`; logout `POST /logout`.
+- Participant/API login: token-based Laravel Sanctum melalui `POST /api/v1/auth/login`.
+- API private route memakai middleware `auth:sanctum`; route admin memakai middleware `auth`.
 
-# 8 Admin Roles
+## Admin Roles
 
-- ADMIN FULL ACCESS — Full akses semua menu
-- ADMIN LAMAN — Semua menu website
-- ADMIN MEMBER — Hanya member/participant
-- ADMIN BNH — Gallery & konten BNH
-- ORGANIZER — Event & orders
-- BENDAHARA — Dashboard, orders, payments
-- SPONSOR — Hanya sponsor
-- MERCHANDISE — Hanya merchandise
+- `admin_full_access` — full access.
+- `admin_laman` — akses menu website sesuai route role.
+- `admin_member` — participant dan membership sesuai route role.
+- `admin_bnh` — role user tersedia; akses aktual harus mengikuti route yang eksplisit.
+- `organizer` — event sesuai route role.
+- `bendahara` — membership dan payment sesuai route role.
+- `sponsor` — sponsor sesuai route role.
+- `merchandise` — merchandise sesuai route role.
+- `participant` — role API; bukan role admin.
+
+## Middleware
+
+- `RoleMiddleware` — memeriksa role user dan mengizinkan akses hanya untuk role yang tercantum. Redirect `/login` jika belum login, abort(403) jika role tidak cocok.
+- `AdminMiddleware` — middleware tambahan untuk admin.
+- `EnsureApiMeta` — middleware untuk API response (menambahkan meta seperti timestamp, request_id).
+
+## Gate Definitions
+
+Gate didefinisikan di `AppServiceProvider` untuk setiap role admin:
+`admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, `merchandise`.
+
+`participant` tidak memiliki Gate admin; aksesnya melalui API authenticated atau endpoint publik.
+
+Otorisasi route memakai `RoleMiddleware`; Gate tambahan didefinisikan di `AppServiceProvider`. Route, Gate, service, model, migration, dan coverage aktual dirangkum di `docs/17 — Implementation Sync.md`.

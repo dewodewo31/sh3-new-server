@@ -5,10 +5,17 @@ use App\Http\Middleware\EnsureApiMeta;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('events:update-status')->everyMinute();
+        $schedule->command('membership:expire')->dailyAt('00:00');
+        $schedule->command('membership:auto-renew')->dailyAt('01:00');
+        $schedule->command('notifications:cleanup --days=30')->dailyAt('02:00');
+    })
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',

@@ -19,7 +19,7 @@ CREATE TABLE participants (
     medical_conditions TEXT,
     blood_type VARCHAR(5),
     jersey_size ENUM('XS', 'S', 'M', 'L', 'XL', 'XXL'),
-    membership_type ENUM('tahunan', 'setengah_tahun', 'mingguan', 'none') DEFAULT 'none',
+    membership_type VARCHAR(50) DEFAULT 'none',       -- key dari membership_plans
     membership_start_date DATE,
     membership_end_date DATE,
     is_active BOOLEAN DEFAULT TRUE,
@@ -30,22 +30,31 @@ CREATE TABLE participants (
 );
 ```
 
-## Registrasi Peserta
-
-- **Via API**: `POST /api/v1/auth/register` — membuat `User` (role `participant`) + `Participant` dalam satu transaksi.
-- **Via admin**: CRUD `/admin/participants`.
-
-Setiap `User` bisa memiliki banyak `Participant` (hasMany), namun flow saat ini menggunakan peserta pertama (`user->participants()->first()`).
+> **Catatan:** `membership_type` adalah VARCHAR(50), bukan ENUM. Nilainya adalah `key` dari tabel `membership_plans`. Migration yang mengubah ENUM → string: `2026_07_31_100001_change_membership_type_to_string.php`.
 
 ## Relasi
 
 - `user()` — belongsTo User
 - `membershipHistories()` — hasMany MembershipHistory
+- `membershipPlan()` — belongsTo MembershipPlan via `membership_type` => `key`
 - `eventParticipants()` — hasMany EventParticipant
 - `payments()` — hasMany Payment
 - `merchandiseOrders()` — hasMany MerchandiseOrder
 - `organizationMembers()` — hasMany OrganizationMember
 - `isMembershipActive()` — helper: true jika `membership_type != none` dan `membership_end_date >= hari ini`
+- `membershipTypeLabel()` — label dari plan name (fallback: title case)
+
+## hash_id
+
+`ParticipantResource` menyertakan `hash_id`:
+- Member (membership aktif): `%04d` (contoh `0022`)
+- Non-member: `NM-%04d` (contoh `NM-0044`)
+- Dihasilkan oleh accessor `hashId()` pada model Participant
+
+## Registrasi Peserta
+
+- **Via API**: `POST /api/v1/auth/register` — membuat `User` (role `participant`) + `Participant` dalam satu transaksi.
+- **Via admin**: CRUD `/admin/participants`, role `admin_full_access` atau `admin_member`.
 
 ## Membership
 

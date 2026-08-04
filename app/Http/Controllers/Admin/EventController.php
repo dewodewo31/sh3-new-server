@@ -7,12 +7,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\EventRequest;
 use App\Repositories\CategoryRepository;
 use App\Repositories\EventRepository;
+use App\Services\UserService;
 
 class EventController extends Controller
 {
-    public function __construct(
+        public function __construct(
         private EventRepository $eventRepository,
         private CategoryRepository $categoryRepository,
+        private \App\Services\EventService $eventService,
+        private UserService $userService,
     ) {}
 
     public function index()
@@ -42,7 +45,9 @@ class EventController extends Controller
             }
         }
 
-        $this->eventRepository->create($data);
+        $event = $this->eventRepository->create($data);
+
+        $this->userService->logActivity(auth()->user(), 'create_event', ['event_id' => $event->id, 'title' => $event->title]);
 
         return redirect()->route('admin.events.index')->with('success', 'Event berhasil dibuat');
     }
@@ -79,6 +84,8 @@ class EventController extends Controller
 
         $this->eventRepository->update($event, $data);
 
+        $this->userService->logActivity(auth()->user(), 'update_event', ['event_id' => $event->id, 'title' => $event->title]);
+
         return redirect()->route('admin.events.index')->with('success', 'Event berhasil diupdate');
     }
 
@@ -92,14 +99,38 @@ class EventController extends Controller
         }
         $this->eventRepository->delete($event);
 
+        $this->userService->logActivity(auth()->user(), 'delete_event', ['event_id' => $id, 'title' => $event->title]);
+
         return redirect()->route('admin.events.index')->with('success', 'Event berhasil dihapus');
     }
 
     public function publish(int $id)
     {
         $event = $this->eventRepository->findById($id);
-        $event->update(['status' => 'publish']);
+        
+        try {
+            $this->eventService->publishEvent($event);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
+
+        $this->userService->logActivity(auth()->user(), 'publish_event', ['event_id' => $event->id, 'title' => $event->title]);
 
         return redirect()->back()->with('success', 'Event berhasil dipublikasi');
+    }
+
+    public function cancel(int $id)
+    {
+        $event = $this->eventRepository->findById($id);
+
+        try {
+            $this->eventService->cancelEvent($event);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
+
+        $this->userService->logActivity(auth()->user(), 'cancel_event', ['event_id' => $event->id, 'title' => $event->title]);
+
+        return redirect()->back()->with('success', 'Event berhasil dibatalkan');
     }
 }
