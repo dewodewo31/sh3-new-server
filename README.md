@@ -61,6 +61,8 @@ php artisan serve
 
 ## Default Credentials (Seeder)
 
+### Admin (Web Login — `/login` with email)
+
 | Role | Email | Password |
 |------|-------|----------|
 | Admin Full Access | admin.full@sh3.com | password |
@@ -72,7 +74,17 @@ php artisan serve
 | Sponsor | sponsor@sh3.com | password |
 | Merchandise | merchandise@sh3.com | password |
 
-Login di `/login`.
+### Participant (API Login — `/api/v1/auth/login` with username)
+
+Participant users are auto-created by `ParticipantSeeder` with username generated from name.
+
+| Name | Username | Password |
+|------|----------|----------|
+| Budi Santoso | budi_santoso | password |
+| Siti Rahayu | siti_rahayu | password |
+| ... | (auto-generated from name) | password |
+
+Admin login di `/login`. Participant login di `POST /api/v1/auth/login` (username).
 
 ## Struktur
 
@@ -500,8 +512,8 @@ Semua endpoint API berada di prefix `/api/v1`.
 
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| POST | `/auth/register` | Registrasi peserta baru (password opsional) |
-| POST | `/auth/login` | Login (email + password) |
+| POST | `/auth/register` | Registrasi peserta baru (password opsional, username opsional/auto-generate) |
+| POST | `/auth/login` | Login peserta (username + password) → Sanctum token |
 | POST | `/auth/forgot-password` | Kirim link reset password |
 | POST | `/auth/reset-password` | Reset password |
 | GET | `/events/upcoming` | Event mendatang |

@@ -54,7 +54,35 @@ CREATE TABLE participants (
 ## Registrasi Peserta
 
 - **Via API**: `POST /api/v1/auth/register` — membuat `User` (role `participant`) + `Participant` dalam satu transaksi.
+  - Field `username` bersifat **opsional**; jika tidak disertakan, sistem akan meng-generate
+    otomatis berdasarkan `name` (format: `slug_name`, unik dengan suffix angka jika duplikat).
+  - Aturan username: 3–30 karakter, hanya huruf/karis/underscore.
+  - `email` tetap **wajib** (dipakai untuk notifikasi, verifikasi, reset password, komunikasi).
 - **Via admin**: CRUD `/admin/participants`, role `admin_full_access` atau `admin_member`.
+
+## Login Peserta (API)
+
+Peserta login melalui API menggunakan **username**, bukan email.
+
+```
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+    "username": "johndoe",
+    "password": "secret123"
+}
+```
+
+- **Request class:** `LoginRequest` — memvalidasi `username` (required, string) + `password` (required, string).
+- **Service:** `AuthService::login()` — lookup user via `UserRepository::findByUsername()`,
+  lalu memastikan `role = 'participant'` dan `is_active = true`.
+- **Response:** Sanctum token + user data (termasuk `username`).
+- **Error scenarios:**
+  - Username tidak ditemukan atau password salah → 422 `"Username atau password salah."`
+  - Akun non-aktif (`is_active = false`) → 422 `"Akun Anda telah dinonaktifkan."`
+  - Admin/user non-participant mencoba login via API → 422 `"Akun ini bukan peserta."`
+- **Email** tidak dipakai untuk login peserta. Email tetap untuk notifikasi, verifikasi, dan reset password.
 
 ## Membership
 

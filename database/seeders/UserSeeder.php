@@ -11,14 +11,14 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            ['name' => 'Admin Full Access', 'email' => 'admin.full@sh3.com', 'role' => 'admin_full_access'],
-            ['name' => 'Admin Laman', 'email' => 'admin.laman@sh3.com', 'role' => 'admin_laman'],
-            ['name' => 'Admin Member', 'email' => 'admin.member@sh3.com', 'role' => 'admin_member'],
-            ['name' => 'Admin BNH', 'email' => 'admin.bnh@sh3.com', 'role' => 'admin_bnh'],
-            ['name' => 'Organizer', 'email' => 'organizer@sh3.com', 'role' => 'organizer'],
-            ['name' => 'Bendahara', 'email' => 'bendahara@sh3.com', 'role' => 'bendahara'],
-            ['name' => 'Sponsor', 'email' => 'sponsor@sh3.com', 'role' => 'sponsor'],
-            ['name' => 'Merchandise', 'email' => 'merchandise@sh3.com', 'role' => 'merchandise'],
+            ['name' => 'Admin Full Access', 'username' => 'admin_full', 'email' => 'admin.full@sh3.com', 'role' => 'admin_full_access'],
+            ['name' => 'Admin Laman', 'username' => 'admin_laman', 'email' => 'admin.laman@sh3.com', 'role' => 'admin_laman'],
+            ['name' => 'Admin Member', 'username' => 'admin_member', 'email' => 'admin.member@sh3.com', 'role' => 'admin_member'],
+            ['name' => 'Admin BNH', 'username' => 'admin_bnh', 'email' => 'admin.bnh@sh3.com', 'role' => 'admin_bnh'],
+            ['name' => 'Organizer', 'username' => 'organizer', 'email' => 'organizer@sh3.com', 'role' => 'organizer'],
+            ['name' => 'Bendahara', 'username' => 'bendahara', 'email' => 'bendahara@sh3.com', 'role' => 'bendahara'],
+            ['name' => 'Sponsor', 'username' => 'sponsor', 'email' => 'sponsor@sh3.com', 'role' => 'sponsor'],
+            ['name' => 'Merchandise', 'username' => 'merchandise', 'email' => 'merchandise@sh3.com', 'role' => 'merchandise'],
         ];
 
         foreach ($users as $user) {
@@ -26,6 +26,7 @@ class UserSeeder extends Seeder
                 ['email' => $user['email']],
                 [
                     'name' => $user['name'],
+                    'username' => $user['username'],
                     'password' => Hash::make('password'),
                     'role' => $user['role'],
                     'is_active' => true,

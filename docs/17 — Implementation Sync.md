@@ -104,7 +104,7 @@ Relasi utama: user-participant/activity logs; participant-membership histories/e
 
 ## Validation, Responses, and Errors
 
-Validasi berada pada 24 Form Request di `app/Http/Requests`. Response sukses umumnya memakai `data` dan optional `message`, sedangkan validasi Laravel memakai HTTP 422 dengan `message` dan `errors`. Auth gagal adalah HTTP 401, forbidden role HTTP 403, resource tidak ditemukan HTTP 404. Field dan batas upload mengikuti Request class aktual.
+Validasi berada pada Form Request di `app/Http/Requests` (termasuk `LoginRequest` untuk participant API login via `username`, dan `EmailLoginRequest` untuk web admin login via `email`). Response sukses API menggunakan `message`, `user`, dan `token`. Validasi Laravel memakai HTTP 422 dengan `message` dan `errors` (key field sesuai request). Auth gagal adalah HTTP 401, forbidden role HTTP 403, resource tidak ditemukan HTTP 404.
 
 ## Database Schema and Migration Changes
 
@@ -146,15 +146,15 @@ Dependensi utama: PHP `^8.3`, Laravel `^13.8`, Sanctum, Reverb, Tinker, dan Simp
 POST /api/v1/auth/login
 Content-Type: application/json
 
-{"email":"user@example.com","password":"secret123"}
+{"username":"johndoe","password":"secret123"}
 ```
 
 ```json
-{"data":{"token":"...","user":{"id":1,"role":"participant"}},"message":"Login berhasil"}
+{"message":"Login berhasil","user":{"id":1,"name":"...","username":"johndoe","email":"...","role":"participant"},"token":"..."}
 ```
 
 ```json
-{"message":"The given data was invalid.","errors":{"field":["The field is required."]}}
+{"message":"The given data was invalid.","errors":{"username":["The username field is required."]}}
 ```
 
 Payload dan field response per modul harus dirujuk ke Request/Resource aktual karena tidak semua endpoint memakai bentuk yang sama.

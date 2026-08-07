@@ -45,6 +45,7 @@ class GalleryService
         $data['thumbnail_path'] = $thumbnailPath;
         $data['source'] = 'local';
         $data['created_by'] = auth()->id();
+        unset($data['file']);
 
         return $this->galleryRepository->create($data);
     }

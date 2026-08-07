@@ -44,8 +44,11 @@ class AuthController extends Controller
         $data = $request->validated();
 
         $user = DB::transaction(function () use ($data) {
+            $username = $data['username'] ?? $this->generateUsername($data['name']);
+
             $user = User::create([
                 'name' => $data['name'],
+                'username' => $username,
                 'email' => $data['email'],
                 'password' => $data['password'] ?? Str::random(60),
                 'role' => 'participant',
@@ -140,5 +143,26 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Password berhasil direset.',
         ]);
+    }
+
+    private function generateUsername(string $name): string
+    {
+        $base = Str::slug($name, '_');
+        $base = str_replace('-', '_', $base);
+        $base = preg_replace('/[^a-zA-Z0-9_]/', '', $base);
+        $base = Str::lower($base);
+        $base = substr($base, 0, 30);
+
+        $username = $base;
+        $suffix = 1;
+        while (User::where('username', $username)->exists()) {
+            $suffixPart = (string) $suffix;
+            $maxLen = 30 - strlen($suffixPart) - 1;
+            $truncated = $maxLen > 0 ? substr($base, 0, $maxLen) : substr($base, 0, 25);
+            $username = $truncated.'_'.$suffixPart;
+            $suffix++;
+        }
+
+        return $username;
     }
 }

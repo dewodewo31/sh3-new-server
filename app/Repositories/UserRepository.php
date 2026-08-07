@@ -16,6 +16,11 @@ class UserRepository extends BaseRepository
         return $this->findFirstBy('email', $email);
     }
 
+    public function findByUsername(string $username)
+    {
+        return $this->findFirstBy('username', $username);
+    }
+
     public function findByRole(string $role)
     {
         return $this->findBy('role', $role);

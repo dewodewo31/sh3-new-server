@@ -72,17 +72,44 @@ Disimpan di `user_activity_logs` (action + details JSON + ip + user_agent).
 
 ## API (Auth)
 
+API authentication hanya untuk **participant** (role `participant`).
+Admin login menggunakan web session di `POST /login` (email + password).
+
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| POST | `/api/v1/auth/register` | Register peserta (role=participant), password opsional |
-| POST | `/api/v1/auth/login` | Login → token + user |
+| POST | `/api/v1/auth/register` | Register peserta (role=participant), password opsional, username opsional (auto-generate) |
+| POST | `/api/v1/auth/login` | Login peserta via **username** + password → token + user |
 | POST | `/api/v1/auth/logout` | Logout (revoke token) |
-| GET | `/api/v1/auth/me` | Profil user + participants |
+| GET | `/api/v1/auth/me` | Profil user + peserta |
 | POST | `/api/v1/auth/refresh` | Refresh token |
-| POST | `/api/v1/auth/forgot-password` | Kirim link reset password |
+| POST | `/api/v1/auth/forgot-password` | Kirim link reset password (berdasarkan email) |
 | POST | `/api/v1/auth/reset-password` | Reset password |
 
 Register membuat `User` (role `participant`) + `Participant` dalam satu transaksi.
+`username` di-generate otomatis jika tidak disertakan.
+
+### Login Request (Participant)
+
+```json
+{
+    "username": "johndoe",
+    "password": "secret123"
+}
+```
+
+- Admin **tidak dapat** login lewat endpoint API ini — akan mendapat error 422 "Akun ini buku peserta."
+
+### Web Admin Login
+
+```
+POST /login
+Content-Type: application/x-www-form-urlencoded
+
+email=admin.full@sh3.com&password=password
+```
+
+- Memakai `EmailLoginRequest` (validasi `email` + `password`).
+- Session-based via `Auth::attempt()`.
 
 ## File Terkait
 

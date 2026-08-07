@@ -2,6 +2,91 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-06 — Dedicated Participant Authentication (Username-based)
+
+### Latar Belakang
+
+Sistem otentikasi sebelumnya menggunakan **shared `LoginRequest`** untuk kedua jalur login
+(web admin via session dan API participant via Sanctum), sehingga:
+
+- Form login web admin mengirimkan `email`, tetapi `LoginRequest` menvalidasi `username` → error "The username field is required."
+- API login tersedia untuk **semua peran** termasuk admin, bukan hanya participant.
+
+### Perubahan
+
+#### Auth Request yang Dipisahkan
+
+| Jalur | Request Class | Field | Tujuan |
+|-------|--------------|-------|--------|
+| **API participant** | `LoginRequest` | `username` + `password` | Login peserta via `POST /api/v1/auth/login` |
+| **Web admin** | `EmailLoginRequest` (baru) | `email` + `password` | Login admin via `POST /login` |
+
+- **`app/Http/Requests/LoginRequest.php`** — divalidasi `username` (required, string) + `password` (required, string).
+  Digunakan eksklusif oleh `AuthController::login()` (API participant).
+- **`app/Http/Requests/EmailLoginRequest.php`** — baru; divalidasi `email` (required, email) + `password`.
+  Digunakan oleh `AuthenticatedSessionController` (web admin).
+
+#### Controller & Service
+
+- **`app/Http/Controllers/Auth/AuthenticatedSessionController.php`** — beralih ke `EmailLoginRequest`.
+  `Auth::attempt()` menerima `['email', 'password']` yang kompatibel dengan provider Eloquent default.
+- **`app/Services/AuthService.php::login()`** — lookup user **hanya** via `username`
+  (`UserRepository::findByUsername()`), **melepahkan fallback ke `email`**.
+  Menambahkan pengecekan peran: hanya user dengan `role = participant` yang boleh login via API.
+  Admin yang mencoba login via API akan mendapat error "Akun ini bukan peserta."
+
+#### Registrasi
+
+- **`app/Http/Requests/RegisterRequest.php`** — menambahkan field opsional `username`
+  (3–30 karakter, alfanumerik + underscore, unique).
+- **`app/Http/Controllers/API/AuthController::register()`** — `username` dibuat otomatis
+  via `generateUsername()` jika tidak disertakan. User yang terdaftar selalu memiliki
+  `role = participant`.
+- **`database/seeders/ParticipantSeeder.php`** — setiap peserta seed juga membuat
+  `User` record (role `participant`, username otomatis, password `password`).
+
+#### Factory & Seeder
+
+- **`database/factories/UserFactory.php`** — menambahkan `username` (unique), `role` (default `participant`).
+  Menambahkan factory state `admin()` untuk user admin.
+- **`database/seeders/UserSeeder.php`** — menambahkan `username` pada semua admin (mis. `admin_full`, `organizer`).
+- **`database/migrations/2026_08_05_000001_add_username_to_users_table.php`** — migrasi direkonstruksi
+  (file hilang dari repositori tapi terdaftar di tabel `migrations`); menambahkan kolom
+  `username VARCHAR(30) UNIQUE` pada tabel `users` untuk fresh install.
+
+#### Resource
+
+- **`app/Http/Resources/UserResource.php`** — menambahkan field `username`.
+
+#### Repository
+
+- **`app/Repositories/UserRepository.php`** — memastikan `findByUsername()` tersedia.
+
+#### Frontend (Next.js)
+
+- `frontend-sh3/test_api_correct.js`, `test_api_fixed.js`, `test_frontend_api.js` — diperbarui
+  untuk menggunakan `username` pada request login.
+
+### Verifikasi
+
+- Participant login via API dengan `username`: **200 OK** + token.
+- Admin login via API dengan `username`: **422** — "Akun ini bukan peserta."
+- Admin login via web dengan `email`: **302 redirect ke /admin/dashboard**.
+- Registrasi otomatis generate `username` jika tidak disertakan.
+- Semua test di `AuthApiTest` (18 test) **pass**, termasuk test baru untuk
+  penolakan login admin via API dan login dengan username.
+
+### Dokumentasi
+
+- `docs/01 — Arsitektur & Authentication.md` — memperbarui deskripsi alur login.
+- `docs/02 — Participant Module.md` — menambahkan spesifikasi login participant.
+- `docs/11 — User Management Module.md` — memperbarui tabel API auth.
+- `docs/17 — Implementation Sync.md` — memperbarui contoh request/response login.
+- `docs/readme.md` — memperbarui API Endpoints.
+- `README.md` — memperbarui API Endpoints & default credentials.
+
+---
+
 ## 2026-08-04 — Sinkronisasi Implementasi & Dokumentasi
 
 ### Scheduler & Console Commands

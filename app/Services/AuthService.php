@@ -16,17 +16,23 @@ class AuthService
 
     public function login(array $credentials): User
     {
-        $user = $this->userRepository->findByEmail($credentials['email']);
+        $user = $this->userRepository->findByUsername($credentials['username']);
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['Email atau password salah.'],
+                'username' => ['Username atau password salah.'],
             ]);
         }
 
         if (! $user->is_active) {
             throw ValidationException::withMessages([
-                'email' => ['Akun Anda telah dinonaktifkan.'],
+                'username' => ['Akun Anda telah dinonaktifkan.'],
+            ]);
+        }
+
+        if ($user->role !== 'participant') {
+            throw ValidationException::withMessages([
+                'username' => ['Akun ini bukan peserta.'],
             ]);
         }
 

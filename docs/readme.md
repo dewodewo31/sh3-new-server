@@ -197,28 +197,34 @@ Sumber otoritatif: migration `0001_01_01_000000_create_users_table.php` dan `202
 
 ### **Seeder Default Users**
 
+Admin users (login via web `/login` dengan `email`):
+
 ```php
 // Database/Seeders/UserSeeder.php
-public function run()
-{
-    User::create(['name' => 'Admin Full Access', 'email' => 'admin.full@sh3.com',  'password' => Hash::make('password'), 'role' => 'admin_full_access']);
-    User::create(['name' => 'Admin Laman',      'email' => 'admin.laman@sh3.com',  'password' => Hash::make('password'), 'role' => 'admin_laman']);
-    User::create(['name' => 'Admin Member',     'email' => 'admin.member@sh3.com', 'password' => Hash::make('password'), 'role' => 'admin_member']);
-    User::create(['name' => 'Admin BNH',        'email' => 'admin.bnh@sh3.com',    'password' => Hash::make('password'), 'role' => 'admin_bnh']);
-    User::create(['name' => 'Organizer',        'email' => 'organizer@sh3.com',    'password' => Hash::make('password'), 'role' => 'organizer']);
-    User::create(['name' => 'Bendahara',        'email' => 'bendahara@sh3.com',    'password' => Hash::make('password'), 'role' => 'bendahara']);
-    User::create(['name' => 'Sponsor',          'email' => 'sponsor@sh3.com',      'password' => Hash::make('password'), 'role' => 'sponsor']);
-    User::create(['name' => 'Merchandise',      'email' => 'merchandise@sh3.com',  'password' => Hash::make('password'), 'role' => 'merchandise']);
-}
+User::create(['name' => 'Admin Full Access', 'username' => 'admin_full', 'email' => 'admin.full@sh3.com', 'password' => Hash::make('password'), 'role' => 'admin_full_access']);
+User::create(['name' => 'Admin Laman',      'username' => 'admin_laman',  'email' => 'admin.laman@sh3.com',  'password' => Hash::make('password'), 'role' => 'admin_laman']);
+User::create(['name' => 'Admin Member',     'username' => 'admin_member', 'email' => 'admin.member@sh3.com', 'password' => Hash::make('password'), 'role' => 'admin_member']);
+User::create(['name' => 'Admin BNH',        'username' => 'admin_bnh',    'email' => 'admin.bnh@sh3.com',    'password' => Hash::make('password'), 'role' => 'admin_bnh']);
+User::create(['name' => 'Organizer',        'username' => 'organizer',    'email' => 'organizer@sh3.com',    'password' => Hash::make('password'), 'role' => 'organizer']);
+User::create(['name' => 'Bendahara',        'username' => 'bendahara',    'email' => 'bendahara@sh3.com',    'password' => Hash::make('password'), 'role' => 'bendahara']);
+User::create(['name' => 'Sponsor',          'username' => 'sponsor',      'email' => 'sponsor@sh3.com',      'password' => Hash::make('password'), 'role' => 'sponsor']);
+User::create(['name' => 'Merchandise',      'username' => 'merchandise',  'email' => 'merchandise@sh3.com',  'password' => Hash::make('password'), 'role' => 'merchandise']);
 ```
+
+Participant users (login via API `/api/v1/auth/login` dengan `username`):
+- Seeder otomatis membuat `User` (role `participant`) + `Participant` dengan `username`
+  yang di-generate dari nama (mis. `budi_santoso`, `siti_rahayu`).
+- Password default semua seed user: `password`.
 
 ### **Authentication Flow**
 
-1. User Login (Email/Password)
-2. Middleware Check Role
-3. API: Token via Sanctum; Admin: Session-based
-4. Token Generated / Session Created
-5. Session/Token Management
+1. **Participant login (API):** kirim `username` + `password` → `POST /api/v1/auth/login` → Sanctum token.
+2. **Admin login (Web):** kirim `email` + `password` → `POST /login` → session-based, redirect ke dashboard.
+3. Admin **tidak dapat** login lewat API `/api/v1/auth/login` (akan dapat error "Akun ini bukan peserta.").
+4. Middleware check role (`RoleMiddleware`).
+5. API: Token via Sanctum; Admin: Session-based.
+6. Token generated / Session created.
+7. Email tetap dipakai untuk notifikasi, verifikasi, reset password.
 
 ### **Tabel: `user_activity_logs`**
 
@@ -760,13 +766,23 @@ Semua API memakai prefix `/api/v1`.
 ### **Authentication API**
 
 ```
-POST /api/v1/auth/register              # password opsional (min 6)
-POST /api/v1/auth/login
+POST /api/v1/auth/register              # password opsional (min 6), username opsional (auto-generate)
+POST /api/v1/auth/login                 # username + password (participant only)
 POST /api/v1/auth/logout                # auth:sanctum
 POST /api/v1/auth/refresh               # auth:sanctum
-POST /api/v1/auth/forgot-password
-POST /api/v1/auth/reset-password
+POST /api/v1/auth/forgot-password       # berdasarkan email
+POST /api/v1/auth/reset-password        # berdasarkan email
+GET  /api/v1/auth/me                    # auth:sanctum
 ```
+
+Login peserta memakai `username` (bukan email). Admin login via web session di `POST /login`
+dengan `email + password`. Admin tidak dapat login lewat API `/api/v1/auth/login`.
+
+### **Authentication Flow**
+
+1. Participant login (API): kirim `username` + `password` → `POST /api/v1/auth/login` → dapatkan Sanctum token.
+2. Admin login (Web): kirim `email` + `password` → `POST /login` → session-based, redirect ke `/admin/dashboard`.
+3. Email tetap dipakai untuk notifikasi, verifikasi, dan reset password (forgot/reset password).
 
 ### **Profile API**
 

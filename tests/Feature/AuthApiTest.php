@@ -23,6 +23,7 @@ class AuthApiTest extends TestCase
 
         $this->registerPayload = [
             'name' => 'Budi Santoso',
+            'username' => 'budi_santoso',
             'email' => 'budi@example.com',
             'phone' => '08123456789',
             'gender' => 'male',
@@ -48,12 +49,28 @@ class AuthApiTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'email' => 'budi@example.com',
+            'username' => 'budi_santoso',
             'role' => 'participant',
         ]);
         $this->assertDatabaseHas('participants', [
             'email' => 'budi@example.com',
             'phone' => '08123456789',
             'jersey_size' => 'L',
+        ]);
+    }
+
+    public function test_register_generates_username_when_not_provided(): void
+    {
+        $payload = $this->registerPayload;
+        unset($payload['username']);
+
+        $response = $this->postJson('/api/v1/auth/register', $payload);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('users', [
+            'email' => 'budi@example.com',
+            'username' => 'budi_santoso',
+            'role' => 'participant',
         ]);
     }
 
@@ -65,12 +82,24 @@ class AuthApiTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_register_with_duplicate_username_is_rejected(): void
+    {
+        User::factory()->create(['username' => 'budi_santoso']);
+
+        $this->postJson('/api/v1/auth/register', $this->registerPayload)
+            ->assertUnprocessable();
+    }
+
     public function test_login_success_returns_token(): void
     {
-        $user = User::factory()->create(['email' => 'budi@example.com']);
+        $user = User::factory()->create([
+            'username' => 'johndoe',
+            'password' => Hash::make('password'),
+            'role' => 'participant',
+        ]);
 
         $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'budi@example.com',
+            'username' => 'johndoe',
             'password' => 'password',
         ]);
 
@@ -82,29 +111,64 @@ class AuthApiTest extends TestCase
 
     public function test_login_with_wrong_password_is_rejected(): void
     {
-        User::factory()->create(['email' => 'budi@example.com']);
+        User::factory()->create([
+            'username' => 'johndoe',
+            'password' => Hash::make('password'),
+            'role' => 'participant',
+        ]);
 
         $this->postJson('/api/v1/auth/login', [
-            'email' => 'budi@example.com',
+            'username' => 'johndoe',
             'password' => 'wrong-password',
         ])->assertUnprocessable()
-            ->assertJsonPath('errors.email.0', 'Email atau password salah.');
+            ->assertJsonPath('errors.username.0', 'Username atau password salah.');
+    }
+
+    public function test_login_with_nonexistent_username_is_rejected(): void
+    {
+        $this->postJson('/api/v1/auth/login', [
+            'username' => 'nonexistent',
+            'password' => 'password',
+        ])->assertUnprocessable()
+            ->assertJsonPath('errors.username.0', 'Username atau password salah.');
+    }
+
+    public function test_login_rejects_admin_users(): void
+    {
+        User::factory()->create([
+            'username' => 'admin_full',
+            'password' => Hash::make('password'),
+            'role' => 'admin_full_access',
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'username' => 'admin_full',
+            'password' => 'password',
+        ])->assertUnprocessable()
+            ->assertJsonPath('errors.username.0', 'Akun ini bukan peserta.');
     }
 
     public function test_login_inactive_account_is_rejected(): void
     {
-        User::factory()->create(['email' => 'budi@example.com', 'is_active' => false]);
+        User::factory()->create([
+            'username' => 'johndoe',
+            'password' => Hash::make('password'),
+            'role' => 'participant',
+            'is_active' => false,
+        ]);
 
         $this->postJson('/api/v1/auth/login', [
-            'email' => 'budi@example.com',
+            'username' => 'johndoe',
             'password' => 'password',
         ])->assertUnprocessable()
-            ->assertJsonPath('errors.email.0', 'Akun Anda telah dinonaktifkan.');
+            ->assertJsonPath('errors.username.0', 'Akun Anda telah dinonaktifkan.');
     }
 
     public function test_logout_revokes_token(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'participant',
+        ]);
 
         $token = $user->createToken('api-token')->plainTextToken;
 
@@ -123,7 +187,9 @@ class AuthApiTest extends TestCase
 
     public function test_me_returns_authenticated_user(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'participant',
+        ]);
         Participant::factory()->create(['user_id' => $user->id]);
 
         Sanctum::actingAs($user);
@@ -136,7 +202,9 @@ class AuthApiTest extends TestCase
 
     public function test_refresh_rotates_token(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'participant',
+        ]);
 
         $oldToken = $user->createToken('api-token')->plainTextToken;
 
@@ -169,7 +237,10 @@ class AuthApiTest extends TestCase
     {
         Notification::fake();
 
-        User::factory()->create(['email' => 'budi@example.com']);
+        User::factory()->create([
+            'email' => 'budi@example.com',
+            'role' => 'participant',
+        ]);
 
         $this->postJson('/api/v1/auth/forgot-password', ['email' => 'budi@example.com'])
             ->assertOk()
@@ -184,7 +255,10 @@ class AuthApiTest extends TestCase
 
     public function test_reset_password_with_valid_token_changes_password(): void
     {
-        $user = User::factory()->create(['email' => 'budi@example.com']);
+        $user = User::factory()->create([
+            'email' => 'budi@example.com',
+            'role' => 'participant',
+        ]);
 
         $token = Password::broker()->createToken($user);
 
@@ -201,7 +275,10 @@ class AuthApiTest extends TestCase
 
     public function test_reset_password_with_invalid_token_is_rejected(): void
     {
-        User::factory()->create(['email' => 'budi@example.com']);
+        User::factory()->create([
+            'email' => 'budi@example.com',
+            'role' => 'participant',
+        ]);
 
         $this->postJson('/api/v1/auth/reset-password', [
             'token' => 'invalid-token',
