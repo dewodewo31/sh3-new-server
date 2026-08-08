@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\OrganizationMemberRequest;
 use App\Repositories\OrganizationMemberRepository;
 
 class OrganizationController extends Controller
@@ -23,9 +25,15 @@ class OrganizationController extends Controller
         return view('organizations.create');
     }
 
-    public function store(\App\Http\Requests\OrganizationMemberRequest $request)
+    public function store(OrganizationMemberRequest $request)
     {
-        $this->organizationMemberRepository->create($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('avatar')) {
+            $data['avatar'] = ImageHelper::upload($request->file('avatar'), 'organizations');
+        }
+
+        $this->organizationMemberRepository->create($data);
 
         return redirect()->route('admin.organizations.index')->with('success', 'Anggota organisasi berhasil ditambahkan');
     }
@@ -37,10 +45,19 @@ class OrganizationController extends Controller
         return view('organizations.edit', compact('member'));
     }
 
-    public function update(int $id, \App\Http\Requests\OrganizationMemberRequest $request)
+    public function update(int $id, OrganizationMemberRequest $request)
     {
         $member = $this->organizationMemberRepository->findById($id);
-        $this->organizationMemberRepository->update($member, $request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('avatar')) {
+            if ($member->avatar) {
+                ImageHelper::delete($member->avatar);
+            }
+            $data['avatar'] = ImageHelper::upload($request->file('avatar'), 'organizations');
+        }
+
+        $this->organizationMemberRepository->update($member, $data);
 
         return redirect()->route('admin.organizations.index')->with('success', 'Data anggota berhasil diupdate');
     }
@@ -48,6 +65,11 @@ class OrganizationController extends Controller
     public function destroy(int $id)
     {
         $member = $this->organizationMemberRepository->findById($id);
+
+        if ($member->avatar) {
+            ImageHelper::delete($member->avatar);
+        }
+
         $this->organizationMemberRepository->delete($member);
 
         return redirect()->route('admin.organizations.index')->with('success', 'Anggota berhasil dihapus');

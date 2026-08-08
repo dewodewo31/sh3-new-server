@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ForgotPasswordRequest;
 use App\Http\Requests\LoginRequest;
@@ -34,7 +35,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login berhasil',
-            'user' => $user,
+            'user' => $this->userPayload($user),
             'token' => $token,
         ]);
     }
@@ -77,7 +78,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registrasi berhasil',
-            'user' => $user->load('participants'),
+            'user' => $this->userPayload($user->load('participants')),
             'token' => $token,
         ], 201);
     }
@@ -97,7 +98,7 @@ class AuthController extends Controller
     public function me(): JsonResponse
     {
         return response()->json([
-            'user' => auth()->user()->load('participants'),
+            'user' => $this->userPayload(auth()->user()->load('participants')),
         ]);
     }
 
@@ -143,6 +144,13 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Password berhasil direset.',
         ]);
+    }
+
+    private function userPayload($user): array
+    {
+        $user->setAttribute('avatar', ImageHelper::getUrl($user->avatar));
+
+        return $user->toArray();
     }
 
     private function generateUsername(string $name): string

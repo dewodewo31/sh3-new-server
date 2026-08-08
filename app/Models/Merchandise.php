@@ -10,6 +10,9 @@ class Merchandise extends Model
     use HasFactory;
 
     protected $table = 'merchandise';
+
+    protected $guarded = [];
+
     protected function casts(): array
     {
         return [

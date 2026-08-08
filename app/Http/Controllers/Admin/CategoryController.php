@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CategoryRequest;
 use App\Repositories\CategoryRepository;
@@ -28,7 +29,13 @@ class CategoryController extends Controller
 
     public function store(CategoryRequest $request)
     {
-        $category = $this->categoryRepository->create($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('banner')) {
+            $data['banner'] = ImageHelper::upload($request->file('banner'), 'categories');
+        }
+
+        $category = $this->categoryRepository->create($data);
 
         $this->userService->logActivity(auth()->user(), 'create_category', ['category_id' => $category->id, 'name' => $category->name]);
 
@@ -45,7 +52,16 @@ class CategoryController extends Controller
     public function update(int $id, CategoryRequest $request)
     {
         $category = $this->categoryRepository->findById($id);
-        $this->categoryRepository->update($category, $request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('banner')) {
+            if ($category->banner) {
+                ImageHelper::delete($category->banner);
+            }
+            $data['banner'] = ImageHelper::upload($request->file('banner'), 'categories');
+        }
+
+        $this->categoryRepository->update($category, $data);
 
         $this->userService->logActivity(auth()->user(), 'update_category', ['category_id' => $category->id, 'name' => $category->name]);
 
@@ -55,6 +71,11 @@ class CategoryController extends Controller
     public function destroy(int $id)
     {
         $category = $this->categoryRepository->findById($id);
+
+        if ($category->banner) {
+            ImageHelper::delete($category->banner);
+        }
+
         $this->categoryRepository->delete($category);
 
         $this->userService->logActivity(auth()->user(), 'delete_category', ['category_id' => $id, 'name' => $category->name]);
