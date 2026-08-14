@@ -196,6 +196,7 @@ class MembershipApiTest extends TestCase
         $this->put('/admin/membership-plans/'.$plan->id, [
             'key' => $plan->key,
             'name' => 'Premium Tahunan',
+            'price' => 1500000,
             'base_event_price' => 500000,
             'discount_percentage' => 0,
             'reference_event_count' => 1,
@@ -207,9 +208,9 @@ class MembershipApiTest extends TestCase
 
         $plan->refresh();
         $this->assertSame('Premium Tahunan', $plan->name);
-        $this->assertSame(500000, $plan->price);
+        $this->assertSame(1500000, $plan->price);
 
-        // calculatePrice is event-based: no eligible events seeded -> 0
+        // informational event-based calc still works (no eligible events seeded -> 0)
         $this->assertSame(0, $this->membershipService->calculatePrice('tahunan'));
     }
 
@@ -221,6 +222,7 @@ class MembershipApiTest extends TestCase
         $this->post('/admin/membership-plans', [
             'key' => 'dua_bulan',
             'name' => 'Dua Bulan',
+            'price' => 75000,
             'base_event_price' => 75000,
             'discount_percentage' => 0,
             'reference_event_count' => 1,
@@ -308,16 +310,12 @@ class MembershipApiTest extends TestCase
         $old = $this->membershipService->grant($this->participant, 'tahunan');
         $this->assertSame($originalPrice, (int) $old->price);
 
-        // change plan price
-        $plan->update([
-            'base_event_price' => 500000,
-            'discount_percentage' => 0,
-            'reference_event_count' => 1,
-        ]);
+        // admin changes the plan's final price
+        $plan->update(['price' => 1500000]);
         $plan->refresh();
-        $this->assertNotSame($originalPrice, $plan->price);
+        $this->assertSame(1500000, $plan->price);
 
-        // old membership unchanged
+        // old membership unchanged (snapshot preserved)
         $old->refresh();
         $this->assertSame($originalPrice, (int) $old->price);
 
@@ -336,5 +334,94 @@ class MembershipApiTest extends TestCase
         $response = $this->get('/admin/memberships');
         $response->assertOk();
         $response->assertSee('1.192.500');
+    }
+
+    // --- Phase 16: mandatory pricing regression tests ---
+
+    public function test_payment_amount_equals_history_price_equals_plan_price(): void
+    {
+        $plan = MembershipPlan::where('key', 'tahunan')->firstOrFail();
+
+        $history = $this->membershipService->requestSubscription($this->participant, 'tahunan', 'transfer');
+        $payment = $history->fresh()->payment;
+
+        $this->assertNotNull($payment);
+        $this->assertSame($plan->price, (int) $history->price);
+        $this->assertSame($plan->price, (int) $payment->amount);
+        $this->assertSame((int) $history->price, (int) $payment->amount);
+    }
+
+    public function test_legacy_zero_price_recovery_command(): void
+    {
+        $plan = MembershipPlan::where('key', 'tahunan')->firstOrFail();
+
+        // simulate legacy bug: history with price=0 for a paid plan
+        $broken = MembershipHistory::create([
+            'participant_id' => $this->participant->id,
+            'membership_type' => 'tahunan',
+            'start_date' => '2026-08-14',
+            'end_date' => '2026-12-31',
+            'price' => 0,
+            'status' => 'active',
+        ]);
+
+        // a history that already has a valid price must NOT be touched
+        $valid = MembershipHistory::create([
+            'participant_id' => $this->participant->id,
+            'membership_type' => 'tahunan',
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+            'price' => 999000,
+            'status' => 'active',
+        ]);
+
+        $this->artisan('membership:fix-zero-prices')->assertSuccessful();
+
+        $this->assertSame($plan->price, (int) $broken->fresh()->price);
+        $this->assertSame(999000, (int) $valid->fresh()->price);
+    }
+
+    public function test_legacy_zero_price_kept_when_plan_is_free(): void
+    {
+        // free plan: price=0 is valid, must NOT be treated as bug
+        MembershipPlan::create([
+            'key' => 'gratis',
+            'name' => 'Gratis',
+            'price' => 0,
+            'base_event_price' => 25000,
+            'discount_percentage' => 100,
+            'reference_event_count' => 1,
+            'duration' => 7,
+            'duration_unit' => 'days',
+            'is_active' => true,
+            'sort_order' => 9,
+        ]);
+
+        MembershipHistory::create([
+            'participant_id' => $this->participant->id,
+            'membership_type' => 'gratis',
+            'start_date' => '2026-08-14',
+            'end_date' => '2026-08-21',
+            'price' => 0,
+            'status' => 'active',
+        ]);
+
+        $this->artisan('membership:fix-zero-prices')->assertSuccessful();
+
+        $this->assertSame(0, (int) MembershipHistory::where('membership_type', 'gratis')->first()->price);
+    }
+
+    public function test_admin_page_days_left_shows_integer_not_float(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin_full_access']);
+        $this->actingAs($admin);
+
+        $this->membershipService->grant($this->participant, 'mingguan');
+
+        $response = $this->get('/admin/memberships');
+        $response->assertOk();
+
+        $this->assertMatchesRegularExpression('/Sisa \d+ hari/', $response->getContent());
+        $this->assertDoesNotMatchRegularExpression('/Sisa \d+\.\d+ hari/', $response->getContent());
     }
 }

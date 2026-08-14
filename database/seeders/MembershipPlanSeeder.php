@@ -9,11 +9,10 @@ class MembershipPlanSeeder extends Seeder
 {
     public function run(): void
     {
-        // Pricing rules = single source of truth. `price` is the derived full-package
-        // price (base * (1 - disc/100) * reference_count); kept explicit here so the
-        // seeder is self-contained and the value is documented, not only computed
-        // by the model observer.
-        // base_event_price = Rp25.000, discounts 10%/5%/5%, reference event counts 53/26/1.
+        // `price` is the FINAL PACKAGE PRICE paid by participants and is stored
+        // as-is (admin-defined). base_event_price / discount_percentage /
+        // reference_event_count remain as informational pricing config.
+        // base_event_price = Rp25.000, discounts 10%/5%/0%, reference event counts 53/26/1.
         $plans = [
             [
                 'key' => 'tahunan',

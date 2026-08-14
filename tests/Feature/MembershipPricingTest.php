@@ -102,21 +102,24 @@ class MembershipPricingTest extends TestCase
         $this->assertEquals(3 * 22500, $price['final_price']);
     }
 
-    public function test_plan_price_equals_full_package_price_single_source(): void
+    public function test_plan_price_is_stored_as_is_not_recalculated(): void
     {
-        $plan = $this->makePlan(['discount_percentage' => 10, 'reference_event_count' => 53]);
+        // price is admin-defined final price: must NOT be overwritten by the
+        // formula (fullPackagePrice() stays available as informational only).
+        $plan = $this->makePlan(['price' => 1500000, 'discount_percentage' => 10, 'reference_event_count' => 53]);
 
-        $this->assertEquals($plan->fullPackagePrice(), $plan->price);
+        $this->assertSame(1500000, $plan->fresh()->price);
+        $this->assertSame(1192500, $plan->fullPackagePrice()); // formula unchanged as info
     }
 
-    public function test_service_plans_returns_derived_price(): void
+    public function test_service_plans_returns_stored_price(): void
     {
-        $this->makePlan(['key' => 'tahunan', 'discount_percentage' => 10, 'reference_event_count' => 53]);
+        $this->makePlan(['key' => 'tahunan', 'price' => 1500000, 'discount_percentage' => 10, 'reference_event_count' => 53]);
 
         $plans = app(MembershipService::class)->plans();
         $annual = collect($plans)->firstWhere('type', 'tahunan');
 
         $this->assertNotNull($annual);
-        $this->assertEquals(1192500, $annual['price']);
+        $this->assertEquals(1500000, $annual['price']);
     }
 }

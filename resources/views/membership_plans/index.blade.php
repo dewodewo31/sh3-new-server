@@ -5,6 +5,7 @@
         'key' => old('key', ''),
         'name' => old('name', ''),
         'description' => old('description', ''),
+        'price' => old('price') !== null ? (int) old('price') : '',
         'base_event_price' => old('base_event_price') !== null ? (int) old('base_event_price') : '',
         'discount_percentage' => old('discount_percentage') !== null ? (int) old('discount_percentage') : '',
         'reference_event_count' => old('reference_event_count') !== null ? (int) old('reference_event_count') : '',
@@ -18,6 +19,7 @@
     $emptyForm['key'] = '';
     $emptyForm['name'] = '';
     $emptyForm['description'] = '';
+    $emptyForm['price'] = '';
     $emptyForm['base_event_price'] = '';
     $emptyForm['discount_percentage'] = '';
     $emptyForm['reference_event_count'] = '';
@@ -131,6 +133,20 @@
                         <p class="form-hint">Harga dasar 1x pertemuan lari (Minggu).</p>
                     </div>
 
+                    <div class="form-group">
+                        <label for="plan-price" class="form-label">Harga Paket (Final)</label>
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-sm font-medium text-slate-400">Rp</span>
+                            <input type="text" id="plan-price" inputmode="numeric" name="price" x-model.number="form.price"
+                                class="form-input !pl-10 @error('price') error @enderror"
+                                placeholder="cth: 1.500.000"
+                                aria-label="Harga final paket membership dalam Rupiah"
+                                required>
+                        </div>
+                        @error('price') <p class="form-error">{{ $message }}</p> @enderror
+                        <p class="form-hint">Harga yang dibayar peserta. Nilai ini disimpan apa adanya.</p>
+                    </div>
+
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div class="form-group">
                             <label for="plan-discount" class="form-label">Diskon (%)</label>
@@ -155,10 +171,10 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Harga Paket Penuh (otomatis)</label>
+                        <label class="form-label">Referensi Kalkulasi (informasi)</label>
                         <div class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-700/50 dark:text-slate-300">
                             <span class="font-semibold text-slate-900 dark:text-white" x-text="pricePreview"></span>
-                            <p class="mt-0.5 text-xs text-slate-400">= (harga/event × (100 − diskon) ÷ 100) × jumlah event referensi</p>
+                            <p class="mt-0.5 text-xs text-slate-400">= (harga/event × (100 − diskon) ÷ 100) × jumlah event referensi. Hanya info, tidak menimpa Harga Paket.</p>
                         </div>
                     </div>
 
@@ -340,7 +356,7 @@
                         </td>
                         <td class="!py-3.5">
                             <div class="flex items-center justify-end gap-1.5">
-                                <button type="button" class="icon-btn" @click="startEdit({{ Js::from($plan->only(['id','key','name','description','base_event_price','discount_percentage','reference_event_count','duration','duration_unit','sort_order','is_active'])) }})" aria-label="Edit plan {{ $plan->name }}" title="Edit">
+                                <button type="button" class="icon-btn" @click="startEdit({{ Js::from($plan->only(['id','key','name','description','price','base_event_price','discount_percentage','reference_event_count','duration','duration_unit','sort_order','is_active'])) }})" aria-label="Edit plan {{ $plan->name }}" title="Edit">
                                     <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/></svg>
                                 </button>
                                 <button type="button" class="icon-btn text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" @click="destroyPlan({{ Js::from($plan->only(['id','name'])) }})" aria-label="Hapus plan {{ $plan->name }}" title="Hapus">
@@ -452,6 +468,7 @@
                     key: plan.key,
                     name: plan.name,
                     description: plan.description || '',
+                    price: plan.price ?? '',
                     base_event_price: plan.base_event_price ?? '',
                     discount_percentage: plan.discount_percentage ?? '',
                     reference_event_count: plan.reference_event_count ?? '',

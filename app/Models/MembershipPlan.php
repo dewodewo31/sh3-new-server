@@ -25,18 +25,17 @@ class MembershipPlan extends Model
     }
 
     /**
-     * price is DERIVED from the pricing rules, never set by hand.
-     * This keeps a single formula in MembershipPricingService as the source of truth.
+     * price is the FINAL PACKAGE PRICE set by the admin, stored as-is.
+     * It is intentionally NOT recalculated on save — editing a plan must not
+     * overwrite the admin-defined price.
+     *
+     * fullPackagePrice()/effectiveEventPrice() below remain available purely
+     * as informational helpers (preview, stats, breakdown) — they never write
+     * back to the model.
      */
     protected static function booted(): void
     {
-        static::saving(function (self $plan) {
-            if (! is_null($plan->base_event_price)
-                && ! is_null($plan->discount_percentage)
-                && ! is_null($plan->reference_event_count)) {
-                $plan->price = $plan->fullPackagePrice();
-            }
-        });
+        // no-op: price is admin-defined, never auto-derived
     }
 
     public function durationLabel(): string

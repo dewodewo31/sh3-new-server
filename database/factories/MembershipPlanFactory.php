@@ -24,7 +24,7 @@ class MembershipPlanFactory extends Factory
             'base_event_price' => 25000,
             'discount_percentage' => fake()->randomElement([5, 10]),
             'reference_event_count' => fake()->randomElement([1, 26, 53]),
-            'price' => 0, // derived by model observer from the rules above
+            'price' => fake()->randomElement([25000, 617500, 1192500]), // admin-defined final package price (stored as-is)
             'duration' => fake()->randomElement([7, 30, 365]),
             'duration_unit' => 'days',
             'is_active' => true,
