@@ -44,6 +44,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/organization/tree', [OrganizationController::class, 'tree']);
     Route::get('/organization/years', [OrganizationController::class, 'years']);
 
+    Route::post('/attendance/sync-up', [AttendanceController::class, 'syncUp']);
+    Route::get('/attendance/sync-down', [AttendanceController::class, 'syncDown']);
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('role:admin_full_access,admin_laman,admin_bnh')->group(function () {
             Route::post('/admin/galleries', [GalleryController::class, 'store']);
@@ -87,9 +90,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn']);
         Route::post('/attendance/check-out', [AttendanceController::class, 'checkOut']);
         Route::post('/attendance/scan', [AttendanceController::class, 'scan']);
-        Route::post('/attendance/sync-up', [AttendanceController::class, 'syncUp']);
         Route::get('/attendance/report', [AttendanceController::class, 'report']);
-        Route::get('/attendance/sync-down', [AttendanceController::class, 'syncDown']);
         Route::get('/attendance/{eventId}', [AttendanceController::class, 'byEvent']);
 
         Route::post('/merchandise/order', [MerchandiseController::class, 'order']);
