@@ -5,7 +5,9 @@
         'key' => old('key', ''),
         'name' => old('name', ''),
         'description' => old('description', ''),
-        'price' => old('price') !== null ? (int) old('price') : '',
+        'base_event_price' => old('base_event_price') !== null ? (int) old('base_event_price') : '',
+        'discount_percentage' => old('discount_percentage') !== null ? (int) old('discount_percentage') : '',
+        'reference_event_count' => old('reference_event_count') !== null ? (int) old('reference_event_count') : '',
         'duration' => old('duration', 12),
         'duration_unit' => old('duration_unit', 'months'),
         'sort_order' => old('sort_order', $nextSortOrder),
@@ -16,7 +18,9 @@
     $emptyForm['key'] = '';
     $emptyForm['name'] = '';
     $emptyForm['description'] = '';
-    $emptyForm['price'] = '';
+    $emptyForm['base_event_price'] = '';
+    $emptyForm['discount_percentage'] = '';
+    $emptyForm['reference_event_count'] = '';
     $emptyForm['duration'] = 12;
     $emptyForm['duration_unit'] = 'months';
     $emptyForm['sort_order'] = $nextSortOrder;
@@ -83,7 +87,6 @@
                     <input type="hidden" name="_method" value="PUT">
                 </template>
                 <input type="hidden" name="editing_id" :value="editingId ?? ''">
-                <input type="hidden" name="price" :value="form.price">
 
                 <div class="space-y-5">
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -115,17 +118,48 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="plan-price" class="form-label">Harga (Rupiah)</label>
+                        <label for="plan-base" class="form-label">Harga per Event (Rupiah)</label>
                         <div class="relative">
                             <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-sm font-medium text-slate-400">Rp</span>
-                            <input type="text" id="plan-price" inputmode="numeric" :value="priceDisplay" @input="onPriceInput"
+                            <input type="text" id="plan-base" inputmode="numeric" name="base_event_price" x-model.number="form.base_event_price"
                                 class="form-input !pl-10"
-                                placeholder="cth: 400.000"
-                                aria-label="Harga plan dalam Rupiah"
+                                placeholder="cth: 25.000"
+                                aria-label="Harga per event dalam Rupiah"
                                 required>
                         </div>
-                        @error('price') <p class="form-error">{{ $message }}</p> @enderror
-                        <p class="form-hint">Format Rupiah otomatis dengan pemisah ribuan, contoh: 400.000</p>
+                        @error('base_event_price') <p class="form-error">{{ $message }}</p> @enderror
+                        <p class="form-hint">Harga dasar 1x pertemuan lari (Minggu).</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="form-group">
+                            <label for="plan-discount" class="form-label">Diskon (%)</label>
+                            <input type="number" id="plan-discount" name="discount_percentage" x-model.number="form.discount_percentage"
+                                min="0" max="100"
+                                class="form-input"
+                                placeholder="0"
+                                aria-label="Persentase diskon"
+                                required>
+                            @error('discount_percentage') <p class="form-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="form-group">
+                            <label for="plan-ref" class="form-label">Jumlah Event Referensi</label>
+                            <input type="number" id="plan-ref" name="reference_event_count" x-model.number="form.reference_event_count"
+                                min="0"
+                                class="form-input"
+                                placeholder="0"
+                                aria-label="Jumlah event referensi"
+                                required>
+                            @error('reference_event_count') <p class="form-error">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Harga Paket Penuh (otomatis)</label>
+                        <div class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-700/50 dark:text-slate-300">
+                            <span class="font-semibold text-slate-900 dark:text-white" x-text="pricePreview"></span>
+                            <p class="mt-0.5 text-xs text-slate-400">= (harga/event × (100 − diskon) ÷ 100) × jumlah event referensi</p>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -142,6 +176,7 @@
                                     aria-label="Satuan durasi">
                                     <option value="months">Bulan</option>
                                     <option value="days">Hari</option>
+                                    <option value="years">Tahun</option>
                                 </select>
                                 <svg class="pointer-events-none absolute right-3 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
                             </div>
@@ -305,7 +340,7 @@
                         </td>
                         <td class="!py-3.5">
                             <div class="flex items-center justify-end gap-1.5">
-                                <button type="button" class="icon-btn" @click="startEdit({{ Js::from($plan->only(['id','key','name','description','price','duration','duration_unit','sort_order','is_active'])) }})" aria-label="Edit plan {{ $plan->name }}" title="Edit">
+                                <button type="button" class="icon-btn" @click="startEdit({{ Js::from($plan->only(['id','key','name','description','base_event_price','discount_percentage','reference_event_count','duration','duration_unit','sort_order','is_active'])) }})" aria-label="Edit plan {{ $plan->name }}" title="Edit">
                                     <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/></svg>
                                 </button>
                                 <button type="button" class="icon-btn text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" @click="destroyPlan({{ Js::from($plan->only(['id','name'])) }})" aria-label="Hapus plan {{ $plan->name }}" title="Hapus">
@@ -370,11 +405,13 @@
                 return this.destroyUrlTemplate.replace('__ID__', this.deleteId);
             },
 
-            get priceDisplay() {
-                const p = this.form.price;
-                if (p === '' || p === null || p === undefined) return '';
-                const n = Number(p) || 0;
-                return n.toLocaleString('id-ID');
+            get pricePreview() {
+                const base = Number(this.form.base_event_price) || 0;
+                const disc = Number(this.form.discount_percentage) || 0;
+                const ref = Number(this.form.reference_event_count) || 0;
+                const full = Math.round(base * (100 - disc) / 100) * ref;
+                if (full === 0) return 'Rp 0';
+                return 'Rp ' + full.toLocaleString('id-ID');
             },
 
             slugify(text) {
@@ -402,11 +439,6 @@
                 this.keyAuto = true;
             },
 
-            onPriceInput(event) {
-                const raw = String(event.target.value).replace(/[^\d]/g, '');
-                this.form.price = raw === '' ? '' : parseInt(raw, 10);
-            },
-
             adjustSort(step) {
                 this.form.sort_order = Math.max(0, (Number(this.form.sort_order) || 0) + step);
             },
@@ -420,7 +452,9 @@
                     key: plan.key,
                     name: plan.name,
                     description: plan.description || '',
-                    price: plan.price,
+                    base_event_price: plan.base_event_price ?? '',
+                    discount_percentage: plan.discount_percentage ?? '',
+                    reference_event_count: plan.reference_event_count ?? '',
                     duration: plan.duration,
                     duration_unit: plan.duration_unit,
                     sort_order: plan.sort_order ?? 0,

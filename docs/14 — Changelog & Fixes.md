@@ -2,6 +2,40 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-14 — Participant Forgot/Reset Password (Tanpa Email / Pihak Ketiga)
+
+Fitur reset password khusus **Participant** tanpa email / OTP / SMS / WA / pihak ke-3.
+Verifikasi hanya **Username + Hash ID** (kode peserta). Terpisah dari reset password Admin.
+
+### Endpoint (publik, via API)
+| Method | Path                                        | Keterangan                                      |
+|--------|---------------------------------------------|-------------------------------------------------|
+| POST   | `/api/v1/participant/auth/verify-reset`     | Verifikasi username + hash_id                   |
+| POST   | `/api/v1/participant/auth/reset-password`   | Reset password (throttle 5/15 mnt per IP)       |
+
+### File
+- `app/Http/Controllers/API/ParticipantAuthController.php` (baru)
+- `app/Services/ParticipantPasswordResetService.php` (baru)
+- `app/Http/Requests/ParticipantVerifyResetRequest.php`, `ParticipantResetPasswordRequest.php` (baru)
+- `routes/api.php` — 2 route publik (`reset-password` + `throttle:5,15`)
+- `app/Models/Participant.php` — `hash_id` kini kolom unik (kode peserta `SH3XXXXXXX`), auto-generate + migrasi backfill
+- `database/migrations/2026_08_14_000100_add_hash_id_to_participants_table.php` (baru)
+- `tests/Feature/ParticipantPasswordResetTest.php` (baru, 10 kasus) — **PASS**
+
+### Keamanan
+- `Hash::make()`; token participant di-revoke setelah reset.
+- Hanya pemilik kombinasi username + hash_id yang bisa reset; peserta lain / Admin ditolak dengan pesan generik.
+- `hash_id` peserta lain tidak dibocorkan.
+- Rate limit 5 / 15 mnt / IP pada `reset-password`.
+
+### Audit Log
+- `user_activity_logs`: `action = 'Participant Password Reset'`, `details = {participant_id, username}`, `ip_address`, `user_agent`.
+
+### Dokumentasi
+- `docs/18 — Participant Password Reset.md` (baru).
+
+---
+
 ## 2026-08-06 — Dedicated Participant Authentication (Username-based)
 
 ### Latar Belakang

@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\CategoryController;
+use App\Http\Controllers\API\ParticipantAuthController;
 use App\Http\Controllers\API\EventController;
 use App\Http\Controllers\API\GalleryController;
 use App\Http\Controllers\API\MembershipController;
@@ -24,6 +25,9 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/refresh', [AuthController::class, 'refresh'])->middleware('auth:sanctum');
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+
+    Route::post('/participant/auth/verify-reset', [ParticipantAuthController::class, 'verifyReset']);
+    Route::post('/participant/auth/reset-password', [ParticipantAuthController::class, 'resetPassword'])->middleware('throttle:5,15');
 
     Route::get('/events/upcoming', [EventController::class, 'upcoming']);
     Route::get('/events', [EventController::class, 'index']);

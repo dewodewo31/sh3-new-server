@@ -21,7 +21,10 @@ class MembershipPlanFactory extends Factory
             'key' => Str::slug($name),
             'name' => $name,
             'description' => fake()->sentence(),
-            'price' => fake()->randomElement([10000, 250000, 400000]),
+            'base_event_price' => 25000,
+            'discount_percentage' => fake()->randomElement([5, 10]),
+            'reference_event_count' => fake()->randomElement([1, 26, 53]),
+            'price' => 0, // derived by model observer from the rules above
             'duration' => fake()->randomElement([7, 30, 365]),
             'duration_unit' => 'days',
             'is_active' => true,

@@ -76,12 +76,28 @@ class Participant extends Model
         return $this->membership_end_date && $this->membership_end_date >= now()->toDateString();
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (Participant $participant) {
+            if (empty($participant->hash_id)) {
+                $participant->hash_id = static::generateHashId();
+            }
+        });
+    }
+
+    public static function generateHashId(): string
+    {
+        do {
+            $code = 'SH3'.Str::upper(Str::random(7));
+        } while (static::where('hash_id', $code)->exists());
+
+        return $code;
+    }
+
     protected function hashId(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->isMembershipActive()
-                ? sprintf('%04d', $this->id)
-                : 'NM-'.sprintf('%04d', $this->id),
+            get: fn () => $this->attributes['hash_id'] ?? null,
         );
     }
 }

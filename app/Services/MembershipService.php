@@ -5,62 +5,27 @@ namespace App\Services;
 use App\Models\MembershipHistory;
 use App\Models\MembershipPlan;
 use App\Models\Participant;
-use App\Repositories\MembershipHistoryRepository;
 use App\Repositories\MembershipPlanRepository;
-use App\Repositories\ParticipantRepository;
+use App\Services\NotificationService;
+use App\Services\PaymentService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class MembershipService
 {
     public function __construct(
-        private ParticipantRepository $participantRepository,
-        private MembershipHistoryRepository $membershipHistoryRepository,
         private MembershipPlanRepository $membershipPlanRepository,
         private PaymentService $paymentService,
         private NotificationService $notificationService,
+        private MembershipPricingService $pricingService,
     ) {}
 
-    public function checkEligibility(Participant $participant): string
-    {
-        if ($participant->membership_type === 'none') {
-            return 'paid';
-        }
-
-        if ($participant->membership_end_date && $participant->membership_end_date >= now()->toDateString()) {
-            return 'free';
-        }
-
-        return 'paid';
-    }
-
-    public function findPlan(string $type): ?MembershipPlan
-    {
-        return $this->membershipPlanRepository->findActiveByKey($type);
-    }
-
-    public function calculatePrice(string $type): int
-    {
-        return $this->findPlan($type)?->price ?? 0;
-    }
-
-    public function calculateEndDate(string $type, ?int $durationMonths = null): Carbon
-    {
-        if ($durationMonths) {
-            return now()->addMonths($durationMonths);
-        }
-
-        $plan = $this->findPlan($type);
-
-        if (! $plan) {
-            return now();
-        }
-
-        return $plan->duration_unit === 'days'
-            ? now()->addDays($plan->duration)
-            : now()->addMonths($plan->duration);
-    }
-
+    /**
+     * All active plans for the API / admin / frontend.
+     * `price` is the derived full-package price; the real membership price is
+     * computed per-transaction by MembershipPricingService::calculatePrice().
+     */
     public function plans(): array
     {
         return $this->membershipPlanRepository->activePlans()
@@ -73,53 +38,101 @@ class MembershipService
                 'duration_value' => $plan->duration,
                 'duration_unit' => $plan->duration_unit,
                 'price' => $plan->price,
+                'base_event_price' => $plan->base_event_price,
+                'discount_percentage' => $plan->discount_percentage,
+                'reference_event_count' => $plan->reference_event_count,
             ])
             ->values()
             ->all();
     }
 
+    public function findPlan(string $type): ?MembershipPlan
+    {
+        return $this->membershipPlanRepository->findByKey($type);
+    }
+
+    /**
+     * Final membership price for a plan starting today (= eligible Sunday events * effective price).
+     * Integer Rupiah.
+     */
+    public function calculatePrice(string $type, ?string $startDate = null): int
+    {
+        $plan = $this->findPlan($type);
+        if (! $plan) {
+            return 0;
+        }
+
+        return $this->pricingService->calculatePrice($plan, $startDate ?? now()->toDateString())['final_price'];
+    }
+
+    public function calculateEndDate(string $type, ?int $durationMonths = null): Carbon
+    {
+        $plan = $this->findPlan($type);
+        if (! $plan) {
+            return now();
+        }
+
+        return Carbon::parse($this->pricingService->calculatePeriod($plan, now()->toDateString())['actual_end_date']);
+    }
+
     public function grant(Participant $participant, string $type, ?int $durationMonths = null): MembershipHistory
     {
-        return DB::transaction(function () use ($participant, $type, $durationMonths) {
+        return DB::transaction(function () use ($participant, $type) {
             $this->cancelActiveHistories($participant);
 
-            $startDate = now()->toDateString();
-            $endDate = $this->calculateEndDate($type, $durationMonths)->toDateString();
+            $plan = $this->findPlan($type);
+            $breakdown = $plan ? $this->pricingService->calculatePrice($plan) : null;
 
             $history = $participant->membershipHistories()->create([
                 'membership_type' => $type,
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'price' => $this->calculatePrice($type),
+                'start_date' => $breakdown['start_date'] ?? now()->toDateString(),
+                'end_date' => $breakdown['actual_end_date'] ?? now()->toDateString(),
+                'normal_end_date' => $breakdown['normal_end_date'] ?? null,
+                'eligible_event_count' => $breakdown['eligible_event_count'] ?? null,
+                'base_event_price' => $breakdown['base_event_price'] ?? null,
+                'discount_percentage' => $breakdown['discount_percentage'] ?? null,
+                'effective_event_price' => $breakdown['effective_event_price'] ?? null,
+                'price' => $breakdown['final_price'] ?? 0,
                 'status' => MembershipHistory::STATUS_ACTIVE,
             ]);
 
             $participant->update([
                 'membership_type' => $type,
-                'membership_start_date' => $startDate,
-                'membership_end_date' => $endDate,
+                'membership_start_date' => $history->start_date,
+                'membership_end_date' => $history->end_date,
             ]);
 
             $this->notificationService->notifyParticipant(
                 $participant,
-                'Membership aktif',
-                'Membership '.$type.' Anda aktif sampai '.$endDate.'.',
-                'badge-check',
+                'membership_granted',
+                "Membership {$plan?->name} telah aktif hingga {$history->end_date->format('d M Y')}."
             );
 
             return $history;
         });
     }
 
-    public function requestSubscription(Participant $participant, string $type, string $paymentMethod = 'transfer', ?string $paymentProof = null, ?int $durationMonths = null): MembershipHistory
-    {
-        return DB::transaction(function () use ($participant, $type, $paymentMethod, $paymentProof, $durationMonths) {
-            $price = $this->calculatePrice($type);
+    public function requestSubscription(
+        Participant $participant,
+        string $type,
+        string $paymentMethod = 'transfer',
+        ?string $paymentProof = null,
+        ?int $durationMonths = null
+    ): MembershipHistory {
+        return DB::transaction(function () use ($participant, $type, $paymentMethod, $paymentProof) {
+            $plan = $this->findPlan($type);
+            $breakdown = $plan ? $this->pricingService->calculatePrice($plan) : null;
+            $price = $breakdown['final_price'] ?? 0;
 
             $history = $participant->membershipHistories()->create([
                 'membership_type' => $type,
-                'start_date' => now()->toDateString(),
-                'end_date' => $this->calculateEndDate($type, $durationMonths)->toDateString(),
+                'start_date' => $breakdown['start_date'] ?? now()->toDateString(),
+                'end_date' => $breakdown['actual_end_date'] ?? now()->toDateString(),
+                'normal_end_date' => $breakdown['normal_end_date'] ?? null,
+                'eligible_event_count' => $breakdown['eligible_event_count'] ?? null,
+                'base_event_price' => $breakdown['base_event_price'] ?? null,
+                'discount_percentage' => $breakdown['discount_percentage'] ?? null,
+                'effective_event_price' => $breakdown['effective_event_price'] ?? null,
                 'price' => $price,
                 'status' => MembershipHistory::STATUS_PENDING,
             ]);
@@ -147,80 +160,135 @@ class MembershipService
 
             $this->cancelActiveHistories($participant, $history->id);
 
-            $startDate = now()->toDateString();
-            $endDate = $this->calculateEndDate($type)->toDateString();
+            $plan = $this->findPlan($type);
+            $breakdown = $plan ? $this->pricingService->calculatePrice($plan) : null;
 
             $history->update([
-                'start_date' => $startDate,
-                'end_date' => $endDate,
+                'start_date' => $breakdown['start_date'] ?? now()->toDateString(),
+                'end_date' => $breakdown['actual_end_date'] ?? now()->toDateString(),
+                'normal_end_date' => $breakdown['normal_end_date'] ?? null,
+                'eligible_event_count' => $breakdown['eligible_event_count'] ?? null,
+                'base_event_price' => $breakdown['base_event_price'] ?? null,
+                'discount_percentage' => $breakdown['discount_percentage'] ?? null,
+                'effective_event_price' => $breakdown['effective_event_price'] ?? null,
+                'price' => $breakdown['final_price'] ?? $history->price,
                 'status' => MembershipHistory::STATUS_ACTIVE,
             ]);
 
             $participant->update([
                 'membership_type' => $type,
-                'membership_start_date' => $startDate,
-                'membership_end_date' => $endDate,
+                'membership_start_date' => $history->start_date,
+                'membership_end_date' => $history->end_date,
             ]);
+
+            $this->notificationService->notifyParticipant(
+                $participant,
+                'membership_activated',
+                "Membership {$plan?->name} diaktifkan hingga {$history->end_date->format('d M Y')}."
+            );
         });
     }
 
-    public function cancelMembership(Participant $participant): void
+    public function cancelMembership(Participant $participant, string $reason = 'manual'): void
     {
-        DB::transaction(function () use ($participant) {
+        DB::transaction(function () use ($participant, $reason) {
+            $this->cancelActiveHistories($participant);
+
             $participant->update([
-                'membership_type' => 'none',
+                'membership_type' => null,
                 'membership_start_date' => null,
                 'membership_end_date' => null,
             ]);
 
-            $participant->membershipHistories()
-                ->whereIn('status', [MembershipHistory::STATUS_ACTIVE, MembershipHistory::STATUS_PENDING])
-                ->update(['status' => MembershipHistory::STATUS_CANCELLED]);
+            $this->notificationService->notifyParticipant(
+                $participant,
+                'membership_cancelled',
+                "Membership dibatalkan: {$reason}"
+            );
         });
     }
 
-    public function cancelHistory(MembershipHistory $history): void
+    public function cancelHistory(MembershipHistory $history, string $reason = 'manual'): void
     {
-        DB::transaction(function () use ($history) {
-            if ($history->status === MembershipHistory::STATUS_ACTIVE) {
-                $this->cancelMembership($history->participant);
-            } else {
-                $history->update(['status' => MembershipHistory::STATUS_CANCELLED]);
-            }
-        });
+        $history->update(['status' => MembershipHistory::STATUS_CANCELLED]);
+    }
+
+    public function checkEligibility(Participant $participant): array
+    {
+        $active = $participant->membershipHistories()
+            ->where('status', MembershipHistory::STATUS_ACTIVE)
+            ->where('end_date', '>=', now())
+            ->latest()
+            ->first();
+
+        return [
+            'is_eligible' => ! is_null($active),
+            'membership_type' => $active?->membership_type,
+            'end_date' => $active?->end_date?->format('Y-m-d'),
+        ];
     }
 
     public function markExpiredHistories(): int
     {
-        return $this->membershipHistoryRepository->markExpired();
+        $expired = MembershipHistory::query()
+            ->where('status', MembershipHistory::STATUS_ACTIVE)
+            ->where('end_date', '<', now())
+            ->get();
+
+        foreach ($expired as $history) {
+            $history->update(['status' => MembershipHistory::STATUS_EXPIRED]);
+
+            try {
+                $this->notificationService->notifyParticipant(
+                    $history->participant,
+                    'membership_expired',
+                    "Membership {$history->plan?->name} telah berakhir."
+                );
+            } catch (\Throwable $e) {
+                Log::warning("Failed to notify membership expiry for history {$history->id}: {$e->getMessage()}");
+            }
+        }
+
+        return $expired->count();
     }
 
-    public function autoRenewal(Participant $participant): void
+    public function autoRenewal(): int
     {
-        $daysUntilExpiry = now()->diffInDays($participant->membership_end_date, false);
-
-        if ($daysUntilExpiry <= 7 && $daysUntilExpiry >= 0) {
-            $this->grant($participant, $participant->membership_type);
-        }
+        // Auto-renewal hook — currently disabled, no payment gateway connected.
+        return 0;
     }
 
     public function stats(): array
     {
+        $now = now();
+        $expiringSoon = $now->copy()->addDays(7);
+
         return [
-            'total' => $this->membershipHistoryRepository->count(),
-            'active' => $this->membershipHistoryRepository->countByStatus(MembershipHistory::STATUS_ACTIVE),
-            'pending' => $this->membershipHistoryRepository->countByStatus(MembershipHistory::STATUS_PENDING),
-            'expired' => $this->membershipHistoryRepository->countByStatus(MembershipHistory::STATUS_EXPIRED),
-            'expiring_soon' => $this->membershipHistoryRepository->countExpiringSoon(7),
-            'revenue' => $this->membershipHistoryRepository->sumPriceByStatus(MembershipHistory::STATUS_ACTIVE),
+            'total' => MembershipHistory::count(),
+            'active' => MembershipHistory::where('status', MembershipHistory::STATUS_ACTIVE)->count(),
+            'pending' => MembershipHistory::where('status', MembershipHistory::STATUS_PENDING)->count(),
+            'expired' => MembershipHistory::where('status', MembershipHistory::STATUS_EXPIRED)->count(),
+            'expiring_soon' => MembershipHistory::where('status', MembershipHistory::STATUS_ACTIVE)
+                ->whereBetween('end_date', [$now->toDateString(), $expiringSoon->toDateString()])
+                ->count(),
+            'revenue' => (int) MembershipHistory::whereIn('status', [
+                MembershipHistory::STATUS_ACTIVE,
+                MembershipHistory::STATUS_EXPIRED,
+            ])->sum('price'),
         ];
     }
 
     private function cancelActiveHistories(Participant $participant, ?int $exceptId = null): void
     {
-        $participant->membershipHistories()
-            ->where('status', MembershipHistory::STATUS_ACTIVE)
-            ->when($exceptId, fn ($query) => $query->where('id', '!=', $exceptId))
-            ->update(['status' => MembershipHistory::STATUS_CANCELLED]);
+        $query = $participant->membershipHistories()
+            ->where('status', MembershipHistory::STATUS_ACTIVE);
+
+        if ($exceptId) {
+            $query->where('id', '<>', $exceptId);
+        }
+
+        foreach ($query->get() as $history) {
+            $history->update(['status' => MembershipHistory::STATUS_CANCELLED]);
+        }
     }
 }
