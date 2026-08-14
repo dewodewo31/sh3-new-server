@@ -74,7 +74,7 @@ class MembershipApiTest extends TestCase
         $response->assertOk()
             ->assertJsonCount(3, 'data')
             ->assertJsonPath('data.0.type', 'tahunan')
-            ->assertJsonPath('data.0.price', 400000);
+            ->assertJsonPath('data.0.price', 1192500);
     }
 
     public function test_can_list_membership_history(): void
@@ -101,14 +101,14 @@ class MembershipApiTest extends TestCase
         $history = $this->participant->membershipHistories()->first();
 
         $this->assertSame('pending', $history->status);
-        $this->assertSame(400000.0, (float) $history->price);
+        $this->assertSame(0.0, (float) $history->price);
         $this->assertDatabaseHas('payments', [
             'participant_id' => $this->participant->id,
             'payment_type' => 'membership',
             'paymentable_id' => $history->id,
             'paymentable_type' => MembershipHistory::class,
             'status' => 'pending',
-            'amount' => 400000.00,
+            'amount' => 0.00,
         ]);
     }
 
@@ -195,7 +195,9 @@ class MembershipApiTest extends TestCase
         $this->put('/admin/membership-plans/'.$plan->id, [
             'key' => $plan->key,
             'name' => 'Premium Tahunan',
-            'price' => 500000,
+            'base_event_price' => 500000,
+            'discount_percentage' => 0,
+            'reference_event_count' => 1,
             'duration' => 12,
             'duration_unit' => 'months',
             'sort_order' => 1,
@@ -206,7 +208,8 @@ class MembershipApiTest extends TestCase
         $this->assertSame('Premium Tahunan', $plan->name);
         $this->assertSame(500000, $plan->price);
 
-        $this->assertSame(500000, $this->membershipService->calculatePrice('tahunan'));
+        // calculatePrice is event-based: no eligible events seeded -> 0
+        $this->assertSame(0, $this->membershipService->calculatePrice('tahunan'));
     }
 
     public function test_admin_can_create_and_delete_plan(): void
@@ -217,7 +220,9 @@ class MembershipApiTest extends TestCase
         $this->post('/admin/membership-plans', [
             'key' => 'dua_bulan',
             'name' => 'Dua Bulan',
-            'price' => 75000,
+            'base_event_price' => 75000,
+            'discount_percentage' => 0,
+            'reference_event_count' => 1,
             'duration' => 2,
             'duration_unit' => 'months',
             'sort_order' => 4,

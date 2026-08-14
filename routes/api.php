@@ -36,10 +36,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/galleries', [GalleryController::class, 'index']);
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/merchandise', [MerchandiseController::class, 'index']);
-    Route::get('/merchandise/{id}', [MerchandiseController::class, 'show']);
+    Route::get('/merchandise/{id}', [MerchandiseController::class, 'show'])->whereNumber('id');
     Route::get('/sponsors', [SponsorController::class, 'index']);
     Route::get('/organization', [OrganizationController::class, 'index']);
-    Route::get('/organization/{id}', [OrganizationController::class, 'show']);
+    Route::get('/organization/{id}', [OrganizationController::class, 'show'])->whereNumber('id');
     Route::get('/organization/stats', [OrganizationController::class, 'stats']);
     Route::get('/organization/tree', [OrganizationController::class, 'tree']);
     Route::get('/organization/years', [OrganizationController::class, 'years']);

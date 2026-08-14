@@ -25,9 +25,9 @@ class OrganizationController extends Controller
         return OrganizationMemberResource::collection($members)->response();
     }
 
-    public function show(int $id): JsonResponse
+    public function show(string $id): JsonResponse
     {
-        $member = $this->organizationMemberRepository->findByIdWithHolder($id);
+        $member = $this->organizationMemberRepository->findByIdWithHolder((int) $id);
 
         return response()->json(['data' => new OrganizationMemberResource($member)]);
     }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class MembershipHistory extends Model
 {
@@ -46,6 +47,26 @@ class MembershipHistory extends Model
     {
         return $this->hasMany(Payment::class, 'paymentable_id')
             ->where('paymentable_type', self::class);
+    }
+
+    public function payment(): MorphOne
+    {
+        return $this->morphOne(Payment::class, 'paymentable');
+    }
+
+    public function markAsPaid(): void
+    {
+        if ($this->status !== self::STATUS_PENDING) {
+            return;
+        }
+
+        $this->update(['status' => self::STATUS_ACTIVE]);
+
+        $this->participant->update([
+            'membership_type' => $this->membership_type,
+            'membership_start_date' => $this->start_date,
+            'membership_end_date' => $this->end_date,
+        ]);
     }
 
     public function isActive(): bool

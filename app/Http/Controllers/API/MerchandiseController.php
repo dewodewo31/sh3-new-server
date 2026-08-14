@@ -27,9 +27,9 @@ class MerchandiseController extends Controller
         return response()->json(['data' => MerchandiseResource::collection($merchandise)]);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(string $id): JsonResponse
     {
-        $item = $this->merchandiseRepository->findById($id);
+        $item = $this->merchandiseRepository->findById((int) $id);
 
         return response()->json(['data' => new MerchandiseResource($item)]);
     }

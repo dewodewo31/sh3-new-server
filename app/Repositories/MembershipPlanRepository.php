@@ -53,4 +53,9 @@ class MembershipPlanRepository extends BaseRepository
     {
         return $this->model->where('key', $key)->where('is_active', true)->first();
     }
+
+    public function findByKey(string $key): ?MembershipPlan
+    {
+        return $this->model->where('key', $key)->first();
+    }
 }

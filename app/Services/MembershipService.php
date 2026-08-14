@@ -195,7 +195,7 @@ class MembershipService
             $this->cancelActiveHistories($participant);
 
             $participant->update([
-                'membership_type' => null,
+                'membership_type' => 'none',
                 'membership_start_date' => null,
                 'membership_end_date' => null,
             ]);
