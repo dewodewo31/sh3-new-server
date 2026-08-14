@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -72,6 +73,17 @@ class MembershipHistory extends Model
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE && $this->end_date->isFuture();
+    }
+
+    /**
+     * Single source of truth for "currently active membership".
+     * status = active AND end_date >= today (end_date counts as active through that day).
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query
+            ->where('status', self::STATUS_ACTIVE)
+            ->whereDate('end_date', '>=', now()->toDateString());
     }
 
     public function isExpired(): bool

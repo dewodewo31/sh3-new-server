@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -74,6 +75,20 @@ class Participant extends Model
         }
 
         return $this->membership_end_date && $this->membership_end_date >= now()->toDateString();
+    }
+
+    /**
+     * Single source of truth for the admin grant participant dropdown:
+     * participants WITHOUT a currently-active membership (status=active AND
+     * end_date >= today). cancelled/expired/past-end_date histories do not
+     * disqualify a participant. Used by both the create form query and the
+     * POST validation, so frontend filtering can never be bypassed.
+     */
+    public function scopeEligibleForMembership(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('membershipHistories', function (Builder $q) {
+            $q->active(); // MembershipHistory::scopeActive — single source of truth
+        });
     }
 
     protected static function booted(): void

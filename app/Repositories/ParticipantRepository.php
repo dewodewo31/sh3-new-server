@@ -24,6 +24,19 @@ class ParticipantRepository extends BaseRepository
             ->get();
     }
 
+    /**
+     * Participants eligible for a new membership grant:
+     * no membership history with status=active AND end_date >= today.
+     * Backend filtering — the dropdown never receives ineligible participants.
+     */
+    public function eligibleForMembership(array $relations = [])
+    {
+        return $this->model->with($relations)
+            ->eligibleForMembership()
+            ->orderBy('name')
+            ->get();
+    }
+
     public function findExpiringMembers(int $days = 7)
     {
         return $this->model->where('membership_type', '!=', 'none')
