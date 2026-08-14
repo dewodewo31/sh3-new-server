@@ -101,14 +101,15 @@ class MembershipApiTest extends TestCase
         $history = $this->participant->membershipHistories()->first();
 
         $this->assertSame('pending', $history->status);
-        $this->assertSame(0.0, (float) $history->price);
+        $plan = MembershipPlan::where('key', 'tahunan')->firstOrFail();
+        $this->assertSame($plan->price, (int) $history->price);
         $this->assertDatabaseHas('payments', [
             'participant_id' => $this->participant->id,
             'payment_type' => 'membership',
             'paymentable_id' => $history->id,
             'paymentable_type' => MembershipHistory::class,
             'status' => 'pending',
-            'amount' => 0.00,
+            'amount' => $plan->price,
         ]);
     }
 
@@ -259,5 +260,81 @@ class MembershipApiTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertDatabaseHas('membership_plans', ['id' => $plan->id]);
+    }
+
+    // --- Bug fix: membership price must snapshot plan price ---
+
+    public function test_membership_price_matches_plan_price(): void
+    {
+        $plan = MembershipPlan::where('key', 'tahunan')->firstOrFail();
+        $history = $this->membershipService->grant($this->participant, 'tahunan');
+
+        $this->assertSame($plan->price, (int) $history->price);
+    }
+
+    public function test_client_cannot_manipulate_price(): void
+    {
+        $plan = MembershipPlan::where('key', 'tahunan')->firstOrFail();
+
+        $response = $this->postJson('/api/v1/membership/subscribe', [
+            'membership_type' => 'tahunan',
+            'payment_method' => 'transfer',
+            'price' => 1, // client tries to manipulate
+        ]);
+
+        $response->assertCreated();
+        $history = $this->participant->membershipHistories()->first();
+        $this->assertSame($plan->price, (int) $history->price);
+    }
+
+    public function test_cancelled_membership_keeps_price(): void
+    {
+        $plan = MembershipPlan::where('key', 'tahunan')->firstOrFail();
+        $history = $this->membershipService->grant($this->participant, 'tahunan');
+        $originalPrice = $history->price;
+
+        $this->membershipService->cancelMembership($this->participant);
+
+        $history->refresh();
+        $this->assertSame('cancelled', $history->status);
+        $this->assertSame($plan->price, (int) $originalPrice);
+    }
+
+    public function test_plan_price_change_does_not_affect_old_membership(): void
+    {
+        $plan = MembershipPlan::where('key', 'tahunan')->firstOrFail();
+        $originalPrice = $plan->price;
+
+        $old = $this->membershipService->grant($this->participant, 'tahunan');
+        $this->assertSame($originalPrice, (int) $old->price);
+
+        // change plan price
+        $plan->update([
+            'base_event_price' => 500000,
+            'discount_percentage' => 0,
+            'reference_event_count' => 1,
+        ]);
+        $plan->refresh();
+        $this->assertNotSame($originalPrice, $plan->price);
+
+        // old membership unchanged
+        $old->refresh();
+        $this->assertSame($originalPrice, (int) $old->price);
+
+        // new membership uses new price
+        $new = $this->membershipService->grant($this->participant, 'tahunan');
+        $this->assertSame($plan->price, (int) $new->price);
+    }
+
+    public function test_admin_page_shows_correct_price(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin_full_access']);
+        $this->actingAs($admin);
+
+        $this->membershipService->grant($this->participant, 'tahunan');
+
+        $response = $this->get('/admin/memberships');
+        $response->assertOk();
+        $response->assertSee('1.192.500');
     }
 }

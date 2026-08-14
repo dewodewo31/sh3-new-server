@@ -92,7 +92,7 @@ class MembershipService
                 'base_event_price' => $breakdown['base_event_price'] ?? null,
                 'discount_percentage' => $breakdown['discount_percentage'] ?? null,
                 'effective_event_price' => $breakdown['effective_event_price'] ?? null,
-                'price' => $breakdown['final_price'] ?? 0,
+                'price' => $plan?->price ?? 0, // ponytail: snapshot plan price, not event-based final_price (was 0 when eligibleEventCount=0)
                 'status' => MembershipHistory::STATUS_ACTIVE,
             ]);
 
@@ -122,7 +122,7 @@ class MembershipService
         return DB::transaction(function () use ($participant, $type, $paymentMethod, $paymentProof) {
             $plan = $this->findPlan($type);
             $breakdown = $plan ? $this->pricingService->calculatePrice($plan) : null;
-            $price = $breakdown['final_price'] ?? 0;
+            $price = $plan?->price ?? 0; // ponytail: snapshot plan price, not event-based
 
             $history = $participant->membershipHistories()->create([
                 'membership_type' => $type,
@@ -171,7 +171,7 @@ class MembershipService
                 'base_event_price' => $breakdown['base_event_price'] ?? null,
                 'discount_percentage' => $breakdown['discount_percentage'] ?? null,
                 'effective_event_price' => $breakdown['effective_event_price'] ?? null,
-                'price' => $breakdown['final_price'] ?? $history->price,
+                'price' => $plan?->price ?? $history->price, // ponytail: preserve plan snapshot, don't recompute from events
                 'status' => MembershipHistory::STATUS_ACTIVE,
             ]);
 
