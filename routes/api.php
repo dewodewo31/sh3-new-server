@@ -71,8 +71,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
 
         Route::post('/payments/create', [PaymentController::class, 'store']);
-        Route::get('/payments/{id}', [PaymentController::class, 'show']);
         Route::get('/payments/history', [PaymentController::class, 'history']);
+        Route::get('/payments/{id}', [PaymentController::class, 'show'])->whereNumber('id');
 
         Route::middleware('role:admin_full_access,bendahara')->group(function () {
             Route::post('/payments/confirm/{id}', [PaymentController::class, 'confirm'])->whereNumber('id');

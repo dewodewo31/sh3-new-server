@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Attendance;
 use App\Models\Event;
+use Illuminate\Support\Carbon;
 
 class AttendanceRepository extends BaseRepository
 {
@@ -97,7 +98,7 @@ class AttendanceRepository extends BaseRepository
                 });
             })
             ->when(! empty($filters['since']), function ($q) use ($filters) {
-                $q->where('updated_at', '>=', $filters['since']);
+                $q->where('updated_at', '>=', Carbon::parse($filters['since'])->timezone(config('app.timezone')));
             })
             ->orderBy('updated_at')
             ->get();

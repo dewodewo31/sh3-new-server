@@ -2,6 +2,51 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-14 — Deploy Produksi: Fix Sync-Down, Payments History, Participants, Reverb TLS & PHP 8.3
+
+### Perubahan Kode
+
+- **`app/Repositories/AttendanceRepository.php`** — fix sinkronisasi `sync-down`:
+  Parameter `since` (ISO UTC dari client) kini di-parse dan dikonversi ke timezone aplikasi
+  (`Carbon::parse(...)->timezone(config('app.timezone'))`) sebelum dibandingkan dengan `updated_at`
+  yang tersimpan dalam timezone lokal (Asia/Jakarta). Sebelumnya selisih 7 jam menyebabkan
+  data yang sudah ter-sync tetap terkirim ulang.
+- **`routes/api.php`** — fix route `/api/v1/payments/history` tertelan oleh `/payments/{id}`:
+  Route `history` dipindah ke atas route `{id}` dan `{id}` diberi constrain `->whereNumber('id')`.
+  Sebelumnya `GET /payments/history` memanggil `PaymentController::show()` dengan `id='history'`
+  → `TypeError` (500).
+- **`app/Http/Controllers/API/ParticipantController.php`** — fix `paginate(['user'])`:
+  Argumen pertama `paginate()` adalah `int $perPage`, bukan array relasi.
+  Diubah menjadi `paginate(15, ['user'])` → `GET /api/v1/participants` tidak lagi 500.
+- **`app/Http/Requests/ParticipantRequest.php`** — fix validasi unique email saat update:
+  Route param bernama `{id}` (bukan `{participant}`), sehingga `Route::unique('participants')->ignore()`
+  gagal dan email sendiri dianggap "already taken". Kini `$participantId` diambil dari `route('participant')`
+  atau `route('id')`.
+- **`config/reverb.php`** — Reverb kini dapat berjalan **secure (WSS/HTTPS langsung di port 8080)**
+  memakai sertifikat Let's Encrypt: TLS diisi dari `REVERB_TLS_CERT` / `REVERB_TLS_KEY`
+  (default `/etc/reverb/fullchain.pem` & `/etc/reverb/privkey.pem`). Sesuai `.env`
+  `REVERB_SCHEME=https`. Sebelumnya `'tls' => []` (plain HTTP) sehingga broadcast dari PHP
+  ke `https://server-sh3.cloud:8080` gagal (`SSL connection timeout`).
+
+### Infrastruktur / Konfigurasi Server
+
+- Project di-deploy pada **PHP 8.3** (branch `prod`). Branch `main` memerlukan PHP 8.4.
+- Sertifikat TLS untuk Reverb disalin ke `/etc/reverb/` (ownership `www-data`, `privkey.pem` mode `600`)
+  karena `/etc/letsencrypt` tidak dapat dibaca oleh user `www-data` (Reverb dijalankan sebagai `www-data`).
+- `phpunit.xml` disesuaikan ke database lokal (`127.0.0.1`, user `sh3_user`, DB `db_server_new_test`)
+  menggantikan nilai Docker (`DB_HOST=mysql`, root) yang tidak tersedia di server.
+
+### Verifikasi
+
+- `php artisan test` → **164/164 PASS** (520 assertions).
+- API publik & autentikasi (auth, events, membership, payments, participants, merchandise,
+  attendance, notifications, organization, galleries) → 200 OK di `https://server-sh3.cloud`.
+- Broadcast real-time berhasil dikirim melalui **WSS/HTTPS** ke Reverb (handshake WebSocket 101).
+- Panel admin (`/admin/*`) login via email dan seluruh halaman 200.
+- Upload foto profil & QR scan attendance berfungsi.
+
+---
+
 ## 2026-08-14 — Participant Forgot/Reset Password (Tanpa Email / Pihak Ketiga)
 
 Fitur reset password khusus **Participant** tanpa email / OTP / SMS / WA / pihak ke-3.

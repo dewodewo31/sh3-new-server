@@ -17,7 +17,7 @@ class ParticipantController extends Controller
 
     public function index(): JsonResponse
     {
-        $participants = $this->participantRepository->paginate(['user']);
+        $participants = $this->participantRepository->paginate(15, ['user']);
 
         return response()->json($participants);
     }

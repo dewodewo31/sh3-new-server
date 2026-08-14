@@ -242,7 +242,11 @@ REVERB_APP_KEY=<REVERB_APP_KEY>
 REVERB_APP_SECRET=<REVERB_APP_SECRET>
 REVERB_HOST=sh3.example.com            # host publik tempat WebSocket diakses
 REVERB_PORT=8080
-REVERB_SCHEME=http                     # https jika di belakang TLS proxy
+REVERB_SCHEME=http                     # https jika di belakang TLS proxy ATAU Reverb TLS langsung
+
+# Opsional — aktifkan TLS langsung di Reverb (WSS) memakai sertifikat Let's Encrypt:
+# REVERB_TLS_CERT=/etc/reverb/fullchain.pem
+# REVERB_TLS_KEY=/etc/reverb/privkey.pem
 
 VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
 VITE_REVERB_HOST="${REVERB_HOST}"
@@ -342,6 +346,12 @@ user=www-data
 redirect_stderr=true
 stdout_logfile=/var/www/sh3-server/storage/logs/reverb.log
 ```
+
+> **Reverb TLS langsung (WSS di port 8080):** jika `REVERB_SCHEME=https` di `.env`, Reverb
+> dijalankan sebagai server *secure*. Pastikan `config/reverb.php` mengisi `options.tls` dari
+> `REVERB_TLS_CERT` / `REVERB_TLS_KEY`, dan sertifikat dapat dibaca oleh user `www-data`
+> (mis. disalin ke `/etc/reverb/` — lihat Changelog). Jika `REVERB_SCHEME=http`, biarkan
+> `options.tls` kosong (plain WebSocket / pakai proxy TLS di Nginx).
 
 `/etc/supervisor/conf.d/sh3-scheduler.conf`:
 
@@ -476,7 +486,8 @@ redis-cli ping                              # PONG
 sudo tail -f -n 20 /var/www/sh3-server/storage/logs/queue.log
 
 # 5) Reverb WebSocket
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/   # 200
+# HTTP/plain:          curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/   # 200
+# TLS langsung (WSS):  openssl s_client -connect sh3.example.com:8080 -servername sh3.example.com < /dev/null
 
 # 6) File storage dapat diakses
 curl -s -o /dev/null -w "%{http_code}\n" \

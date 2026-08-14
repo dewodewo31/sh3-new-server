@@ -103,6 +103,11 @@ Detail lengkap ada di `docs/12 — Membership Module.md`. Ringkasan:
 | GET | `/api/v1/participants/{id}/events` | Event yang diikuti peserta |
 | GET | `/api/v1/participants/{id}/attendance` | Absensi peserta |
 
+> **Catatan (fix 2026-08-14):** `GET /api/v1/participants` memanggil
+> `paginate(15, ['user'])` (bukan `paginate(['user'])`) sehingga relasi `user` dimuat
+> dengan benar. Update peserta (`PUT /participants/{id}`) mengabaikan email miliknya
+> sendiri pada validasi unique (route param `{id}`).
+
 ## File Terkait
 
 - `app/Http/Controllers/Admin/ParticipantController.php`

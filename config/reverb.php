@@ -34,7 +34,10 @@ return [
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
             'options' => [
-                'tls' => [],
+                'tls' => [
+                    'local_cert' => env('REVERB_TLS_CERT', '/etc/reverb/fullchain.pem'),
+                    'local_pk' => env('REVERB_TLS_KEY', '/etc/reverb/privkey.pem'),
+                ],
             ],
             'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 10_000),
             'scaling' => [

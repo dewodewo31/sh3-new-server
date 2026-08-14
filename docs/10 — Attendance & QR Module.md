@@ -95,6 +95,11 @@ Scan QR → decode(event_id, participant_id) → cari registrasi
 
 `syncDown` mengembalikan daftar `{ event_id, participant_id, status, check_in_time, check_out_time, check_in_method, latitude, longitude, notes, updated_at }`.
 
+> **Catatan sinkronisasi (fix 2026-08-14):** parameter `since` (format ISO, umumnya UTC dari
+> client) di-parse dan dikonversi ke timezone aplikasi (`Asia/Jakarta`) sebelum dibandingkan
+> dengan `updated_at` yang tersimpan dalam timezone lokal. Tanpa konversi, selisih zona waktu
+> (mis. +7 jam) menyebabkan `sync-down` mengirim ulang data yang seharusnya sudah ter-sync.
+
 ## API Endpoints
 
 Semua endpoint absensi butuh auth (`auth:sanctum`).
