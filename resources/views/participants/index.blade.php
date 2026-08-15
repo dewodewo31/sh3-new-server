@@ -17,12 +17,12 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Membership</th>
-                    <th>Status</th>
-                    <th>Events</th>
+                    <x-th-sort column="name">Name</x-th-sort>
+                    <x-th-sort column="email">Email</x-th-sort>
+                    <x-th-sort column="phone">Phone</x-th-sort>
+                    <x-th-sort column="membership_type">Membership</x-th-sort>
+                    <x-th-sort column="is_active">Status</x-th-sort>
+                    <x-th-sort column="total_events_participated">Events</x-th-sort>
                     <th>Aksi</th>
                 </tr>
             </thead>

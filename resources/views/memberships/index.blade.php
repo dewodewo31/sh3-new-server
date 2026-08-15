@@ -79,10 +79,10 @@
                 <tr>
                     <th>#</th>
                     <th>Peserta</th>
-                    <th>Tipe</th>
-                    <th>Periode</th>
-                    <th>Harga</th>
-                    <th>Status</th>
+                    <x-th-sort column="membership_type">Tipe</x-th-sort>
+                    <x-th-sort column="start_date">Periode</x-th-sort>
+                    <x-th-sort column="price">Harga</x-th-sort>
+                    <x-th-sort column="status">Status</x-th-sort>
                     <th>Aksi</th>
                 </tr>
             </thead>

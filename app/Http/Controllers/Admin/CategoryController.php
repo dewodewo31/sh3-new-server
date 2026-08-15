@@ -17,7 +17,11 @@ class CategoryController extends Controller
 
     public function index()
     {
-        $categories = $this->categoryRepository->all();
+        $categories = $this->categoryRepository->allSorted(
+            ['name', 'slug', 'distance_km', 'sort_order', 'is_active'],
+            'sort_order',
+            'asc',
+        );
 
         return view('categories.index', compact('categories'));
     }

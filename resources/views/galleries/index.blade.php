@@ -17,10 +17,10 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Title</th>
-                    <th>Type</th>
+                    <x-th-sort column="title">Title</x-th-sort>
+                    <x-th-sort column="type">Type</x-th-sort>
                     <th>Event</th>
-                    <th>Featured</th>
+                    <x-th-sort column="is_featured">Featured</x-th-sort>
                     <th>Aksi</th>
                 </tr>
             </thead>

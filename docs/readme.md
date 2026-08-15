@@ -18,6 +18,7 @@
 14. Tech Stack
 15. Modul Notification
 16. Changelog & Perbaikan (lihat `14 — Changelog & Fixes.md`)
+17. Gallery Album (lihat `19 — Gallery Album Module.md`)
 
 ---
 
@@ -88,6 +89,7 @@ app/
 │   │       ├── DashboardController.php
 │   │       ├── EventController.php
 │   │       ├── GalleryController.php
+│   │       ├── GalleryAlbumController.php
 │   │       ├── MembershipController.php
 │   │       ├── MembershipPlanController.php
 │   │       ├── MerchandiseController.php
@@ -126,7 +128,9 @@ app/
 ├── Providers/
 │   ├── AppServiceProvider.php
 │   └── RepositoryServiceProvider.php
-├── Repositories/               (15 Repositories)
+├── Repositories/               (16 Repositories)
+├── Support/
+│   └── Sort.php                (sorting tabel aman, 2026-08-15)
 ├── Services/
 │   ├── AttendanceService.php
 │   ├── AuthService.php
@@ -849,8 +853,8 @@ POST /api/v1/payments/confirm/{id}      # role: admin_full_access, bendahara
 POST /api/v1/attendance/check-in        # auth:sanctum
 POST /api/v1/attendance/check-out       # auth:sanctum
 POST /api/v1/attendance/scan            # auth:sanctum
-POST /api/v1/attendance/sync-up         # auth:sanctum — offline sync
-GET  /api/v1/attendance/sync-down       # auth:sanctum — download offline data
+POST /api/v1/attendance/sync-up         # publik (sejak 2026-08-15) — offline sync + OTS payment
+GET  /api/v1/attendance/sync-down       # publik (sejak 2026-08-15) — download offline data
 GET  /api/v1/attendance/report          # auth:sanctum
 GET  /api/v1/attendance/{eventId}       # auth:sanctum
 ```

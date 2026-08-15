@@ -15,7 +15,11 @@ class SponsorController extends Controller
 
     public function index()
     {
-        $sponsors = $this->sponsorRepository->all();
+        $sponsors = $this->sponsorRepository->allSorted(
+            ['name', 'tier', 'contact_person', 'year', 'is_active'],
+            'name',
+            'asc',
+        );
 
         return view('sponsors.index', compact('sponsors'));
     }

@@ -16,7 +16,10 @@ class UserController extends Controller
 
     public function index()
     {
-        $users = $this->userRepository->paginate();
+        $users = $this->userRepository->paginateSorted(
+            ['name', 'email', 'role', 'is_active', 'last_login', 'created_at'],
+            15,
+        );
 
         return view('users.index', compact('users'));
     }

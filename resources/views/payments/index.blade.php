@@ -13,13 +13,13 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Invoice</th>
+                    <x-th-sort column="invoice_number">Invoice</x-th-sort>
                     <th>Participant</th>
-                    <th>Tipe</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Status</th>
-                    <th>Tanggal</th>
+                    <x-th-sort column="payment_type">Tipe</x-th-sort>
+                    <x-th-sort column="amount">Amount</x-th-sort>
+                    <x-th-sort column="payment_method">Method</x-th-sort>
+                    <x-th-sort column="status">Status</x-th-sort>
+                    <x-th-sort column="created_at">Tanggal</x-th-sort>
                     <th>Aksi</th>
                 </tr>
             </thead>

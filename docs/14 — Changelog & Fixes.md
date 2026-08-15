@@ -2,6 +2,192 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-15 — Sync-Up OTS (Payment + Attendance), Re-Registration Flow, Sortable Tables, Gallery Album & Seeder Import
+
+### A. Sync-Up OTS: Sinkronisasi Offline Lengkap (Payment + Attendance + Dedup)
+
+**Commit:** `a445031` → `b72e698` → `9be35b7` — `app/Http/Controllers/API/AttendanceController.php` dirombak besar-besaran.
+
+#### Route Publik (bukan lagi auth-only)
+
+- **`routes/api.php`** — `POST /api/v1/attendance/sync-up` dan `GET /api/v1/attendance/sync-down`
+  dipindahkan dari grup `auth:sanctum` ke grup **publik** (sebelumnya hanya bisa dipanggil
+  dengan token; device OTS offline tidak memiliki token). Kini bisa dipanggil tanpa autentikasi.
+
+#### Payload `sync-up`
+
+Request `POST /api/v1/attendance/sync-up` kini menerima **dua array**:
+
+```json
+{
+  "attendances": [
+    {
+      "event_id": 1,
+      "qr_code": "SH3-1-2-ABC12345",
+      "hash_id": "0022",
+      "check_in_time": "2026-08-15 07:30:00",
+      "check_out_time": null
+    }
+  ],
+  "ots_registrations": [
+    {
+      "event_id": 1,
+      "hash_id": "MANUAL_OTS_001",
+      "member_name": "Budi",
+      "check_in_time": "2026-08-15 08:00:00",
+      "check_out_time": null
+    }
+  ]
+}
+```
+
+#### Alur proses `sync-up`
+
+1. **Attendance reguler** (`attendances[]`):
+   - `EventParticipant` dicari via `qr_code` + `event_id`; jika tidak ketemu, fallback lookup
+     via `hash_id` peserta dalam event yang sama.
+   - `event_participants` di-update: `check_in_at`, `check_out_at`, `is_attended = true`.
+   - `attendances` di-*update* bila sudah ada (tanpa duplikasi), atau dibuat bila belum ada.
+   - Jika attendance sudah punya `check_out_time`, hanya `check_in_time` + `status=present`
+     yang di-update (mencegah menimpa waktu keluar yang sudah tercatat).
+2. **OTS member** (`ots_registrations[]`):
+   - Participant aggregator `MANUAL_OTS_AGGREGATOR` (`name = 'Manual OTS NON MEMBER'`,
+     `email = manual.ots@sh3.com`) dibuat otomatis dengan `firstOrCreate` untuk semua OTS manual
+     (hash_id mengandung kata `manual`).
+   - OTS member: participant dicari/dibuat via `hash_id`.
+   - **Satu `EventParticipant` per participant per event** (`firstOrCreate` dengan
+     `qr_code = OTS-{hash_id}EV{event_id}`, `registration_type = paid`, `payment_status = confirmed`).
+   - `total_events_participated` di-increment **hanya sekali per event** (tracking `$processedEvents`).
+   - **Payment dibuat otomatis** untuk setiap scan OTS: `INV-OTS-{random8}`, tipe
+     `event_registration`, method `cash`, status `confirmed`, terhubung polymorphic ke
+     `EventParticipant`.
+   - Attendance di-*update* bila sudah ada (dedup), dibuat bila belum, dengan
+     `notes = 'Manual OTS: ...'` atau `'OTS Member: ...'`.
+   - `event_participants.check_in_at/check_out_at` di-sinkronkan ulang.
+
+#### Fix OTS dedup & re-registration (`9be35b7`)
+
+- **`app/Services/EventService.php`** — re-registrasi sekarang **memperbarui** `EventParticipant`
+  yang sudah ada (reset `is_attended=false`, `check_in_at/out_at=null`, `payment_id`,
+  `registration_type`, `amount`, `payment_status`) dan **menghapus attendance lama**
+  (`$registration->attendance()->delete()`) alih-alih menolak/duplikasi.
+- `total_events_participated` hanya di-increment pada **registrasi pertama** (bila `$existing` null).
+- Keanggotaan gratis kini memakai hasil terstruktur `membershipService->checkEligibility()`
+  (`$eligibility['is_eligible']`), bukan hitungan manual.
+- **`app/Models/EventParticipant.php`** — method baru `markAsRejected()`.
+- **`app/Services/PaymentService.php`** — `rejectPayment()` dibungkus `DB::transaction` dan
+  memanggil `$paymentable->markAsRejected()` bila method ada (status `event_participants`
+  kini ikut berubah menjadi `rejected` saat pembayaran ditolak).
+- **`app/Http/Controllers/API/EventController.php`** — pengecekan `payment_method`/`payment_proof`
+  didasarkan pada `$registration->amount > 0` (bukan `$event->price`), sehingga re-registrasi
+  membership-free tidak memaksa upload bukti bayar. `orderStatus()` memperbaiki status
+  `rejected` (bukan lagi `cancelled`) dan `is_membership_free`.
+
+#### Verifikasi
+
+- `tests/Feature/AttendanceApiTest.php` (+116 baris) dan `tests/Feature/EventApiTest.php`
+  (baru, +384 baris) menambah cakupan alur attendance dan re-registration.
+
+### B. Sortable Tables (Kolom Tabel Bisa Diurutkan) — Admin
+
+Semua tabel index admin kini mendukung **sorting kolom** lewat query string
+`?sort={kolom}&direction={asc|desc}` tanpa reload halaman.
+
+#### Komponen Baru
+
+- **`app/Support/Sort.php`** (baru) — helper statis:
+  - `resolve(array $allowed, string $default, string $defaultDirection)` — membaca `sort` &
+    `direction` dari request, memvalidasi terhadap whitelist kolom, fallback ke default.
+  - `apply(Builder $query, array $allowed, ...)` — menerapkan `orderBy` dengan aman.
+  - `active($column)`, `nextDirection($column)`, `isAsc($column)`, `url($column)` —
+    membangun URL sort yang mempertahankan query string lain (search/filter) sambil toggle arah.
+  - `directionLabel($column)` — label aksesibilitas.
+- **`resources/views/components/th-sort.blade.php`** (baru) — Blade component:
+  ```blade
+  <x-th-sort column="name">Name</x-th-sort>
+  ```
+  Merender link sort dengan ikon panah atas/bawah; class aktif `active asc/desc` diset
+  otomatis. Tanpa `column` → render teks polos.
+- **`resources/css/app.css`** — class `.th-sort`, `.th-sort-icon`, `.th-sort.active`,
+  `.th-sort.asc/.desc` (Tailwind `@layer components`).
+
+#### Repository (BaseRepository + per-modul)
+
+- **`app/Repositories/BaseRepository.php`** — method baru:
+  - `allSorted(array $allowed, string $default = 'id', string $defaultDirection = 'asc', array $relations = [])`
+  - `paginateSorted(array $allowed, int $perPage = 15, array $relations = [], string $default = 'created_at', string $defaultDirection = 'desc')`
+  (keduanya memakai `Sort::apply` + `->withQueryString()` pada paginate).
+- Repository lain memakai `Sort::apply` langsung: `AttendanceRepository` (check_in_time),
+  `EventRepository` (created_at), `MembershipHistoryRepository`, `MembershipPlanRepository`
+  (sort_order), `MerchandiseRepository`, `ParticipantRepository`, `PaymentRepository`,
+  `GalleryAlbumRepository`.
+
+#### Controller & View yang Diperbarui
+
+- `Admin\CategoryController` → `allSorted(['name','slug','distance_km','sort_order','is_active'], 'sort_order', 'asc')`
+- `Admin\GalleryController` → `paginateSorted(['title','type','is_featured','created_at'], 15, ['event'])`
+- `Admin\OrganizationController` → `allSorted([...], 'sort_order', 'asc')`
+- `Admin\SponsorController` → `allSorted([...], 'name', 'asc')`
+- `Admin\UserController` → `paginateSorted(['name','email','role','is_active','last_login','created_at'], 15)`
+- View index: `attendance`, `categories`, `events`, `galleries`, `membership_plans`,
+  `memberships`, `merchandise`, `organizations`, `participants`, `payments`, `sponsors`,
+  `users`, `gallery-albums` — `<th>` diganti `<x-th-sort column="...">`.
+
+### C. Gallery Album Module (CRUD Admin)
+
+Modul baru untuk mengelola **album galeri** (mengelompokkan gallery per event).
+
+- **`app/Http/Controllers/Admin/GalleryAlbumController.php`** (baru) — index, create, store,
+  edit, update, destroy; upload cover via `ImageHelper::upload(..., 'albums')`, hapus cover lama,
+  dan `logActivity()` (create_album/update_album/delete_album).
+- **`app/Repositories/GalleryAlbumRepository.php`** (baru) — `paginateWithRelations(15)`
+  dengan relasi `event`, `withCount('galleries')`, dan `Sort::apply`.
+- **`app/Http/Requests/GalleryAlbumRequest.php`** (baru) — `event_id` (nullable, exists),
+  `title` (required), `description` (nullable), `cover_image` (image, max 4096).
+- **`resources/views/gallery-albums/`** (baru) — `index.blade.php`, `create.blade.php`, `edit.blade.php`.
+- **`routes/web.php`** — `Route::resource('gallery-albums', ...)` dalam grup role
+  `admin_full_access,admin_laman`.
+- **`config/sidebar.php`** — item menu "Albums" (ikon album) di bawah Gallery,
+  aktif untuk `admin.gallery-albums.*`.
+- **`app/Models/GalleryAlbum.php`** — model sudah ada; relasi `event()` dan `galleries()`.
+
+> Tabel `gallery_albums` sudah ada sejak awal (migration `2024_01_01_000012`). Modul ini
+> menambahkan antarmuka admin CRUD-nya. Detail lengkap: `docs/19 — Gallery Album Module.md`.
+
+### D. Fix Checkbox `is_free_for_members` (Hidden Value)
+
+- **`resources/views/events/create.blade.php`** & **`edit.blade.php`** — ditambahkan
+  `<input type="hidden" name="is_free_for_members" value="0">` sebelum checkbox.
+  Sebelumnya, bila checkbox tidak dicentang, field tidak terkirim → Laravel menganggap
+  `false`/default `true` (bila kolom `boolean` default true). Kini unchecked selalu mengirim `0`.
+
+### E. Seeder Import Peserta SH3
+
+- **`database/seeders/Sh3ParticipantImportSeeder.php`** (baru) — import peserta SH3 dari data
+  spreadsheet ke tabel `participants` + `users` (role participant). **Idempotent** (keyed on
+  `hash_id`), bisa dijalankan ulang tanpa duplikat:
+  ```bash
+  php artisan db:seed --class=Sh3ParticipantImportSeeder
+  ```
+  - Membuat `User` (username + password hashed) untuk login participant API.
+  - Menangani email kosong → dummy (`dummy+{hash_id}@example.com`), email duplikat → dummy,
+    username invalid → normalisasi, username bentrok → suffix `_1`, `_2`, dst.
+  - Menghasilkan summary & laporan conflict/error.
+- **`tests/Feature/Sh3ParticipantImportTest.php`** (baru) — 19 peserta terimport, password
+  hashed & login bekerja, idempotent pada re-run, dummy email, normalisasi username.
+
+### F. Test Suite Admin (baru)
+
+- **`tests/Feature/Admin/`** (baru, 7 file, ±957 baris):
+  - `AdminAuthTest.php` — login web admin (guest redirect, login valid/invalid, logout).
+  - `AdminAccessControlTest.php` — matrix role per halaman (dashboard, users, membership
+    plans, participants, memberships, events, categories, galleries, organization, sponsors,
+    merchandise, payments, attendance).
+  - `AdminDashboardTest.php`, `AdminParticipantTest.php`, `AdminMembershipTest.php`,
+    `AdminMembershipPlanTest.php`, `AdminUserManagementTest.php` — CRUD & akses halaman admin.
+
+---
+
 ## 2026-08-14 — Deploy Produksi: Fix Sync-Down, Payments History, Participants, Reverb TLS & PHP 8.3
 
 ### Perubahan Kode

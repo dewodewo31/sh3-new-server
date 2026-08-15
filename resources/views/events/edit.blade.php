@@ -162,6 +162,7 @@
                     {{-- Free for members --}}
                     <div class="form-group md:col-span-2">
                         <label class="form-check-group cursor-pointer">
+                            <input type="hidden" name="is_free_for_members" value="0">
                             <input type="checkbox" name="is_free_for_members" value="1" {{ old('is_free_for_members', $event->is_free_for_members) ? 'checked' : '' }} class="form-check">
                             <span>
                                 <span class="block font-medium text-slate-800 dark:text-slate-200">Gratis untuk anggota</span>

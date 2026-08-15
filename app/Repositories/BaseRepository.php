@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Support\Sort;
 use Illuminate\Database\Eloquent\Model;
 
 abstract class BaseRepository
@@ -18,9 +19,21 @@ abstract class BaseRepository
         return $this->model->with($relations)->get();
     }
 
+    public function allSorted(array $allowed, string $default = 'id', string $defaultDirection = 'asc', array $relations = [])
+    {
+        return Sort::apply($this->model->with($relations), $allowed, $default, $defaultDirection)->get();
+    }
+
     public function paginate(int $perPage = 15, array $relations = [])
     {
         return $this->model->with($relations)->paginate($perPage);
+    }
+
+    public function paginateSorted(array $allowed, int $perPage = 15, array $relations = [], string $default = 'created_at', string $defaultDirection = 'desc')
+    {
+        return Sort::apply($this->model->with($relations), $allowed, $default, $defaultDirection)
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     public function findById(int $id, array $relations = [])

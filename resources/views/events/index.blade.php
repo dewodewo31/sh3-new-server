@@ -75,12 +75,12 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Title</th>
+                    <x-th-sort column="title">Title</x-th-sort>
                     <th>Category</th>
-                    <th>Tanggal</th>
-                    <th>Kuota</th>
-                    <th>Harga</th>
-                    <th>Status</th>
+                    <x-th-sort column="start_date">Tanggal</x-th-sort>
+                    <x-th-sort column="quota">Kuota</x-th-sort>
+                    <x-th-sort column="price">Harga</x-th-sort>
+                    <x-th-sort column="status">Status</x-th-sort>
                     <th class="text-right">Aksi</th>
                 </tr>
             </thead>

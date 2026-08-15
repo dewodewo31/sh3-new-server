@@ -15,7 +15,11 @@ class OrganizationController extends Controller
 
     public function index()
     {
-        $members = $this->organizationMemberRepository->all();
+        $members = $this->organizationMemberRepository->allSorted(
+            ['name', 'position', 'sort_order', 'is_active', 'period_start'],
+            'sort_order',
+            'asc',
+        );
 
         return view('organizations.index', compact('members'));
     }

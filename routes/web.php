@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\GalleryAlbumController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\MembershipController;
 use App\Http\Controllers\Admin\MembershipPlanController;
@@ -70,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
             Route::resource('categories', CategoryController::class);
             Route::resource('galleries', GalleryController::class);
+            Route::resource('gallery-albums', GalleryAlbumController::class);
             Route::resource('organization', OrganizationController::class);
         });
 

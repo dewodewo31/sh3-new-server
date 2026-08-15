@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Merchandise;
+use App\Support\Sort;
 
 class MerchandiseRepository extends BaseRepository
 {
@@ -18,8 +19,10 @@ class MerchandiseRepository extends BaseRepository
 
     public function paginateWithOrders(int $perPage = 15)
     {
-        return $this->model->with('orders')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        $query = $this->model->with('orders');
+
+        Sort::apply($query, ['name', 'price', 'stock', 'status', 'created_at'], 'created_at', 'desc');
+
+        return $query->paginate($perPage)->withQueryString();
     }
 }

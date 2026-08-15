@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\MembershipHistory;
+use App\Support\Sort;
 
 class MembershipHistoryRepository extends BaseRepository
 {
@@ -13,9 +14,11 @@ class MembershipHistoryRepository extends BaseRepository
 
     public function paginateWithParticipant(int $perPage = 15)
     {
-        return $this->model->with(['participant', 'plan'])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        $query = $this->model->with(['participant', 'plan']);
+
+        Sort::apply($query, ['membership_type', 'start_date', 'end_date', 'price', 'status', 'created_at'], 'created_at', 'desc');
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function findByParticipant(int $participantId)

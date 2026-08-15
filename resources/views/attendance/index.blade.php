@@ -14,10 +14,10 @@
                 <tr>
                     <th>#</th>
                     <th>Participant</th>
-                    <th>Check In</th>
-                    <th>Check Out</th>
-                    <th>Status</th>
-                    <th>Method</th>
+                    <x-th-sort column="check_in_time">Check In</x-th-sort>
+                    <x-th-sort column="check_out_time">Check Out</x-th-sort>
+                    <x-th-sort column="status">Status</x-th-sort>
+                    <x-th-sort column="check_in_method">Method</x-th-sort>
                 </tr>
             </thead>
             <tbody>

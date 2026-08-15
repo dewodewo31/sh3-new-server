@@ -69,7 +69,7 @@ Semua API memakai prefix `/api/v1`.
 
 ### Public API
 
-`POST /auth/register`, `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /events/upcoming`, `GET /events`, `GET /events/{id}`, `GET /events/{id}/participants`, `GET /galleries`, `GET /sponsors`, `GET /categories`, `GET /organization`, `GET /organization/{id}`, `GET /organization/stats`, `GET /organization/tree`, `GET /organization/years`, `GET /merchandise`, dan `GET /merchandise/{id}`.
+`POST /auth/register`, `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /events/upcoming`, `GET /events`, `GET /events/{id}`, `GET /events/{id}/participants`, `GET /galleries`, `GET /sponsors`, `GET /categories`, `GET /organization`, `GET /organization/{id}`, `GET /organization/stats`, `GET /organization/tree`, `GET /organization/years`, `GET /merchandise`, `GET /merchandise/{id}`, **`POST /attendance/sync-up`** (sejak 2026-08-15), dan **`GET /attendance/sync-down`** (sejak 2026-08-15).
 
 ### Authenticated API
 
@@ -77,24 +77,36 @@ Auth, profile, participant, event registration/management, payment, membership, 
 
 ### Admin Web
 
-Semua route admin memakai `/admin` dan session `auth`. Resource routes tersedia untuk users, participants, events, categories, galleries, organization, sponsors, dan merchandise. Route khusus meliputi dashboard, notification actions, membership plans, membership grant/cancel, event publish, payment confirm/reject, serta attendance scan/report/generate QR. Detail role per route adalah sumber otoritatif `routes/web.php`, bukan tabel lama di README.
+Semua route admin memakai `/admin` dan session `auth`. Resource routes tersedia untuk users, participants, events, categories, galleries, **gallery-albums (baru 2026-08-15)**, organization, sponsors, dan merchandise. Route khusus meliputi dashboard, notification actions, membership plans, membership grant/cancel, event publish, payment confirm/reject, serta attendance scan/report/generate QR. Detail role per route adalah sumber otoritatif `routes/web.php`, bukan tabel lama di README.
 
 ## Controllers and Services
 
-Controller API tersedia untuk Auth, Event, Participant, Profile, Payment, Membership, Attendance, Merchandise, Gallery, Category, Organization, Sponsor, dan Notification. Controller admin tersedia untuk Dashboard, User, Participant, Event, Category, Gallery, Organization, Sponsor, Merchandise, Membership, MembershipPlan, Payment, Attendance, dan Notification.
+Controller API tersedia untuk Auth, Event, Participant, Profile, Payment, Membership, Attendance, Merchandise, Gallery, Category, Organization, Sponsor, dan Notification. Controller admin tersedia untuk Dashboard, User, Participant, Event, Category, Gallery, **GalleryAlbum (baru 2026-08-15)**, Organization, Sponsor, Merchandise, Membership, MembershipPlan, Payment, Attendance, dan Notification.
 
 Service yang terimplementasi:
 
 - `AuthService`: login, token, refresh, password reset.
 - `UserService`: CRUD user, active toggle, activity logging.
-- `EventService`: event registration, status/business rules, QR-related event operations.
+- `EventService`: event registration (termasuk re-registration update flow), status/business rules, QR-related event operations.
 - `MembershipService`: plan lookup, grant, subscription, activation, cancellation, expiry/statistics.
-- `PaymentService`: create, confirm, reject, dan aktivasi paymentable polymorphic.
+- `PaymentService`: create, confirm, reject (kini juga memanggil `markAsRejected()` pada paymentable), dan aktivasi paymentable polymorphic.
 - `MerchandiseService`: product/order, stock, cancellation, payment proof.
 - `AttendanceService`: check-in/out, scan, report, sync up/down.
 - `QRCodeService`: generate/decode format QR SH3.
 - `NotificationService`: notify role, admin, user, dan participant.
 - `SidebarService`: data menu/sidebar admin.
+
+## Support & Components (baru 2026-08-15)
+
+- `App\Support\Sort` — helper statis untuk sorting tabel aman (whitelist kolom). Dipakai
+  oleh `BaseRepository::allSorted()/paginateSorted()` dan banyak repository modul.
+- `resources/views/components/th-sort.blade.php` — Blade component `<x-th-sort column="...">`
+  untuk header tabel yang bisa diurutkan.
+- `tests/Feature/Admin/` — 7 file test admin (auth, access control, dashboard, participant,
+  membership, membership plan, user management).
+- `tests/Feature/Sh3ParticipantImportTest.php` — test seeder import peserta.
+- `database/seeders/Sh3ParticipantImportSeeder.php` — import peserta dari data spreadsheet
+  (idempotent, keyed on `hash_id`).
 
 ## Models and Relationships
 

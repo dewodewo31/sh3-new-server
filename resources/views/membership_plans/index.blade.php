@@ -315,10 +315,10 @@
                 <thead>
                     <tr>
                         <th class="w-14">No</th>
-                        <th>Nama Plan</th>
-                        <th>Harga</th>
-                        <th>Durasi</th>
-                        <th>Status</th>
+                        <x-th-sort column="name">Nama Plan</x-th-sort>
+                        <x-th-sort column="price">Harga</x-th-sort>
+                        <x-th-sort column="duration">Durasi</x-th-sort>
+                        <x-th-sort column="is_active">Status</x-th-sort>
                         <th class="text-right">Aksi</th>
                     </tr>
                 </thead>
