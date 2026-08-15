@@ -84,9 +84,7 @@ class EventController extends Controller
             $event->id, $participant->id
         );
 
-        $paid = $event->price && $event->price > 0;
-
-        if ($paid) {
+        if ($registration->amount > 0) {
             $validated = $request->validate([
                 'payment_method' => ['nullable', 'in:transfer,cash,qris'],
                 'payment_proof' => ['nullable', 'image', 'max:5120'],
@@ -160,9 +158,9 @@ class EventController extends Controller
     private function orderStatus(EventParticipant $ep): string
     {
         return match ($ep->payment_status) {
-            'confirmed' => $ep->amount > 0 ? 'paid' : 'free',
+            'confirmed' => $ep->is_membership_free ? 'paid' : ($ep->amount > 0 ? 'paid' : 'free'),
             'pending' => 'pending',
-            'rejected' => 'cancelled',
+            'rejected' => 'rejected',
             'refunded' => 'cancelled',
             default => 'pending',
         };

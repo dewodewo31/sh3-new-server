@@ -50,9 +50,12 @@ class EventService
                 $event->id, $participant->id
             );
 
-            if ($existing) {
+            if ($existing && in_array($existing->payment_status, ['pending', 'confirmed'], true)) {
                 throw ValidationException::withMessages([
-                    'event' => ['Anda sudah terdaftar di event ini.'],
+                    'event' => [match ($existing->payment_status) {
+                        'pending' => 'Anda masih memiliki pendaftaran yang sedang diproses.',
+                        default => 'Anda sudah terdaftar di event ini.',
+                    }],
                 ]);
             }
 
@@ -60,7 +63,9 @@ class EventService
             $registrationType = 'paid';
             $amount = $event->price;
 
-            if ($event->is_free_for_members && $this->membershipService->checkEligibility($participant) === 'free') {
+            $eligibility = $this->membershipService->checkEligibility($participant);
+
+            if ($event->is_free_for_members && ($eligibility['is_eligible'] ?? false)) {
                 $registrationType = 'membership';
                 $amount = 0;
                 $isMembershipFree = true;
@@ -69,19 +74,38 @@ class EventService
                 $amount = 0;
             }
 
-            $registration = $this->eventParticipantRepository->create([
-                'event_id' => $event->id,
-                'participant_id' => $participant->id,
-                'registration_type' => $registrationType,
-                'amount' => $amount,
-                'payment_status' => $amount > 0 ? 'pending' : 'confirmed',
-                'is_membership_free' => $isMembershipFree,
-                'payment_id' => $paymentId,
-            ]);
+            $status = $amount > 0 ? 'pending' : 'confirmed';
+
+            if ($existing) {
+                $registration = $existing;
+                $registration->update([
+                    'registration_type' => $registrationType,
+                    'amount' => $amount,
+                    'payment_status' => $status,
+                    'is_membership_free' => $isMembershipFree,
+                    'payment_id' => $paymentId,
+                    'is_attended' => false,
+                    'check_in_at' => null,
+                    'check_out_at' => null,
+                ]);
+                $registration->attendance()->delete();
+            } else {
+                $registration = $this->eventParticipantRepository->create([
+                    'event_id' => $event->id,
+                    'participant_id' => $participant->id,
+                    'registration_type' => $registrationType,
+                    'amount' => $amount,
+                    'payment_status' => $status,
+                    'is_membership_free' => $isMembershipFree,
+                    'payment_id' => $paymentId,
+                ]);
+            }
 
             $this->qrCodeService->generate($registration);
 
-            $participant->increment('total_events_participated');
+            if (! $existing) {
+                $participant->increment('total_events_participated');
+            }
 
             $this->notificationService->notifyAdmins(
                 'Peserta baru mendaftar',

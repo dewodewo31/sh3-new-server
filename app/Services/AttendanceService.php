@@ -34,6 +34,12 @@ class AttendanceService
                 ]);
             }
 
+            if (! in_array($registration->payment_status, ['pending', 'confirmed'], true)) {
+                throw ValidationException::withMessages([
+                    'participant' => ['Pendaftaran ini ditolak/dibatalkan dan tidak dapat digunakan untuk check-in.'],
+                ]);
+            }
+
             $attendance = $this->attendanceRepository->findByEventParticipant($registration->id);
 
             if ($attendance && $attendance->check_in_time) {
@@ -85,6 +91,12 @@ class AttendanceService
             if (! $registration) {
                 throw ValidationException::withMessages([
                     'participant' => ['Peserta tidak terdaftar di event ini.'],
+                ]);
+            }
+
+            if (! in_array($registration->payment_status, ['pending', 'confirmed'], true)) {
+                throw ValidationException::withMessages([
+                    'participant' => ['Pendaftaran ini ditolak/dibatalkan dan tidak dapat digunakan untuk check-out.'],
                 ]);
             }
 

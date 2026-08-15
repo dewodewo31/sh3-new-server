@@ -223,20 +223,39 @@ public function syncUp(Request $request)
                     'paid_at'           => now(),
                 ]);
 
-                // 🔥 4. BUAT ATTENDANCE (1 per OTS scan)
+                // 🔥 4. BUAT ATAU UPDATE ATTENDANCE (update jika sudah ada, create jika belum)
                 $checkInOts = \Carbon\Carbon::parse($ots['check_in_time'])->format('Y-m-d H:i:s');
                 $checkOutOts = isset($ots['check_out_time']) && $ots['check_out_time'] != null
                                ? \Carbon\Carbon::parse($ots['check_out_time'])->format('Y-m-d H:i:s')
                                : null;
 
-                \App\Models\Attendance::create([
-                    'event_participant_id' => $eventParticipant->id,
-                    'check_in_time'        => $checkInOts,
-                    'check_out_time'       => $checkOutOts,
-                    'status'               => 'present',
-                    'check_in_method'      => 'qr_code',
-                    'notes'                => $isManual ? 'Manual OTS: ' . $ots['hash_id'] : 'OTS Member: ' . $ots['hash_id'],
-                ]);
+                $attendance = \App\Models\Attendance::where('event_participant_id', $eventParticipant->id)->first();
+
+                if ($attendance) {
+                    $existingCheckOut = $attendance->check_out_time;
+
+                    if ($existingCheckOut) {
+                        $attendance->update([
+                            'check_in_time' => $checkInOts,
+                            'status'        => 'present',
+                        ]);
+                    } else {
+                        $attendance->update([
+                            'check_in_time'  => $checkInOts,
+                            'check_out_time' => $checkOutOts,
+                            'status'         => 'present',
+                        ]);
+                    }
+                } else {
+                    \App\Models\Attendance::create([
+                        'event_participant_id' => $eventParticipant->id,
+                        'check_in_time'        => $checkInOts,
+                        'check_out_time'       => $checkOutOts,
+                        'status'               => 'present',
+                        'check_in_method'      => 'qr_code',
+                        'notes'                => $isManual ? 'Manual OTS: ' . $ots['hash_id'] : 'OTS Member: ' . $ots['hash_id'],
+                    ]);
+                }
 
                 // 🔥 5. UPDATE check_in_at / check_out_at di EventParticipant (opsional: update dengan waktu terbaru)
                 // Kita update dengan waktu yang paling baru (bisa diambil dari attendance terakhir)
