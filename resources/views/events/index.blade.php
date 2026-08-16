@@ -76,6 +76,7 @@
                 <tr>
                     <th>#</th>
                     <x-th-sort column="title">Title</x-th-sort>
+                    <th>Gambar</th>
                     <th>Category</th>
                     <x-th-sort column="start_date">Tanggal</x-th-sort>
                     <x-th-sort column="quota">Kuota</x-th-sort>
@@ -103,6 +104,7 @@
                                 </div>
                             </div>
                         </td>
+                        <td>@if($event->image)<img src="{{ \App\Helpers\ImageHelper::getUrl($event->image) }}" alt="{{ $event->title }}" class="h-10 w-14 rounded-lg object-cover">@else<span class="text-slate-400 dark:text-slate-500">-</span>@endif</td>
                         <td>
                             @if ($event->category)
                                 <span class="badge badge-blue">{{ $event->category->name }}</span>
@@ -184,7 +186,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8">
+                        <td colspan="9">
                             <div class="empty-state">
                                 <div class="empty-state-icon">
                                     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
