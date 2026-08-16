@@ -18,6 +18,7 @@
                 <tr>
                     <th>#</th>
                     <x-th-sort column="name">Name</x-th-sort>
+                    <th>Hash ID</th>
                     <x-th-sort column="email">Email</x-th-sort>
                     <x-th-sort column="phone">Phone</x-th-sort>
                     <x-th-sort column="membership_type">Membership</x-th-sort>
@@ -31,6 +32,7 @@
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     <td class="font-medium text-gray-900 dark:text-slate-100">{{ $p->name }}</td>
+                    <td><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $p->hash_id }}</code></td>
                     <td>{{ $p->email }}</td>
                     <td>{{ $p->phone ?? '-' }}</td>
                     <td>
@@ -77,7 +79,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8">
+                    <td colspan="9">
                         <div class="empty-state">
                             <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
                             <p class="empty-state-title">Belum ada peserta</p>
