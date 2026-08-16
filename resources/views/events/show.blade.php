@@ -14,6 +14,14 @@
                 </span>
             </div>
             <div class="card-body">
+                <div class="mb-6 space-y-3">
+@if($event->banner)
+<img src="{{ \App\Helpers\ImageHelper::getUrl($event->banner) }}" alt="Banner {{ $event->title }}" class="w-full rounded-xl object-cover" style="max-height:240px">
+@endif
+@if($event->image)
+<img src="{{ \App\Helpers\ImageHelper::getUrl($event->image) }}" alt="{{ $event->title }}" class="h-24 w-36 rounded-lg object-cover">
+@endif
+</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <span class="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500">Category</span>
