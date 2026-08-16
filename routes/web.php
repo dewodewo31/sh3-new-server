@@ -68,10 +68,13 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/events/{id}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
         });
 
-        Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
-            Route::resource('categories', CategoryController::class);
+        Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman,gallery'])->group(function () {
             Route::resource('galleries', GalleryController::class);
             Route::resource('gallery-albums', GalleryAlbumController::class);
+        });
+
+        Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
+            Route::resource('categories', CategoryController::class);
             Route::resource('organization', OrganizationController::class);
         });
 
