@@ -73,6 +73,7 @@ php artisan serve
 | Bendahara | bendahara@sh3.com | password |
 | Sponsor | sponsor@sh3.com | password |
 | Merchandise | merchandise@sh3.com | password |
+| Admin Gallery | admin.gallery@sh3.com | password |
 
 ### Participant (API Login — `/api/v1/auth/login` with username)
 
