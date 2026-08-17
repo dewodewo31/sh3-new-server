@@ -92,7 +92,7 @@ Service yang terimplementasi:
 - `PaymentService`: create, confirm, reject (kini juga memanggil `markAsRejected()` pada paymentable), dan aktivasi paymentable polymorphic.
 - `MerchandiseService`: product/order, stock, cancellation, payment proof.
 - `AttendanceService`: check-in/out, scan, report, sync up/down.
-- `QRCodeService`: generate/decode format QR SH3.
+- `QRCodeService`: generate/decode QR berisi `participant_code` murni (member `\d{4}`, non-member `NM\d{4}`).
 - `NotificationService`: notify role, admin, user, dan participant.
 - `SidebarService`: data menu/sidebar admin.
 
@@ -106,7 +106,7 @@ Service yang terimplementasi:
   membership, membership plan, user management).
 - `tests/Feature/Sh3ParticipantImportTest.php` — test seeder import peserta.
 - `database/seeders/Sh3ParticipantImportSeeder.php` — import peserta dari data spreadsheet
-  (idempotent, keyed on `hash_id`).
+  (idempotent, keyed on `participant_code`).
 
 ## Models and Relationships
 

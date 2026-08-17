@@ -62,14 +62,16 @@ CREATE TABLE attendance_logs (
 
 Generator: `app/Services/QRCodeService.php`.
 
-- Format QR tersimpan: `SH3-{event_id}-{participant_id}-{8 karakter acak}`.
-- `QRCodeService::generate()` menghasilkan string tersebut, menyimpannya ke `event_participants.qr_code`.
-- `QRCodeService::decode()` memecah string menjadi 4 bagian; valid hanya jika bagian pertama adalah `SH3`.
+- Format QR tersimpan: **kode peserta (`participant_code`) murni** — member `3950`, non-member `NM0001`.
+- `QRCodeService::generate()` menulis nilai tersebut ke `event_participants.qr_code` (nilai sama
+  untuk semua event peserta yang sama — QR adalah identitas peserta).
+- `QRCodeService::decode()` memvalidasi `^\d{4}$` (member) atau `^NM\d{4}$` (non-member);
+  format lain (termasuk `SH3-...` lama) → `null`/ditolak.
 
 ## Flow Scan
 
 ```
-Scan QR → decode(event_id, participant_id) → cari registrasi
+Scan QR → decode(participant_code) → cari peserta → cari registrasi (event_id opsional)
   → Belum check-in → Check-in (status=present, is_attended=true)
   → Sudah check-in → Check-out
 ```
@@ -96,19 +98,21 @@ Scan QR → decode(event_id, participant_id) → cari registrasi
 
 | Field | Isi |
 |-------|-----|
-| `attendances` | attendance reguler: `{event_id, qr_code, hash_id, check_in_time, check_out_time}` |
-| `ots_registrations` | pendaftaran OTS (On-The-Spot): `{event_id, hash_id, member_name, check_in_time, check_out_time}` |
+| `attendances` | attendance reguler: `{event_id, participant_code, check_in_time, check_out_time}` |
+| `ots_registrations` | pendaftaran OTS (On-The-Spot): `{event_id, participant_code, member_name, check_in_time, check_out_time}` |
 
 Proses di dalam `DB::transaction`:
 
-1. **Attendance reguler** — lookup `EventParticipant` via `qr_code+event_id`, fallback via
-   `hash_id`; update `check_in_at/check_out_at/is_attended`; update/create `attendances`
-   (tanpa duplikasi — attendance yang sudah punya `check_out_time` hanya di-update
-   `check_in_time` + `status=present`).
-2. **OTS** — participant aggregator `MANUAL_OTS_AGGREGATOR` dibuat otomatis untuk OTS manual;
-   OTS member dicari/dibuat via `hash_id`. Satu `EventParticipant` per participant per event
-   (`firstOrCreate`, `qr_code = OTS-{hash_id}EV{event_id}`), `total_events_participated`
-   increment hanya sekali per event, **Payment dibuat otomatis** (`INV-OTS-{random8}`,
+1. **Attendance reguler** — lookup `EventParticipant` via `event_id` + peserta dengan
+   `participant_code` yang sama (`whereHas('participant', participant_code)`); payload lama
+   (tanpa `participant_code`) di-abaikan diam-diam; update `check_in_at/check_out_at/is_attended`;
+   update/create `attendances` (tanpa duplikasi — attendance yang sudah punya `check_out_time`
+   hanya di-update `check_in_time` + `status=present`).
+2. **OTS** — participant aggregator sentinel `NM0000` (`Participant::OTS_AGGREGATOR_CODE`,
+   `firstOrCreate`) dibuat otomatis untuk OTS manual; OTS member dicari/dibuat via
+   `participant_code`. Satu `EventParticipant` per participant per event (`firstOrCreate`,
+   `qr_code = OTS-{participant_code}EV{event_id}`), `total_events_participated` increment
+   hanya sekali per event, **Payment dibuat otomatis** (`INV-OTS-{random8}`,
    `payment_type=event_registration`, `payment_method=cash`, `status=confirmed`), dan
    attendance di-update (dedup) atau dibuat.
 
@@ -125,7 +129,7 @@ Response:
 
 ### `syncDown`
 
-`syncDown` mengembalikan daftar `{ event_id, participant_id, status, check_in_time, check_out_time, check_in_method, latitude, longitude, notes, updated_at }`.
+`syncDown` mengembalikan daftar `{ event_id, participant_id, participant_code, status, check_in_time, check_out_time, check_in_method, latitude, longitude, notes, updated_at }`.
 
 > `AttendanceService::syncUp(array $records)` (versi per-record: `processed`, `skipped`,
 > `details[]`) masih tersedia namun endpoint API kini memakai logika OTS di

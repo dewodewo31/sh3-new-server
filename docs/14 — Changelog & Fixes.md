@@ -2,6 +2,38 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-16 — Hash ID Admin, Preview Gambar Event, Role Gallery
+
+> **Riwayat (digantikan 2026-08-17):** kolom "Hash ID" pada panel peserta kini menampilkan
+> `participant_code` (member `0001`, non-member `NM0001`). Kolom DB `hash_id` dihapus
+> (migration `2026_08_17_000002`), tanpa backward compat.
+
+### A. Hash ID Partisipan di Panel Admin
+
+Tampilkan `hash_id` peserta di panel admin — murni perubahan view, backend sudah menyediakan via accessor `$appends = ['hash_id']` pada model `Participant`.
+
+- **`resources/views/participants/index.blade.php`** — kolom "Hash ID" ditambahkan di tabel daftar peserta (setelah kolom Name). Nilai ditampilkan dalam format `<code>` monospace. Empty-state `colspan` diubah dari 8 → 9.
+- **`resources/views/participants/show.blade.php`** — row "Hash ID" ditambahkan di kartu Data Peserta (setelah row Nama). Format `<code>` monospace.
+
+### B. Preview Banner & Gambar Event di Panel Admin
+
+- **`resources/views/events/index.blade.php`** — kolom "Gambar" (thumbnail) ditambahkan di tabel daftar event (antara Title dan Category). Menggunakan `ImageHelper::getUrl($event->image)`. Empty-state `colspan` diubah dari 8 → 9.
+- **`resources/views/events/show.blade.php`** — blok media (banner full-width + gambar thumbnail) ditambahkan di kartu Detail Event, sebelum grid info. Banner: `max-height:240px`, gambar: `h-24 w-36`. Keduanya conditional (`@if`). Menggunakan `ImageHelper::getUrl()`.
+
+### C. Role 'gallery' + Akun Admin Gallery
+
+Role baru `gallery` ditambahkan untuk akun yang hanya bisa mengelola Galleries & Albums.
+
+- **`database/migrations/2026_08_16_000001_add_gallery_role_to_users.php`** (baru) — menambahkan `'gallery'` ke ENUM role users via `ALTER TABLE`. Guard `mysql` driver. Rollback menghapus `'gallery'`.
+- **`app/Http/Requests/UserRequest.php`** — `'gallery'` ditambahkan ke `Rule::in([...])`.
+- **`resources/views/users/create.blade.php`** & **`edit.blade.php`** — `'gallery'` ditambahkan ke array dropdown role.
+- **`routes/web.php`** — grup route galleries (`admin.galleries.*` + `admin.gallery-albums.*`) dipisah dari grup categories/organization. Middleware gallery: `admin_full_access,admin_laman,gallery`.
+- **`config/sidebar.php`** — `'gallery'` ditambahkan ke roles menu Dashboard, Galleries, dan Albums.
+- **`database/seeders/UserSeeder.php`** — entry `Admin Gallery` (`admin.gallery@sh3.com` / `password` / role `gallery`).
+- **`README.md`** — baris kredensial Admin Gallery ditambahkan di tabel Default Credentials.
+
+---
+
 ## 2026-08-15 — Sync-Up OTS (Payment + Attendance), Re-Registration Flow, Sortable Tables, Gallery Album & Seeder Import
 
 ### A. Sync-Up OTS: Sinkronisasi Offline Lengkap (Payment + Attendance + Dedup)
@@ -23,18 +55,17 @@ Request `POST /api/v1/attendance/sync-up` kini menerima **dua array**:
   "attendances": [
     {
       "event_id": 1,
-      "qr_code": "SH3-1-2-ABC12345",
-      "hash_id": "0022",
-      "check_in_time": "2026-08-15 07:30:00",
+      "participant_code": "0001",
+      "check_in_time": "2026-08-17 07:30:00",
       "check_out_time": null
     }
   ],
   "ots_registrations": [
     {
       "event_id": 1,
-      "hash_id": "MANUAL_OTS_001",
+      "participant_code": "NM0001",
       "member_name": "Budi",
-      "check_in_time": "2026-08-15 08:00:00",
+      "check_in_time": "2026-08-17 08:00:00",
       "check_out_time": null
     }
   ]
@@ -44,19 +75,19 @@ Request `POST /api/v1/attendance/sync-up` kini menerima **dua array**:
 #### Alur proses `sync-up`
 
 1. **Attendance reguler** (`attendances[]`):
-   - `EventParticipant` dicari via `qr_code` + `event_id`; jika tidak ketemu, fallback lookup
-     via `hash_id` peserta dalam event yang sama.
+   - `EventParticipant` dicari via `event_id` + peserta dengan `participant_code` yang sama
+   (`whereHas('participant', participant_code)`). Payload tanpa `participant_code`
+   (format lama) **di-abaikan diam-diam** (`synced_attendance_count` 0).
    - `event_participants` di-update: `check_in_at`, `check_out_at`, `is_attended = true`.
    - `attendances` di-*update* bila sudah ada (tanpa duplikasi), atau dibuat bila belum ada.
    - Jika attendance sudah punya `check_out_time`, hanya `check_in_time` + `status=present`
      yang di-update (mencegah menimpa waktu keluar yang sudah tercatat).
 2. **OTS member** (`ots_registrations[]`):
-   - Participant aggregator `MANUAL_OTS_AGGREGATOR` (`name = 'Manual OTS NON MEMBER'`,
-     `email = manual.ots@sh3.com`) dibuat otomatis dengan `firstOrCreate` untuk semua OTS manual
-     (hash_id mengandung kata `manual`).
-   - OTS member: participant dicari/dibuat via `hash_id`.
+   - Participant aggregator sentinel `NM0000` (`Participant::OTS_AGGREGATOR_CODE`, `firstOrCreate`,
+     `name = 'Manual OTS NON MEMBER'`, `email = manual.ots@sh3.com`) dibuat otomatis untuk OTS manual.
+   - OTS member: participant dicari/dibuat via `participant_code`.
    - **Satu `EventParticipant` per participant per event** (`firstOrCreate` dengan
-     `qr_code = OTS-{hash_id}EV{event_id}`, `registration_type = paid`, `payment_status = confirmed`).
+     `qr_code = OTS-{participant_code}EV{event_id}`, `registration_type = paid`, `payment_status = confirmed`).
    - `total_events_participated` di-increment **hanya sekali per event** (tracking `$processedEvents`).
    - **Payment dibuat otomatis** untuk setiap scan OTS: `INV-OTS-{random8}`, tipe
      `event_registration`, method `cash`, status `confirmed`, terhubung polymorphic ke
@@ -163,6 +194,8 @@ Modul baru untuk mengelola **album galeri** (mengelompokkan gallery per event).
 
 ### E. Seeder Import Peserta SH3
 
+> **Riwayat (digantikan 2026-08-17):** seeder kini keyed on `participant_code` (kolom `hash_id` dihapus).
+
 - **`database/seeders/Sh3ParticipantImportSeeder.php`** (baru) — import peserta SH3 dari data
   spreadsheet ke tabel `participants` + `users` (role participant). **Idempotent** (keyed on
   `hash_id`), bisa dijalankan ulang tanpa duplikat:
@@ -234,6 +267,9 @@ Modul baru untuk mengelola **album galeri** (mengelompokkan gallery per event).
 ---
 
 ## 2026-08-14 — Participant Forgot/Reset Password (Tanpa Email / Pihak Ketiga)
+
+> **Riwayat (digantikan 2026-08-17):** verifikasi kini memakai **Username + `participant_code`**
+> (member `0001` / non-member `NM0001`). Lihat `docs/18 — Participant Password Reset.md`.
 
 Fitur reset password khusus **Participant** tanpa email / OTP / SMS / WA / pihak ke-3.
 Verifikasi hanya **Username + Hash ID** (kode peserta). Terpisah dari reset password Admin.
@@ -492,6 +528,9 @@ Sistem otentikasi sebelumnya menggunakan **shared `LoginRequest`** untuk kedua j
 | `GET /my-events` | **Baru** (auth) — event yang diikuti user + status order (`EventController::myEvents()`). |
 
 ### API — Response/Resource
+
+> **Riwayat (digantikan 2026-08-17):** `ParticipantResource` kini meng-expose
+> `participant_code`, bukan `hash_id`.
 
 - **`EventResource`**: menambahkan `image_url`, `banner_url`, `registered_count` (hitung `eventParticipants` pending+confirmed), `creator` (id+nama), dan `galleries` (array URL foto).
 - **`ParticipantResource`**: menambahkan `hash_id`.

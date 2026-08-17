@@ -9,6 +9,7 @@ CREATE TABLE participants (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NULL,
     name VARCHAR(255) NOT NULL,
+    participant_code VARCHAR(10) NULL UNIQUE,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(20),
     gender ENUM('male', 'female'),
@@ -44,12 +45,23 @@ CREATE TABLE participants (
 - `isMembershipActive()` — helper: true jika `membership_type != none` dan `membership_end_date >= hari ini`
 - `membershipTypeLabel()` — label dari plan name (fallback: title case)
 
-## hash_id
+## participant_code (Kode Peserta)
 
-`ParticipantResource` menyertakan `hash_id`:
-- Member (membership aktif): `%04d` (contoh `0022`)
-- Non-member: `NM-%04d` (contoh `NM-0044`)
-- Dihasilkan oleh accessor `hashId()` pada model Participant
+`ParticipantResource` menyertakan `participant_code` (auto-generate saat peserta dibuat,
+tetap untuk selamanya):
+
+- Member (membership aktif): `\d{4}` (contoh `0001`, `3950`)
+- Non-member: `NM\d{4}` (contoh `NM0001`)
+- **Sentinel OTS**: `NM0000` — code khusus aggregator OTS (`Participant::OTS_AGGREGATOR_CODE`),
+  tidak memakai nomor urut sequence.
+- Dibuat via `ParticipantCodeService::next()` (urutan per-prefix, cap 9999/prefix)
+  pada hook `creating` model `Participant`.
+
+## Tampilan Admin Panel
+
+`participant_code` ditampilkan di panel admin:
+- **Tabel daftar** (`participants/index`): kolom "Kode" setelah kolom Name, format `<code>` monospace.
+- **Detail peserta** (`participants/show`): row "Kode Peserta" di kartu Data Peserta, setelah row Nama.
 
 ## Registrasi Peserta
 

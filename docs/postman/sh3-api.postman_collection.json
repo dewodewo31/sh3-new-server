@@ -681,7 +681,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"qr_code\": \"SH3-1-1-ABC12345\"\n}",
+              "raw": "{\n    \"qr_code\": \"3950\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -734,7 +734,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"records\": [\n        {\n            \"event_id\": 1,\n            \"participant_id\": 1,\n            \"type\": \"check_in\",\n            \"method\": \"qr_code\"\n        }\n    ]\n}",
+              "raw": "{\n    \"attendances\": [\n        {\n            \"event_id\": 1,\n            \"participant_code\": \"0001\",\n            \"check_in_time\": \"2026-08-17 07:30:00\",\n            \"check_out_time\": null\n        }\n    ],\n    \"ots_registrations\": [\n        {\n            \"event_id\": 1,\n            \"participant_code\": \"NM0001\",\n            \"member_name\": \"Budi\",\n            \"check_in_time\": \"2026-08-17 08:00:00\",\n            \"check_out_time\": null\n        }\n    ]\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {

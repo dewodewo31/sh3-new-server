@@ -96,7 +96,7 @@ app/
 │   │   ├── Admin/       # Web admin controllers
 │   │   └── API/         # REST API controllers
 │   └── Requests/        # 24 form request validation
-├── Helpers/             # ImageHelper, QRCodeHelper
+├── Helpers/             # ImageHelper
 ├── Models/              # 18 models
 ├── Repositories/        # 15 repositories (BaseRepository pattern)
 ├── Services/            # 10 service classes (business logic layer)
@@ -652,7 +652,7 @@ php artisan queue:work
 CRUD event, jadwal, kategori, quota, upload banner/image. Status flow: `draft → publish → ongoing → completed` (transisi otomatis via scheduler). Registrasi event: free, paid, atau free untuk member. QR code otomatis per registrasi. Peserta dapat melihat event mendatang, detail dengan galeri & sponsor.
 
 ### 2. Manajemen Peserta
-Registrasi via API (password opsional, fallback random). Data lengkap: nama, email, phone, gender, tanggal lahir, alamat, kontak darurat, golongan darah, ukuran jersey, kondisi medis. Hash ID: member `0001`, non-member `NM-0001`. Foto profil via user avatar.
+Registrasi via API (password opsional, fallback random). Data lengkap: nama, email, phone, gender, tanggal lahir, alamat, kontak darurat, golongan darah, ukuran jersey, kondisi medis. Kode Peserta (`participant_code`): member `0001`, non-member `NM0001`. Foto profil via user avatar.
 
 ### 3. Membership
 Paket membership **dinamis** via tabel `membership_plans` (CRUD admin). Seed awal: Tahunan (12 bln, Rp400k), Setengah Tahun (6 bln, Rp250k), Mingguan (7 hari, Rp10k). Pemberian langsung oleh admin atau pembelian via API (menghasilkan payment pending, aktivasi setelah konfirmasi bendahara). Auto-renewal (7 hari sebelum expiry), cancel, statistik (total, aktif, pending, expired, revenue).
@@ -661,7 +661,7 @@ Paket membership **dinamis** via tabel `membership_plans` (CRUD admin). Seed awa
 Sistem pembayaran polymorphic — satu tabel `payments` melayani `EventParticipant` (registrasi event), `MerchandiseOrder` (order merchandise), dan `MembershipHistory` (membership). Method: transfer, cash, qris. Status: pending → confirmed/rejected/refunded. Upload bukti bayar. Konfirmasi/reject oleh bendahara.
 
 ### 5. Absensi & QR Code
-Check-in/check-out via QR scan. Format QR: `SH3-{event_id}-{participant_id}-{8char_hash}`. Dukungan self-scan dan admin-scan. Mode offline: `syncUp`/`syncDown` API. Tracking latitude/longitude. Scanner admin: 20fps, native BarcodeDetector, cooldown 1,5 detik. Generate QR per peserta event dari panel admin.
+Check-in/check-out via QR scan. QR berisi kode peserta (`participant_code`) murni — member `3950`, non-member `NM0001`. Dukungan self-scan dan admin-scan. Mode offline: `syncUp`/`syncDown` API. Tracking latitude/longitude. Scanner admin: 20fps, native BarcodeDetector, cooldown 1,5 detik. Generate QR per peserta event dari panel admin.
 
 ### 6. Galeri
 Upload foto/video per event. Featured image, sort_order, thumbnail. Album galeri (GalleryAlbum). API publik mengembalikan foto dengan URL penuh + thumb + info event. Masonry gallery + lightbox di frontend.
@@ -746,7 +746,7 @@ Lihat `docs/14 — Changelog & Fixes.md` untuk changelog lengkap.
 - `EventParticipant::markAsPaid()` — ditambahkan sehingga konfirmasi pembayaran event tidak error rollback.
 
 **Member / Participant**
-- `Participant` mendapat accessor `hash_id` + `$appends` → member `%04d` (mis. `0022`), non-member `NM-%04d` (mis. `NM-0044`); di-expose di `ParticipantResource`.
+- `Participant` mendapat accessor `hash_id` + `$appends` → member `%04d` (mis. `0022`), non-member `NM-%04d` (mis. `NM-0044`); di-expose di `ParticipantResource`. *(riwayat: digantikan `participant_code` — member `0001`, non-member `NM0001` — pada 2026-08-17)*
 - `RegisterRequest` menerima `password` & `password_confirmation` opsional (min. 6 karakter).
 - `AuthController::register()` memakai password yang dikirim user (fallback random jika kosong).
 - Form Registrasi Member (`members/register`) diselaraskan dengan form Data Diri (`members/detail`): label "Nama Lengkap", urutan field Gender sebelum Tanggal Lahir, dan field `gender`/`blood_type`/`emergency_*`/`medical_conditions` bersifat opsional.

@@ -165,7 +165,7 @@ CREATE TABLE users (
     role ENUM(
         'admin_full_access', 'admin_laman', 'admin_member',
         'admin_bnh', 'organizer', 'bendahara', 'sponsor',
-        'merchandise', 'participant'
+        'merchandise', 'gallery', 'participant'
     ) NOT NULL DEFAULT 'participant',
     avatar VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
@@ -191,6 +191,7 @@ Sumber otoritatif: migration `0001_01_01_000000_create_users_table.php` dan `202
 | Bendahara | ⚠️ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ✅ |
 | Sponsor | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ |
 | Merchandise | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
+| Gallery | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ⚠️ |
 
 **Keterangan:**
 - ✅ = Full Access (CRUD)
@@ -213,6 +214,7 @@ User::create(['name' => 'Organizer',        'username' => 'organizer',    'email
 User::create(['name' => 'Bendahara',        'username' => 'bendahara',    'email' => 'bendahara@sh3.com',    'password' => Hash::make('password'), 'role' => 'bendahara']);
 User::create(['name' => 'Sponsor',          'username' => 'sponsor',      'email' => 'sponsor@sh3.com',      'password' => Hash::make('password'), 'role' => 'sponsor']);
 User::create(['name' => 'Merchandise',      'username' => 'merchandise',  'email' => 'merchandise@sh3.com',  'password' => Hash::make('password'), 'role' => 'merchandise']);
+User::create(['name' => 'Admin Gallery',    'username' => 'gallery',      'email' => 'admin.gallery@sh3.com', 'password' => Hash::make('password'), 'role' => 'gallery']);
 ```
 
 Participant users (login via API `/api/v1/auth/login` dengan `username`):
@@ -297,7 +299,7 @@ CREATE TABLE participants (
 - `organizationMembers()` — hasMany OrganizationMember
 - `isMembershipActive(): bool` — true jika `membership_type != none` dan `membership_end_date >= hari ini`
 - `membershipTypeLabel(): string` — label dari plan name (fallback: title case)
-- `hash_id` accessor: member aktif → `%04d` (contoh `0022`); non-member → `NM-%04d` (contoh `NM-0044`)
+- `participant_code` (kode peserta, unique): member aktif → `\d{4}` (contoh `0001`); non-member → `NM\d{4}` (contoh `NM0001`)
 
 ### **Participant Features**
 
@@ -672,8 +674,8 @@ CREATE TABLE attendance_logs (
 
 ### **QR Code Format**
 
-`QRCodeService::generate()` menghasilkan string: `SH3-{event_id}-{participant_id}-{8 random chars}`.
-Disimpan di `event_participants.qr_code`.
+`QRCodeService::generate()` menulis `participant_code` peserta (member `3950` / non-member
+`NM0001`) ke `event_participants.qr_code`.
 
 ### **Attendance Features**
 
@@ -740,7 +742,7 @@ CREATE TABLE membership_histories (
 ### **Member's API Response Fields**
 
 - `membership_plan_name` — nama plan dari relasi `membershipPlan()->name`
-- `hash_id` — format `%04d` (member aktif) atau `NM-%04d` (non-member)
+- `participant_code` — format `\d{4}` (member aktif) atau `NM\d{4}` (non-member)
 - `is_membership_active` — hasil `isMembershipActive()`
 
 ---
@@ -826,7 +828,7 @@ GET  /api/v1/participants/{id}/events   # auth:sanctum
 GET  /api/v1/participants/{id}/attendance # auth:sanctum
 ```
 
-Response includes `hash_id` (member: %04d, non-member: NM-%04d) dan `membership_plan_name`.
+Response includes `participant_code` (member: `\d{4}`, non-member: `NM\d{4}`) dan `membership_plan_name`.
 
 ### **Membership API**
 
@@ -981,7 +983,7 @@ users ───┬─── participants
 1. **Scheduler**: `php artisan schedule:list` melaporkan tidak ada scheduled task. `EventService::updateEventStatus()` dan `MembershipService::markExpiredHistories()` tidak berjalan otomatis.
 2. **Queue**: Notification memakai `ShouldQueue`; worker harus berjalan (`php artisan queue:work`).
 3. **File Upload**: Max 2MB gambar, 5MB banner/bukti bayar.
-4. **QR Code**: Format `SH3-{event_id}-{participant_id}-{8 chars}`.
+4. **QR Code**: Berisi `participant_code` murni (member `\d{4}` / non-member `NM\d{4}`).
 5. **Membership**: Harga/durasi dinamis dari tabel `membership_plans`.
 6. **Payment**: Polymorphic (morphs) ke EventParticipant, MerchandiseOrder, MembershipHistory.
 

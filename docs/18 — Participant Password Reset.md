@@ -2,7 +2,7 @@
 
 Fitur reset password khusus **Participant** (peserta event lari). Tidak menggunakan
 email, OTP, SMS, WhatsApp, Google Authenticator, atau layanan pihak ketiga apa pun.
-Verifikasi hanya menggabungkan **Username** + **Hash ID** (kode peserta).
+Verifikasi hanya menggabungkan **Username** + **Kode Peserta** (`participant_code`).
 
 Fitur ini **terpisah sepenuhnya** dari reset password Admin (yang tetap pakai email
 via `/api/v1/auth/forgot-password` & `/api/v1/auth/reset-password`).
@@ -16,7 +16,7 @@ via `/api/v1/auth/forgot-password` & `/api/v1/auth/reset-password`).
 
 ## Alur (Frontend)
 
-1. Halaman **Forgot Password**: form **Username** + **Hash ID** → tombol **Verifikasi**.
+1. Halaman **Forgot Password**: form **Username** + **Kode Peserta** → tombol **Verifikasi**.
 2. `verify-reset` → jika valid, frontend menampilkan form **Password Baru** +
    **Konfirmasi Password** → tombol **Reset Password**.
 3. `reset-password` → update password participant.
@@ -29,10 +29,10 @@ Request:
 ```json
 {
   "username": "BUDI123",
-  "hash_id": "SH3A7B92XK"
+  "participant_code": "0001"
 }
 ```
-Validation: `username` wajib, `hash_id` wajib.
+Validation: `username` wajib, `participant_code` wajib (format `\d{4}` atau `NM\d{4}`).
 
 Sukses — `200 OK`:
 ```json
@@ -43,7 +43,7 @@ Sukses — `200 OK`:
 }
 ```
 
-Gagal (username/hash_id tidak cocok, atau bukan participant) — `200 OK`, pesan
+Gagal (username/participant_code tidak cocok, atau bukan participant) — `200 OK`, pesan
 generik, **tidak mengungkap field mana yang salah**:
 ```json
 {
@@ -58,12 +58,12 @@ Request:
 ```json
 {
   "username": "BUDI123",
-  "hash_id": "SH3A7B92XK",
+  "participant_code": "0001",
   "password": "passwordbaru",
   "password_confirmation": "passwordbaru"
 }
 ```
-Validation: `username` & `hash_id` wajib; `password` wajib, min 8 karakter,
+Validation: `username` & `participant_code` wajib; `password` wajib, min 8 karakter,
 `confirmed` (harus ada `password_confirmation` yang sama).
 
 Sukses — `200 OK`:
@@ -97,10 +97,10 @@ Rate limit terlampaui — `429 Too Many Attempts`:
 
 - Password disimpan via `Hash::make()` — tidak ada plaintext.
 - Setelah reset, semua token peserta (`users.tokens`) di-revoke.
-- Peserta hanya bisa reset akun **sendiri**: kombinasi `username` + `hash_id`
+- Peserta hanya bisa reset akun **sendiri**: kombinasi `username` + `participant_code`
   harus milik participant yang sama. Peserta lain maupun **Admin** ditolak dengan
   pesan generik yang sama.
-- `hash_id` peserta lain tidak pernah dibocorkan di response.
+- `participant_code` peserta lain tidak pernah dibocorkan di response.
 - Rate limit **5 percobaan / 15 menit / IP** pada `reset-password`.
 
 ## Audit Log
@@ -121,13 +121,13 @@ Setiap reset berhasil mencatat ke `user_activity_logs`:
 - `app/Services/ParticipantPasswordResetService.php` — validasi + reset + audit log.
 - `app/Http/Requests/ParticipantVerifyResetRequest.php`, `ParticipantResetPasswordRequest.php`.
 - `routes/api.php` — 2 route publik (`reset-password` + `throttle:5,15`).
-- `app/Models/Participant.php` — `hash_id` kini **kolom unik** berisi kode peserta
-  (`SH3` + 7 alfanumerik), auto-generate saat participant dibuat.
-- `database/migrations/2026_08_14_000100_add_hash_id_to_participants_table.php` —
-  menambah kolom + backfill semua participant existing.
+- `app/Models/Participant.php` — kolom unik `participant_code` (member `\d{4}` /
+  non-member `NM\d{4}`), auto-generate via `ParticipantCodeService::next()` saat
+  participant dibuat. Sentinel OTS `NM0000` (`Participant::OTS_AGGREGATOR_CODE`).
+- `database/migrations/2026_08_17_000002_add_participant_code_to_participants_table.php` —
+  menambah kolom + backfill semua participant existing (kolom lama dihapus).
 - `tests/Feature/ParticipantPasswordResetTest.php` — 10 kasus (semua PASS).
 
-> Catatan: `hash_id` sebelumnya hanya format tampilan (`%04d` / `NM-%04d`). Kini
-> menjadi kode peserta unik sungguhan (mis. `SH3A7B92XK`) yang dipakai sebagai
-> faktor verifikasi reset password. Perubahan ini berlaku juga pada response
-> `ParticipantResource.hash_id`.
+> Riwayat: fitur ini sebelumnya memakai `hash_id` (kode acak `SH3A7B92XK`) sebagai faktor
+> verifikasi. Sejak 2026-08-17 digantikan `participant_code` (format `%04d` / `NM%04d`,
+> tanpa dash) yang juga tampil di `ParticipantResource.participant_code`.
