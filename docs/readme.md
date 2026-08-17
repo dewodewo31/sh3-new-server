@@ -65,7 +65,6 @@ app/
 │   ├── PaymentDTO.php
 │   └── UserDTO.php
 ├── Helpers/
-│   ├── QRCodeHelper.php
 │   └── ImageHelper.php
 ├── Http/
 │   ├── Controllers/
