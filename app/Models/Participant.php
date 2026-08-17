@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\ParticipantCodeService;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -12,9 +12,9 @@ class Participant extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    public const OTS_AGGREGATOR_CODE = 'NM0000';
 
-    protected $appends = ['hash_id'];
+    protected $guarded = [];
 
     protected function casts(): array
     {
@@ -94,25 +94,10 @@ class Participant extends Model
     protected static function booted(): void
     {
         static::creating(function (Participant $participant) {
-            if (empty($participant->hash_id)) {
-                $participant->hash_id = static::generateHashId();
+            if (empty($participant->participant_code)) {
+                $participant->participant_code = app(ParticipantCodeService::class)
+                    ->next($participant->membership_type === 'none' ? 'NM' : '');
             }
         });
-    }
-
-    public static function generateHashId(): string
-    {
-        do {
-            $code = 'SH3'.Str::upper(Str::random(7));
-        } while (static::where('hash_id', $code)->exists());
-
-        return $code;
-    }
-
-    protected function hashId(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->attributes['hash_id'] ?? null,
-        );
     }
 }
