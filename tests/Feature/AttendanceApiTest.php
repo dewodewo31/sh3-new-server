@@ -360,6 +360,36 @@ class AttendanceApiTest extends TestCase
         ]);
     }
 
+    public function test_sync_up_creates_new_ots_participant_with_email(): void
+    {
+        $event = $this->createEvent();
+
+        $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
+            [
+                'event_id' => $event->id,
+                'participant_code' => 'NM0099',
+                'member_name' => 'OTS Baru',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+        ]])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('synced_ots_count', 1);
+
+        $ots = Participant::where('participant_code', 'NM0099')->first();
+
+        $this->assertNotNull($ots);
+        $this->assertSame('OTS Baru', $ots->name);
+        $this->assertSame('ots.nm0099@sh3.com', $ots->email);
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'participant_id' => $ots->id,
+            'qr_code' => 'OTS-NM0099EV'.$event->id,
+            'payment_status' => 'confirmed',
+        ]);
+    }
+
     public function test_sync_up_creates_ots_sentinel_once(): void
     {
         $event = $this->createEvent();

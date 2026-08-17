@@ -191,7 +191,10 @@ class AttendanceController extends Controller
                     } else {
                         $member = Participant::firstOrCreate(
                             ['participant_code' => $ots['participant_code']],
-                            ['name' => $ots['member_name'] ?? 'Peserta OTS']
+                            [
+                                'name' => $ots['member_name'] ?? 'Peserta OTS',
+                                'email' => 'ots.'.strtolower($ots['participant_code']).'@sh3.com',
+                            ]
                         );
                     }
 
