@@ -32,6 +32,10 @@ return new class extends Migration
             $table->string('participant_code')->nullable(false)->change();
             $table->unique('participant_code');
         });
+
+        Schema::table('participants', function (Blueprint $table) {
+            $table->dropColumn('hash_id');
+        });
     }
 
     public function down(): void

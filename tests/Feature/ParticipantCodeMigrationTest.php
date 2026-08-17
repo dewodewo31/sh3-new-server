@@ -24,6 +24,8 @@ class ParticipantCodeMigrationTest extends TestCase
 
         $this->runMigration();
 
+        $this->assertFalse(Schema::hasColumn('participants', 'hash_id'));
+
         $codes = DB::table('participants')->orderBy('id')->pluck('participant_code')->all();
 
         $this->assertSame(['0001', 'NM0001', 'NM0002', 'NM0000'], $codes);
@@ -41,6 +43,8 @@ class ParticipantCodeMigrationTest extends TestCase
 
         $this->runMigration();
 
+        $this->assertFalse(Schema::hasColumn('participants', 'hash_id'));
+
         $codes = DB::table('participants')->orderBy('id')->pluck('participant_code')->all();
 
         $this->assertSame(['NM0001', 'NM0000', 'NM0002'], $codes);
@@ -56,6 +60,8 @@ class ParticipantCodeMigrationTest extends TestCase
 
         $this->runMigration();
 
+        $this->assertFalse(Schema::hasColumn('participants', 'hash_id'));
+
         $codes = DB::table('participants')->orderBy('id')->pluck('participant_code')->all();
 
         $this->assertSame(['NM0001', '0001'], $codes);
@@ -63,6 +69,12 @@ class ParticipantCodeMigrationTest extends TestCase
 
     private function migrateDownToPreBackfillState(): void
     {
+        if (! Schema::hasColumn('participants', 'hash_id')) {
+            Schema::table('participants', function (Blueprint $table) {
+                $table->string('hash_id')->nullable()->unique()->after('user_id');
+            });
+        }
+
         Schema::table('participants', function (Blueprint $table) {
             $table->dropUnique(['participant_code']);
             $table->dropColumn('participant_code');
