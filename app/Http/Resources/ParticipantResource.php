@@ -11,7 +11,7 @@ class ParticipantResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'hash_id' => $this->hash_id,
+            'participant_code' => $this->participant_code,
             'user_id' => $this->user_id,
             'name' => $this->name,
             'email' => $this->email,

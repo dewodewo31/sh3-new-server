@@ -62,6 +62,16 @@ class ProfileApiTest extends TestCase
             ]);
     }
 
+    public function test_profile_exposes_participant_code_not_hash_id(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $this->getJson('/api/v1/profile')
+            ->assertOk()
+            ->assertJsonPath('data.participant.participant_code', $this->participant->participant_code)
+            ->assertJsonMissingPath('data.participant.hash_id');
+    }
+
     public function test_can_update_profile(): void
     {
         Sanctum::actingAs($this->user);
