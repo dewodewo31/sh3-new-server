@@ -18,14 +18,19 @@ class Sh3ParticipantImportTest extends TestCase
         $this->seed(Sh3ParticipantImportSeeder::class);
     }
 
-    public function test_import_creates_all_19_participants_with_users(): void
+    public function test_import_creates_19_participants_with_unique_nm_codes(): void
     {
         $this->runImport();
 
-        $this->assertSame(19, Participant::whereIn('hash_id', [
-            '3690', '3749', '3317', '2976', '2790', '2898', '2517', '2890', '2903',
-            '3796', '3130', '3614', '3002', '2048', '3180', '3496', '2429', '2431', '3788',
-        ])->count());
+        $codes = Participant::where('participant_code', '!=', Participant::OTS_AGGREGATOR_CODE)
+            ->pluck('participant_code');
+
+        $this->assertSame(19, $codes->count());
+        $this->assertSame(19, $codes->unique()->count());
+
+        foreach ($codes as $code) {
+            $this->assertMatchesRegularExpression('/^NM\d{4}$/', $code);
+        }
 
         foreach (['Bengkiam', 'Riri', 'Moka', 'Yuliani', '888999', 'Ipau'] as $username) {
             $user = User::where('username', $username)->first();
@@ -33,6 +38,18 @@ class Sh3ParticipantImportTest extends TestCase
             $this->assertSame('participant', $user->role);
             $this->assertTrue((bool) $user->is_active);
         }
+    }
+
+    public function test_import_creates_ots_sentinel_with_reserved_code(): void
+    {
+        $this->runImport();
+
+        $this->assertSame(1, Participant::where('participant_code', Participant::OTS_AGGREGATOR_CODE)->count());
+        $this->assertDatabaseHas('participants', [
+            'participant_code' => Participant::OTS_AGGREGATOR_CODE,
+            'name' => 'Manual OTS NON MEMBER',
+            'is_active' => true,
+        ]);
     }
 
     public function test_passwords_are_hashed_and_login_works(): void
@@ -61,9 +78,10 @@ class Sh3ParticipantImportTest extends TestCase
         $this->runImport();
         $this->runImport();
 
-        $this->assertSame(19, Participant::whereNotNull('hash_id')->count());
+        $this->assertSame(19, Participant::where('participant_code', '!=', Participant::OTS_AGGREGATOR_CODE)->count());
+        $this->assertSame(1, Participant::where('participant_code', Participant::OTS_AGGREGATOR_CODE)->count());
         $this->assertSame(19, User::where('role', 'participant')->count());
-        $this->assertSame(0, Participant::select('hash_id')->groupBy('hash_id')->havingRaw('count(*) > 1')->count());
+        $this->assertSame(0, Participant::select('participant_code')->groupBy('participant_code')->havingRaw('count(*) > 1')->count());
         $this->assertSame(0, User::select('username')->whereNotNull('username')->groupBy('username')->havingRaw('count(*) > 1')->count());
     }
 
@@ -72,7 +90,7 @@ class Sh3ParticipantImportTest extends TestCase
         $this->runImport();
 
         $this->assertDatabaseHas('participants', [
-            'hash_id' => '3690',
+            'name' => 'Cohan Luchas',
             'email' => 'dummy+3690@example.com',
         ]);
         $this->assertDatabaseHas('users', [
@@ -84,13 +102,13 @@ class Sh3ParticipantImportTest extends TestCase
     {
         $this->runImport();
 
-        // Megawati (2429) keeps the real email, Hermawan (2431) gets a dummy.
+        // Megawati keeps the real email, Hermawan gets a dummy.
         $this->assertDatabaseHas('participants', [
-            'hash_id' => '2429',
+            'name' => 'Megawati',
             'email' => 'megawati23tk@gmail.com',
         ]);
         $this->assertDatabaseHas('participants', [
-            'hash_id' => '2431',
+            'name' => 'Hermawan sulistio',
             'email' => 'dummy+2431@example.com',
         ]);
     }
