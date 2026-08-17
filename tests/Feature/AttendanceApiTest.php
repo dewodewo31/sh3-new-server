@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
-use App\Models\AttendanceLog;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\EventParticipant;
@@ -187,17 +186,63 @@ class AttendanceApiTest extends TestCase
         ]);
     }
 
-    public function test_scan_valid_qr_returns_decoded_data(): void
+    public function test_scan_without_event_returns_participant_and_registered_events(): void
     {
         $event = $this->createEvent();
+        $this->register($event, $this->participant);
 
         $this->postJson('/api/v1/attendance/scan', [
-            'qr_code' => 'SH3-'.$event->id.'-'.$this->participant->id.'-ABC12345',
+            'qr_code' => $this->participant->participant_code,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.participant_code', $this->participant->participant_code)
+            ->assertJsonPath('data.name', $this->participant->name)
+            ->assertJsonPath('data.status', 'non_member')
+            ->assertJsonPath('data.registered_events.0.event_id', $event->id)
+            ->assertJsonPath('data.registered_events.0.event_title', $event->title);
+    }
+
+    public function test_scan_with_event_returns_registration_status(): void
+    {
+        $event = $this->createEvent();
+        $this->register($event, $this->participant);
+
+        $this->postJson('/api/v1/attendance/scan', [
+            'event_id' => $event->id,
+            'qr_code' => $this->participant->participant_code,
         ])
             ->assertOk()
             ->assertJsonPath('data.event_id', $event->id)
             ->assertJsonPath('data.participant_id', $this->participant->id)
-            ->assertJsonPath('data.hash', 'ABC12345');
+            ->assertJsonPath('data.participant_code', $this->participant->participant_code)
+            ->assertJsonPath('data.registration_status', 'confirmed')
+            ->assertJsonPath('data.is_attended', false);
+    }
+
+    public function test_scan_with_event_not_registered_returns_422(): void
+    {
+        $event = $this->createEvent();
+
+        $this->postJson('/api/v1/attendance/scan', [
+            'event_id' => $event->id,
+            'qr_code' => $this->participant->participant_code,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.participant.0', 'Peserta tidak terdaftar di event ini.');
+    }
+
+    public function test_scan_unknown_code_returns_422(): void
+    {
+        $this->postJson('/api/v1/attendance/scan', ['qr_code' => '9999'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.participant.0', 'Kode peserta tidak dikenal.');
+    }
+
+    public function test_scan_legacy_sh3_code_returns_422(): void
+    {
+        $this->postJson('/api/v1/attendance/scan', ['qr_code' => 'SH3-1-2-ABC12345'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.qr_code.0', 'QR Code tidak valid.');
     }
 
     public function test_scan_invalid_qr_returns_422(): void

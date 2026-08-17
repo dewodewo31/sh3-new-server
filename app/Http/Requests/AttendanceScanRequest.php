@@ -14,6 +14,7 @@ class AttendanceScanRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'event_id' => ['nullable', 'integer', 'exists:events,id'],
             'qr_code' => ['required', 'string'],
         ];
     }
