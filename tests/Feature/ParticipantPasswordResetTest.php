@@ -26,35 +26,35 @@ class ParticipantPasswordResetTest extends TestCase
         ]);
     }
 
-    public function test_verify_with_valid_username_and_hash_id(): void
+    public function test_verify_with_valid_username_and_participant_code(): void
     {
         $p = $this->makeParticipant();
 
         $this->postJson('/api/v1/participant/auth/verify-reset', [
             'username' => $p->user->username,
-            'hash_id' => $p->hash_id,
+            'participant_code' => $p->participant_code,
         ])->assertOk()
             ->assertJson(['success' => true, 'can_reset' => true]);
     }
 
-    public function test_verify_with_valid_username_but_wrong_hash_id(): void
+    public function test_verify_with_valid_username_but_wrong_participant_code(): void
     {
         $p = $this->makeParticipant();
 
         $this->postJson('/api/v1/participant/auth/verify-reset', [
             'username' => $p->user->username,
-            'hash_id' => 'SH3WRONG99',
+            'participant_code' => '9999',
         ])->assertOk()
             ->assertJson(['success' => false, 'message' => 'Data participant tidak valid.']);
     }
 
-    public function test_verify_with_wrong_username_but_valid_hash_id(): void
+    public function test_verify_with_wrong_username_but_valid_participant_code(): void
     {
         $p = $this->makeParticipant();
 
         $this->postJson('/api/v1/participant/auth/verify-reset', [
             'username' => 'nonexistent_user',
-            'hash_id' => $p->hash_id,
+            'participant_code' => $p->participant_code,
         ])->assertOk()
             ->assertJson(['success' => false, 'message' => 'Data participant tidak valid.']);
     }
@@ -66,7 +66,7 @@ class ParticipantPasswordResetTest extends TestCase
 
         $this->postJson('/api/v1/participant/auth/reset-password', [
             'username' => $username,
-            'hash_id' => $p->hash_id,
+            'participant_code' => $p->participant_code,
             'password' => 'newpass123',
             'password_confirmation' => 'newpass123',
         ])->assertOk()
@@ -92,7 +92,7 @@ class ParticipantPasswordResetTest extends TestCase
 
         $this->postJson('/api/v1/participant/auth/reset-password', [
             'username' => $p->user->username,
-            'hash_id' => $p->hash_id,
+            'participant_code' => $p->participant_code,
             'password' => 'newpass123',
             'password_confirmation' => 'newpass123',
         ])->assertOk();
@@ -110,7 +110,7 @@ class ParticipantPasswordResetTest extends TestCase
         for ($i = 1; $i <= 5; $i++) {
             $this->postJson('/api/v1/participant/auth/reset-password', [
                 'username' => 'someone',
-                'hash_id' => 'SH3XXXXXXX',
+                'participant_code' => '9999',
                 'password' => 'short',
                 'password_confirmation' => 'short',
             ], $server)->assertStatus(422);
@@ -118,7 +118,7 @@ class ParticipantPasswordResetTest extends TestCase
 
         $this->postJson('/api/v1/participant/auth/reset-password', [
             'username' => 'someone',
-            'hash_id' => 'SH3XXXXXXX',
+            'participant_code' => '9999',
             'password' => 'short',
             'password_confirmation' => 'short',
         ], $server)->assertStatus(429);
@@ -128,7 +128,7 @@ class ParticipantPasswordResetTest extends TestCase
     {
         $this->postJson('/api/v1/participant/auth/reset-password', [])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['username', 'hash_id', 'password']);
+            ->assertJsonValidationErrors(['username', 'participant_code', 'password']);
     }
 
     public function test_reset_validation_error_when_confirmation_mismatch(): void
@@ -137,7 +137,7 @@ class ParticipantPasswordResetTest extends TestCase
 
         $this->postJson('/api/v1/participant/auth/reset-password', [
             'username' => $p->user->username,
-            'hash_id' => $p->hash_id,
+            'participant_code' => $p->participant_code,
             'password' => 'newpass123',
             'password_confirmation' => 'different123',
         ])->assertStatus(422)
@@ -153,13 +153,13 @@ class ParticipantPasswordResetTest extends TestCase
 
         $this->postJson('/api/v1/participant/auth/verify-reset', [
             'username' => $admin->username,
-            'hash_id' => 'SH3WHATEVER',
+            'participant_code' => '9999',
         ])->assertOk()
             ->assertJson(['success' => false, 'message' => 'Data participant tidak valid.']);
 
         $this->postJson('/api/v1/participant/auth/reset-password', [
             'username' => $admin->username,
-            'hash_id' => 'SH3WHATEVER',
+            'participant_code' => '9999',
             'password' => 'newpass123',
             'password_confirmation' => 'newpass123',
         ])->assertOk()
@@ -171,10 +171,10 @@ class ParticipantPasswordResetTest extends TestCase
         $a = $this->makeParticipant();
         $b = $this->makeParticipant();
 
-        // A's username with B's hash_id must be rejected.
+        // A's username with B's participant_code must be rejected.
         $this->postJson('/api/v1/participant/auth/reset-password', [
             'username' => $a->user->username,
-            'hash_id' => $b->hash_id,
+            'participant_code' => $b->participant_code,
             'password' => 'newpass123',
             'password_confirmation' => 'newpass123',
         ])->assertOk()

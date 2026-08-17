@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Hash;
 class ParticipantPasswordResetService
 {
     /**
-     * Validate that the username belongs to a participant whose hash_id matches.
+     * Validate that the username belongs to a participant whose participant_code matches.
      * Returns false for any mismatch without revealing which field is wrong.
      */
-    public function verify(string $username, string $hashId): bool
+    public function verify(string $username, string $participantCode): bool
     {
         $user = $this->findParticipantUser($username);
 
@@ -21,14 +21,14 @@ class ParticipantPasswordResetService
 
         $participant = $user->participants()->first();
 
-        return $participant !== null && $participant->hash_id === $hashId;
+        return $participant !== null && $participant->participant_code === $participantCode;
     }
 
     /**
-     * Reset the participant's password when username + hash_id match.
+     * Reset the participant's password when username + participant_code match.
      * Returns false when validation fails (no detail leaked).
      */
-    public function reset(string $username, string $hashId, string $password): bool
+    public function reset(string $username, string $participantCode, string $password): bool
     {
         $user = $this->findParticipantUser($username);
 
@@ -38,7 +38,7 @@ class ParticipantPasswordResetService
 
         $participant = $user->participants()->first();
 
-        if (! $participant || $participant->hash_id !== $hashId) {
+        if (! $participant || $participant->participant_code !== $participantCode) {
             return false;
         }
 
