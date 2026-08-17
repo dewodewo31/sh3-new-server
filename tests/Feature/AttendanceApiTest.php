@@ -483,7 +483,7 @@ class AttendanceApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 100000,
             'payment_status' => 'rejected',
-            'qr_code' => 'SH3-'.$event->id.'-'.$this->participant->id.'-OLDQR',
+            'qr_code' => $this->participant->participant_code,
         ]);
 
         $this->postJson('/api/v1/attendance/check-in', $this->checkInPayload($event, $this->participant))
@@ -506,7 +506,7 @@ class AttendanceApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 100000,
             'payment_status' => 'refunded',
-            'qr_code' => 'SH3-'.$event->id.'-'.$this->participant->id.'-OLDQR',
+            'qr_code' => $this->participant->participant_code,
         ]);
 
         $this->postJson('/api/v1/attendance/check-in', $this->checkInPayload($event, $this->participant))

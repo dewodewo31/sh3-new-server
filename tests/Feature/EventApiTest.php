@@ -169,7 +169,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->participant_code,
         ]);
 
         $this->getJson('/api/v1/events/'.$event->id.'/participants')
@@ -196,7 +196,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->participant_code,
         ]);
 
         $this->getJson('/api/v1/events/'.$event->id.'/participants')
@@ -218,14 +218,14 @@ class EventApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->participant_code,
         ]);
 
         $this->getJson('/api/v1/events/'.$event->id.'/qr')
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.participant_name', $participant->name)
-            ->assertJsonPath('data.0.qr_code', 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345');
+            ->assertJsonPath('data.0.qr_code', $participant->participant_code);
     }
 
     public function test_register_free_event_success(): void
@@ -449,7 +449,7 @@ class EventApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
-        $qr = 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345';
+        $qr = $participant->participant_code;
         EventParticipant::create([
             'event_id' => $event->id,
             'participant_id' => $participant->id,
@@ -479,7 +479,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 150000,
             'payment_status' => 'pending',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->participant_code,
         ]);
 
         $this->postJson('/api/v1/events/'.$event->id.'/register')
@@ -494,7 +494,7 @@ class EventApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
-        $qr = 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345';
+        $qr = $participant->participant_code;
         EventParticipant::create([
             'event_id' => $event->id,
             'participant_id' => $participant->id,
@@ -524,7 +524,7 @@ class EventApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
-        $oldQr = 'SH3-'.$event->id.'-'.$participant->id.'-OLDQR01';
+        $oldQr = $participant->participant_code;
         EventParticipant::create([
             'event_id' => $event->id,
             'participant_id' => $participant->id,
@@ -544,7 +544,7 @@ class EventApiTest extends TestCase
 
         $this->assertSame('pending', $registration->payment_status);
         $this->assertNotNull($registration->qr_code);
-        $this->assertNotSame($oldQr, $registration->qr_code);
+        $this->assertSame($participant->participant_code, $registration->qr_code);
         $this->assertSame(1, EventParticipant::where('event_id', $event->id)
             ->where('participant_id', $participant->id)
             ->count());
@@ -567,7 +567,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 150000,
             'payment_status' => 'refunded',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-OLDQR02',
+            'qr_code' => $participant->participant_code,
         ]);
 
         $this->postJson('/api/v1/events/'.$event->id.'/register')
@@ -601,7 +601,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 150000,
             'payment_status' => 'rejected',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-OLDQR03',
+            'qr_code' => $participant->participant_code,
         ]);
 
         $response = $this->postJson('/api/v1/events/'.$event->id.'/register')
@@ -648,7 +648,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 150000,
             'payment_status' => 'refunded',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-OLDQR04',
+            'qr_code' => $participant->participant_code,
         ]);
 
         $this->postJson('/api/v1/events/'.$event->id.'/register')
@@ -678,7 +678,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 150000,
             'payment_status' => 'rejected',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-OLDQR05',
+            'qr_code' => $participant->participant_code,
         ]);
 
         $this->postJson('/api/v1/events/'.$event->id.'/register')
