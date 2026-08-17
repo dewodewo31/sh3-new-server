@@ -183,6 +183,7 @@ class AttendanceService
                 return [
                     'event_id' => $attendance->eventParticipant?->event_id,
                     'participant_id' => $attendance->eventParticipant?->participant_id,
+                    'participant_code' => $attendance->eventParticipant?->participant?->participant_code,
                     'status' => $attendance->status,
                     'check_in_time' => $attendance->check_in_time?->toISOString(),
                     'check_out_time' => $attendance->check_out_time?->toISOString(),

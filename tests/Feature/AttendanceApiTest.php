@@ -65,7 +65,7 @@ class AttendanceApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->participant_code,
         ]);
     }
 
@@ -294,7 +294,7 @@ class AttendanceApiTest extends TestCase
         $attendances = [
             [
                 'event_id' => $event->id,
-                'qr_code' => $registration->qr_code,
+                'participant_code' => $this->participant->participant_code,
                 'check_in_time' => now()->toDateTimeString(),
                 'check_out_time' => null,
             ],
@@ -326,7 +326,7 @@ class AttendanceApiTest extends TestCase
         $this->postJson('/api/v1/attendance/sync-up', ['attendances' => [
             [
                 'event_id' => $event->id,
-                'qr_code' => 'NONEXISTENT-QR-CODE',
+                'participant_code' => '9999',
                 'check_in_time' => now()->toDateTimeString(),
             ],
         ]])
@@ -338,18 +338,12 @@ class AttendanceApiTest extends TestCase
     public function test_sync_up_processes_ots_registration(): void
     {
         $event = $this->createEvent();
-        $member = Participant::create([
-            'hash_id' => 'SH3TEST123',
-            'name' => 'OTS Member',
-            'email' => 'ots@test.com',
-            'phone' => '081000000000',
-            'is_active' => true,
-        ]);
+        $member = Participant::factory()->create(['name' => 'OTS Member']);
 
         $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
             [
                 'event_id' => $event->id,
-                'hash_id' => 'SH3TEST123',
+                'participant_code' => $member->participant_code,
                 'member_name' => 'OTS Member',
                 'check_in_time' => now()->toDateTimeString(),
             ],
@@ -361,9 +355,86 @@ class AttendanceApiTest extends TestCase
         $this->assertDatabaseHas('event_participants', [
             'event_id' => $event->id,
             'participant_id' => $member->id,
-            'qr_code' => 'OTS-SH3TEST123EV'.$event->id,
+            'qr_code' => 'OTS-'.$member->participant_code.'EV'.$event->id,
             'payment_status' => 'confirmed',
         ]);
+    }
+
+    public function test_sync_up_creates_ots_sentinel_once(): void
+    {
+        $event = $this->createEvent();
+        $secondEvent = $this->createEvent(['title' => 'Second OTS Event']);
+
+        $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
+            [
+                'event_id' => $event->id,
+                'participant_code' => Participant::OTS_AGGREGATOR_CODE,
+                'member_name' => 'Manual OTS',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+            [
+                'event_id' => $secondEvent->id,
+                'participant_code' => Participant::OTS_AGGREGATOR_CODE,
+                'member_name' => 'Manual OTS',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+        ]])
+            ->assertOk()
+            ->assertJsonPath('synced_ots_count', 2);
+
+        $sentinel = Participant::where('participant_code', Participant::OTS_AGGREGATOR_CODE)->get();
+
+        $this->assertCount(1, $sentinel);
+        $this->assertSame('Manual OTS NON MEMBER', $sentinel->first()->name);
+        $this->assertSame('manual.ots@sh3.com', $sentinel->first()->email);
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'participant_id' => $sentinel->first()->id,
+            'qr_code' => 'OTS-'.Participant::OTS_AGGREGATOR_CODE.'EV'.$event->id,
+        ]);
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $secondEvent->id,
+            'participant_id' => $sentinel->first()->id,
+        ]);
+    }
+
+    public function test_sync_up_ignores_legacy_attendance_payload(): void
+    {
+        $event = $this->createEvent();
+        $this->register($event, $this->participant);
+
+        $this->postJson('/api/v1/attendance/sync-up', ['attendances' => [
+            [
+                'event_id' => $event->id,
+                'qr_code' => 'SH3-'.$event->id.'-'.$this->participant->id.'-ABC12345',
+                'hash_id' => '0022',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+        ]])
+            ->assertOk()
+            ->assertJsonPath('synced_attendance_count', 0);
+
+        $this->assertDatabaseCount('attendances', 0);
+    }
+
+    public function test_sync_up_ignores_legacy_ots_payload(): void
+    {
+        $event = $this->createEvent();
+
+        $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
+            [
+                'event_id' => $event->id,
+                'hash_id' => 'MANUAL_OTS_001',
+                'member_name' => 'Budi',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+        ]])
+            ->assertOk()
+            ->assertJsonPath('synced_ots_count', 0);
+
+        $this->assertDatabaseCount('event_participants', 0);
+        $this->assertDatabaseMissing('participants', ['name' => 'Budi']);
     }
 
     public function test_sync_down_returns_delta_since_timestamp(): void
@@ -386,6 +457,7 @@ class AttendanceApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.event_id', $event->id)
             ->assertJsonPath('data.0.participant_id', $this->participant->id)
+            ->assertJsonPath('data.0.participant_code', $this->participant->participant_code)
             ->assertJsonPath('data.0.status', 'present');
     }
 

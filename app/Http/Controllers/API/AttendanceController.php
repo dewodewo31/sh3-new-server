@@ -101,23 +101,20 @@ class AttendanceController extends Controller
                 // 1. UPDATE DATA ATTENDANCE REGULER
                 // ============================================================
                 foreach ($attendances as $att) {
-                    $eventParticipant = EventParticipant::where('qr_code', $att['qr_code'])
-                        ->where('event_id', $att['event_id'])
-                        ->first();
-
-                    if (! $eventParticipant && isset($att['hash_id'])) {
-                        $eventParticipant = EventParticipant::where('event_id', $att['event_id'])
-                            ->whereHas('participant', function ($q) use ($att) {
-                                $q->where('hash_id', $att['hash_id']);
-                            })
-                            ->first();
+                    if (empty($att['participant_code'])) {
+                        continue;
                     }
+
+                    $eventParticipant = EventParticipant::where('event_id', $att['event_id'])
+                        ->whereHas('participant', function ($q) use ($att) {
+                            $q->where('participant_code', $att['participant_code']);
+                        })
+                        ->first();
 
                     if (! $eventParticipant) {
                         \Log::warning('Reguler tidak ditemukan', [
-                            'qr_code' => $att['qr_code'] ?? null,
+                            'participant_code' => $att['participant_code'],
                             'event_id' => $att['event_id'],
-                            'hash_id' => $att['hash_id'] ?? null,
                         ]);
 
                         continue;
@@ -169,7 +166,7 @@ class AttendanceController extends Controller
 
                 // 🔥 Cari atau buat participant aggregator untuk semua OTS manual
                 $manualOtsParticipant = Participant::firstOrCreate(
-                    ['hash_id' => 'MANUAL_OTS_AGGREGATOR'],
+                    ['participant_code' => Participant::OTS_AGGREGATOR_CODE],
                     [
                         'name' => 'Manual OTS NON MEMBER',
                         'is_active' => true,
@@ -182,14 +179,18 @@ class AttendanceController extends Controller
                 $processedEvents = [];
 
                 foreach ($otsRegistrations as $ots) {
-                    $isManual = stripos($ots['hash_id'], 'manual') !== false;
+                    if (empty($ots['participant_code'])) {
+                        continue;
+                    }
+
+                    $isManual = $ots['participant_code'] === Participant::OTS_AGGREGATOR_CODE;
 
                     // Tentukan participant
                     if ($isManual) {
                         $member = $manualOtsParticipant;
                     } else {
                         $member = Participant::firstOrCreate(
-                            ['hash_id' => $ots['hash_id']],
+                            ['participant_code' => $ots['participant_code']],
                             ['name' => $ots['member_name'] ?? 'Peserta OTS']
                         );
                     }
@@ -203,7 +204,7 @@ class AttendanceController extends Controller
                             'participant_id' => $participantId,
                         ],
                         [
-                            'qr_code' => 'OTS-'.$ots['hash_id'].'EV'.$ots['event_id'],
+                            'qr_code' => 'OTS-'.$ots['participant_code'].'EV'.$ots['event_id'],
                             'registration_type' => 'paid',
                             'amount' => Event::find($ots['event_id'])->price ?? 0,
                             'payment_status' => 'confirmed',
@@ -264,7 +265,7 @@ class AttendanceController extends Controller
                             'check_out_time' => $checkOutOts,
                             'status' => 'present',
                             'check_in_method' => 'qr_code',
-                            'notes' => $isManual ? 'Manual OTS: '.$ots['hash_id'] : 'OTS Member: '.$ots['hash_id'],
+                            'notes' => $isManual ? 'Manual OTS: '.$ots['participant_code'] : 'OTS Member: '.$ots['participant_code'],
                         ]);
                     }
 
