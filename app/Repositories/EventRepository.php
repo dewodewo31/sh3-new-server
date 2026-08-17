@@ -47,6 +47,14 @@ class EventRepository extends BaseRepository
         return $this->model->where('status', 'ongoing')->get();
     }
 
+    public function findScannable(array $relations = ['category'])
+    {
+        return $this->model->with($relations)
+            ->whereIn('status', ['publish', 'ongoing'])
+            ->orderBy('start_date')
+            ->get();
+    }
+
     public function paginateWithCategory(int $perPage = 15)
     {
         return $this->model->with('category')

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Participant;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\EventParticipantRepository;
 use App\Repositories\EventRepository;
@@ -39,7 +40,9 @@ class AttendanceController extends Controller
 
     public function scan()
     {
-        return view('attendance.scan');
+        $events = $this->eventRepository->findScannable();
+
+        return view('attendance.scan', compact('events'));
     }
 
     public function generateQr(int $id)
@@ -58,6 +61,7 @@ class AttendanceController extends Controller
     public function processScan(Request $request): JsonResponse
     {
         $request->validate([
+            'event_id' => ['required', 'integer', 'exists:events,id'],
             'qr_code' => ['required', 'string'],
         ]);
 
@@ -67,13 +71,22 @@ class AttendanceController extends Controller
         if (! $decoded) {
             return response()->json([
                 'success' => false,
-                'message' => 'QR Code tidak valid. Pastikan format kode benar (SH3-...).',
+                'message' => 'QR Code tidak valid. Pastikan format kode benar (contoh: 3950 atau NM0001).',
+            ], 422);
+        }
+
+        $participant = Participant::where('participant_code', $decoded['participant_code'])->first();
+
+        if (! $participant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode peserta tidak dikenal.',
             ], 422);
         }
 
         $registration = $this->eventParticipantRepository->findByEventAndParticipant(
-            $decoded['event_id'],
-            $decoded['participant_id'],
+            $request->event_id,
+            $participant->id,
         );
 
         if (! $registration) {
@@ -83,7 +96,7 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        if (! $registration->qr_code || $registration->qr_code !== $qrData) {
+        if (! $registration->qr_code || $registration->qr_code !== $decoded['participant_code']) {
             return response()->json([
                 'success' => false,
                 'message' => 'QR Code tidak dikenali. Silakan gunakan QR terbaru milik peserta.',
