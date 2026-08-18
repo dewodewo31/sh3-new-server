@@ -21,6 +21,19 @@ class AuthenticatedSessionController extends Controller
         $credentials = $request->credentials();
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::user();
+
+            if (in_array($user->role, ['sponsor', 'guest_sponsor'], true)) {
+                Auth::logout();
+
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return back()->withErrors([
+                    'email' => 'Akun ini tidak memiliki akses ke panel admin.',
+                ])->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             return redirect()->intended(route('admin.dashboard'));

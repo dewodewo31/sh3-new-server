@@ -32,6 +32,11 @@ class User extends Authenticatable
         return $this->hasMany(Participant::class);
     }
 
+    public function guestSponsor()
+    {
+        return $this->hasOne(GuestSponsor::class);
+    }
+
     public function activityLogs()
     {
         return $this->hasMany(UserActivityLog::class);

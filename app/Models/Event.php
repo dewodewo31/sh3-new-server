@@ -60,8 +60,13 @@ class Event extends Model
     public function sponsors()
     {
         return $this->belongsToMany(Sponsor::class, 'event_sponsors')
-            ->withPivot(['package', 'value', 'status'])
+            ->withPivot(['package', 'value', 'status', 'max_guest_accounts'])
             ->withTimestamps();
+    }
+
+    public function guestSponsors()
+    {
+        return $this->hasMany(GuestSponsor::class);
     }
 
     public function galleries()

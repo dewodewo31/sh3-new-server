@@ -31,6 +31,7 @@ class AdminAccessControlTest extends TestCase
             '/admin/galleries',
             '/admin/organization',
             '/admin/sponsors',
+            '/admin/guest-sponsors',
             '/admin/merchandise',
             '/admin/payments',
             '/admin/bookkeepings',
@@ -42,11 +43,17 @@ class AdminAccessControlTest extends TestCase
         }
     }
 
-    public function test_dashboard_is_accessible_by_any_authenticated_user(): void
+    public function test_dashboard_is_accessible_by_admin_roles(): void
     {
-        $participant = $this->user('participant');
+        $this->actingAs($this->user('admin_full_access'))->get('/admin/dashboard')->assertOk();
+        $this->actingAs($this->user('organizer'))->get('/admin/dashboard')->assertOk();
+    }
 
-        $this->actingAs($participant)->get('/admin/dashboard')->assertOk();
+    public function test_dashboard_is_forbidden_for_non_admin_roles(): void
+    {
+        $this->actingAs($this->user('participant'))->get('/admin/dashboard')->assertForbidden();
+        $this->actingAs($this->user('sponsor'))->get('/admin/dashboard')->assertForbidden();
+        $this->actingAs($this->user('guest_sponsor'))->get('/admin/dashboard')->assertForbidden();
     }
 
     public function test_notifications_are_accessible_by_any_authenticated_user(): void
@@ -111,11 +118,11 @@ class AdminAccessControlTest extends TestCase
         $this->actingAs($this->user('admin_full_access'))->get('/admin/organization')->assertOk();
     }
 
-    public function test_sponsors_allow_admin_full_access_admin_laman_and_sponsor(): void
+    public function test_sponsors_allow_admin_full_access_and_admin_laman(): void
     {
         $this->actingAs($this->user('organizer'))->get('/admin/sponsors')->assertForbidden();
+        $this->actingAs($this->user('sponsor'))->get('/admin/sponsors')->assertForbidden();
         $this->actingAs($this->user('admin_laman'))->get('/admin/sponsors')->assertOk();
-        $this->actingAs($this->user('sponsor'))->get('/admin/sponsors')->assertOk();
         $this->actingAs($this->user('admin_full_access'))->get('/admin/sponsors')->assertOk();
     }
 

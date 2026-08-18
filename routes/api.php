@@ -3,13 +3,15 @@
 use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\CategoryController;
-use App\Http\Controllers\API\ParticipantAuthController;
 use App\Http\Controllers\API\EventController;
 use App\Http\Controllers\API\GalleryController;
+use App\Http\Controllers\API\GuestSponsorAttendanceController;
+use App\Http\Controllers\API\GuestSponsorAuthController;
 use App\Http\Controllers\API\MembershipController;
 use App\Http\Controllers\API\MerchandiseController;
 use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\OrganizationController;
+use App\Http\Controllers\API\ParticipantAuthController;
 use App\Http\Controllers\API\ParticipantController;
 use App\Http\Controllers\API\PaymentController;
 use App\Http\Controllers\API\ProfileController;
@@ -28,6 +30,8 @@ Route::prefix('v1')->group(function () {
 
     Route::post('/participant/auth/verify-reset', [ParticipantAuthController::class, 'verifyReset']);
     Route::post('/participant/auth/reset-password', [ParticipantAuthController::class, 'resetPassword'])->middleware('throttle:5,15');
+
+    Route::post('/guest-sponsor/auth/login', [GuestSponsorAuthController::class, 'login']);
 
     Route::get('/events/upcoming', [EventController::class, 'upcoming']);
     Route::get('/events', [EventController::class, 'index']);
@@ -109,5 +113,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+        Route::get('/guest-sponsor/auth/me', [GuestSponsorAuthController::class, 'me']);
+        Route::post('/guest-sponsor/attendance/scan', [GuestSponsorAttendanceController::class, 'scan']);
+        Route::post('/guest-sponsor/attendance/check-in', [GuestSponsorAttendanceController::class, 'checkIn']);
+        Route::post('/guest-sponsor/attendance/check-out', [GuestSponsorAttendanceController::class, 'checkOut']);
+        Route::get('/guest-sponsor/attendance/my', [GuestSponsorAttendanceController::class, 'my']);
     });
 });

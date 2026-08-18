@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\GalleryAlbumController;
 use App\Http\Controllers\Admin\GalleryController;
+use App\Http\Controllers\Admin\GuestSponsorController;
 use App\Http\Controllers\Admin\MembershipController;
 use App\Http\Controllers\Admin\MembershipPlanController;
 use App\Http\Controllers\Admin\MerchandiseController;
@@ -31,7 +32,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
 
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware(RoleMiddleware::class.':admin_full_access,admin_laman,admin_member,admin_bnh,organizer,bendahara,merchandise,gallery');
 
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::get('/', [NotificationController::class, 'index'])->name('index');
@@ -79,8 +80,19 @@ Route::middleware(['auth'])->group(function () {
             Route::resource('organization', OrganizationController::class);
         });
 
-        Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman,sponsor'])->group(function () {
+        Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
             Route::resource('sponsors', SponsorController::class);
+        });
+
+        Route::middleware([RoleMiddleware::class.':admin_full_access'])->group(function () {
+            Route::get('/guest-sponsors', [GuestSponsorController::class, 'index'])->name('guest-sponsors.index');
+            Route::get('/guest-sponsors/create', [GuestSponsorController::class, 'create'])->name('guest-sponsors.create');
+            Route::post('/guest-sponsors', [GuestSponsorController::class, 'store'])->name('guest-sponsors.store');
+            Route::get('/guest-sponsors/{id}', [GuestSponsorController::class, 'show'])->whereNumber('id')->name('guest-sponsors.show');
+            Route::put('/guest-sponsors/{id}', [GuestSponsorController::class, 'update'])->whereNumber('id')->name('guest-sponsors.update');
+            Route::delete('/guest-sponsors/{id}', [GuestSponsorController::class, 'destroy'])->whereNumber('id')->name('guest-sponsors.destroy');
+            Route::post('/guest-sponsors/{id}/toggle-active', [GuestSponsorController::class, 'toggleActive'])->whereNumber('id')->name('guest-sponsors.toggle-active');
+            Route::post('/guest-sponsors/quota', [GuestSponsorController::class, 'setQuota'])->name('guest-sponsors.quota');
         });
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman,merchandise'])->group(function () {
