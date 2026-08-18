@@ -18,20 +18,20 @@
             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div class="form-group">
                     <label class="form-label">Sponsor <span class="text-red-600">*</span></label>
-                    <select name="sponsor_id" class="form-select">
+                    <select name="sponsor_id" id="sponsor_id" class="form-select">
                         <option value="">Pilih Sponsor</option>
                         @foreach($sponsors as $sponsor)
-                            <option value="{{ $sponsor->id }}" {{ old('sponsor_id') == $sponsor->id ? 'selected' : '' }}>{{ $sponsor->name }}</option>
+                            <option value="{{ $sponsor['sponsor_id'] }}" {{ old('sponsor_id') == $sponsor['sponsor_id'] ? 'selected' : '' }}>{{ $sponsor['sponsor_name'] }}</option>
                         @endforeach
                     </select>
                     @error('sponsor_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div class="form-group">
                     <label class="form-label">Event <span class="text-red-600">*</span></label>
-                    <select name="event_id" class="form-select">
+                    <select name="event_id" id="event_id" class="form-select">
                         <option value="">Pilih Event</option>
-                        @foreach($events as $event)
-                            <option value="{{ $event->id }}" {{ old('event_id') == $event->id ? 'selected' : '' }}>{{ $event->title }}</option>
+                        @foreach($quotas as $quota)
+                            <option value="{{ $quota['event_id'] }}" data-sponsor="{{ $quota['sponsor_id'] }}" {{ old('event_id') == $quota['event_id'] && old('sponsor_id') == $quota['sponsor_id'] ? 'selected' : '' }}>{{ $quota['event_title'] }}</option>
                         @endforeach
                     </select>
                     @error('event_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -75,4 +75,43 @@
         </form>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    (function () {
+        var sponsorSelect = document.getElementById('sponsor_id');
+        var eventSelect = document.getElementById('event_id');
+
+        if (!sponsorSelect || !eventSelect) return;
+
+        var options = Array.prototype.slice.call(eventSelect.options).filter(function (o) {
+            return o.value !== '';
+        });
+
+        function filterEvents() {
+            var sponsorId = sponsorSelect.value;
+            var kept = options.filter(function (o) {
+                return o.getAttribute('data-sponsor') === sponsorId;
+            });
+            var selected = eventSelect.value;
+
+            eventSelect.innerHTML = '';
+            var placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Pilih Event';
+            eventSelect.appendChild(placeholder);
+
+            kept.forEach(function (o) {
+                eventSelect.appendChild(o);
+            });
+
+            if (selected && kept.some(function (o) { return o.value === selected; })) {
+                eventSelect.value = selected;
+            }
+        }
+
+        sponsorSelect.addEventListener('change', filterEvents);
+    })();
+</script>
+@endpush
 @endsection

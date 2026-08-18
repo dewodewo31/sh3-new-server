@@ -45,10 +45,13 @@ class GuestSponsorController extends Controller
 
     public function create()
     {
-        $sponsors = $this->sponsorRepository->findActive();
-        $events = $this->eventRepository->findScannable();
+        $quotas = collect($this->guestSponsorRepository->quotas());
 
-        return view('guest-sponsors.create', compact('sponsors', 'events'));
+        return view('guest-sponsors.create', [
+            'quotas' => $quotas,
+            'sponsors' => $quotas->unique('sponsor_id')->values(),
+            'events' => $quotas->unique('event_id')->values(),
+        ]);
     }
 
     public function store(GuestSponsorRequest $request)
