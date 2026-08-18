@@ -1,5 +1,5 @@
 {{-- Reusable flash alerts. Handles success, error, warning, info. --}}
-<div class="space-y-4">
+<div class="mb-6 space-y-4">
     @if (session('success'))
         <div class="alert alert-success animate-slide-up" role="alert">
             <svg class="alert-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
