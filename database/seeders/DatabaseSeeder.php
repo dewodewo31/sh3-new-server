@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             ParticipantSeeder::class,
             EventSeeder::class,
             SponsorSeeder::class,
+            BookkeepingSeeder::class,
             EventParticipantSeeder::class,
             MerchandiseSeeder::class,
             OrganizationMemberSeeder::class,
