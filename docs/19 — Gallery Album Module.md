@@ -113,15 +113,15 @@ if ($request->hasFile('cover_image')) {
 
 | Method | URI | Name | Role |
 |--------|-----|------|------|
-| GET | `/admin/gallery-albums` | `admin.gallery-albums.index` | admin_full_access, admin_laman |
-| GET | `/admin/gallery-albums/create` | `admin.gallery-albums.create` | admin_full_access, admin_laman |
-| POST | `/admin/gallery-albums` | `admin.gallery-albums.store` | admin_full_access, admin_laman |
-| GET | `/admin/gallery-albums/{gallery_album}/edit` | `admin.gallery-albums.edit` | admin_full_access, admin_laman |
-| PUT/PATCH | `/admin/gallery-albums/{gallery_album}` | `admin.gallery-albums.update` | admin_full_access, admin_laman |
-| DELETE | `/admin/gallery-albums/{gallery_album}` | `admin.gallery-albums.destroy` | admin_full_access, admin_laman |
+| GET | `/admin/gallery-albums` | `admin.gallery-albums.index` | admin_full_access, admin_laman, gallery |
+| GET | `/admin/gallery-albums/create` | `admin.gallery-albums.create` | admin_full_access, admin_laman, gallery |
+| POST | `/admin/gallery-albums` | `admin.gallery-albums.store` | admin_full_access, admin_laman, gallery |
+| GET | `/admin/gallery-albums/{gallery_album}/edit` | `admin.gallery-albums.edit` | admin_full_access, admin_laman, gallery |
+| PUT/PATCH | `/admin/gallery-albums/{gallery_album}` | `admin.gallery-albums.update` | admin_full_access, admin_laman, gallery |
+| DELETE | `/admin/gallery-albums/{gallery_album}` | `admin.gallery-albums.destroy` | admin_full_access, admin_laman, gallery |
 
 Route didaftarkan via `Route::resource('gallery-albums', GalleryAlbumController::class)`
-dalam grup `RoleMiddleware:admin_full_access,admin_laman` di `routes/web.php`.
+dalam grup `RoleMiddleware:admin_full_access,admin_laman,gallery` di `routes/web.php`.
 
 ---
 
@@ -134,7 +134,7 @@ Menu **Albums** ditambahkan di `config/sidebar.php` di bawah menu Gallery:
     'label' => 'Albums',
     'route' => 'admin.gallery-albums.index',
     'icon' => '...',
-    'roles' => ['admin_full_access', 'admin_laman'],
+    'roles' => ['admin_full_access', 'admin_laman', 'gallery'],
     'active' => ['admin.gallery-albums.*'],
 ],
 ```

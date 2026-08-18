@@ -20,7 +20,7 @@ class QRCodeServiceTest extends TestCase
     public function test_decode_member_code(): void
     {
         $this->assertSame(
-            ['participant_code' => '3950', 'status' => 'member'],
+            ['hash_id' => '3950', 'status' => 'member'],
             $this->service()->decode('3950'),
         );
     }
@@ -28,7 +28,7 @@ class QRCodeServiceTest extends TestCase
     public function test_decode_non_member_code(): void
     {
         $this->assertSame(
-            ['participant_code' => 'NM0001', 'status' => 'non_member'],
+            ['hash_id' => 'NM0001', 'status' => 'non_member'],
             $this->service()->decode('NM0001'),
         );
     }
@@ -48,15 +48,15 @@ class QRCodeServiceTest extends TestCase
         $this->assertNull($this->service()->decode('NM00'));
     }
 
-    public function test_generate_writes_participant_code_into_qr_code(): void
+    public function test_generate_writes_hash_id_into_qr_code(): void
     {
         $participant = Participant::factory()->create(['membership_type' => 'tahunan']);
         $ep = EventParticipant::factory()->create(['participant_id' => $participant->id]);
 
         $code = $this->service()->generate($ep);
 
-        $this->assertSame($participant->participant_code, $code);
-        $this->assertSame($participant->participant_code, $ep->fresh()->qr_code);
+        $this->assertSame($participant->hash_id, $code);
+        $this->assertSame($participant->hash_id, $ep->fresh()->qr_code);
     }
 
     public function test_generate_is_identical_across_events_for_same_participant(): void
@@ -69,6 +69,6 @@ class QRCodeServiceTest extends TestCase
         $secondCode = $this->service()->generate($secondEp);
 
         $this->assertSame($firstCode, $secondCode);
-        $this->assertSame($participant->participant_code, $firstCode);
+        $this->assertSame($participant->hash_id, $firstCode);
     }
 }

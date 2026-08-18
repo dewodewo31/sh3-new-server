@@ -75,7 +75,7 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        $participant = Participant::where('participant_code', $decoded['participant_code'])->first();
+        $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
 
         if (! $participant) {
             return response()->json([
@@ -96,7 +96,7 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        if (! $registration->qr_code || $registration->qr_code !== $decoded['participant_code']) {
+        if (! $registration->qr_code || $registration->qr_code !== $decoded['hash_id']) {
             return response()->json([
                 'success' => false,
                 'message' => 'QR Code tidak dikenali. Silakan gunakan QR terbaru milik peserta.',

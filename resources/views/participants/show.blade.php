@@ -28,7 +28,7 @@
                 </div>
                 <div class="flex justify-between py-3">
                     <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Participant Code</dt>
-                    <dd><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:bg-slate-800 dark:text-slate-100">{{ $participant->participant_code }}</code></dd>
+                    <dd><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:bg-slate-800 dark:text-slate-100">{{ $participant->hash_id }}</code></dd>
                 </div>
                 <div class="flex justify-between py-3">
                     <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">Email</dt>

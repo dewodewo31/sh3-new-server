@@ -18,7 +18,7 @@ class ParticipantAuthController extends Controller
     {
         $valid = $this->service->verify(
             $request->input('username'),
-            $request->input('participant_code'),
+            $request->input('hash_id'),
         );
 
         if (! $valid) {
@@ -38,7 +38,7 @@ class ParticipantAuthController extends Controller
     {
         $done = $this->service->reset(
             $request->input('username'),
-            $request->input('participant_code'),
+            $request->input('hash_id'),
             $request->input('password'),
         );
 

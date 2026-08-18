@@ -73,6 +73,12 @@ Nama model dan tabel registrasi aktual adalah `events` dan `event_participants`;
 - Controller/service memakai helper image dan public storage sesuai implementasi.
 - URL publik bergantung pada disk/config storage dan `APP_URL`.
 
+## Tampilan Admin Panel
+
+Banner dan gambar event ditampilkan di panel admin:
+- **Tabel daftar** (`events/index`): kolom "Gambar" (thumbnail) antara Title dan Category, menggunakan `ImageHelper::getUrl($event->image)`.
+- **Detail event** (`events/show`): blok media — banner full-width (`max-height:240px`) + gambar thumbnail (`h-24 w-36`) di atas grid info. Keduanya conditional (`@if`).
+
 ## Registration Flow
 
 - Member aktif dapat gratis jika event mengaktifkan `is_free_for_members`.

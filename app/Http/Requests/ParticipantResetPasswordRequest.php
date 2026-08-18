@@ -15,7 +15,7 @@ class ParticipantResetPasswordRequest extends FormRequest
     {
         return [
             'username' => ['required', 'string'],
-            'participant_code' => ['required', 'string', 'regex:/^\d{4}$|^NM\d{4}$/'],
+            'hash_id' => ['required', 'string', 'regex:/^\d{4}$|^NM\d{4}$/'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }

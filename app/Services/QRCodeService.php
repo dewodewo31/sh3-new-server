@@ -8,7 +8,7 @@ class QRCodeService
 {
     public function generate(EventParticipant $eventParticipant): string
     {
-        $code = $eventParticipant->participant->participant_code;
+        $code = $eventParticipant->participant->hash_id;
 
         $eventParticipant->update(['qr_code' => $code]);
 
@@ -18,11 +18,11 @@ class QRCodeService
     public function decode(string $qrData): ?array
     {
         if (preg_match('/^\d{4}$/', $qrData)) {
-            return ['participant_code' => $qrData, 'status' => 'member'];
+            return ['hash_id' => $qrData, 'status' => 'member'];
         }
 
         if (preg_match('/^NM\d{4}$/', $qrData)) {
-            return ['participant_code' => $qrData, 'status' => 'non_member'];
+            return ['hash_id' => $qrData, 'status' => 'non_member'];
         }
 
         return null;

@@ -32,7 +32,7 @@
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     <td class="font-medium text-gray-900 dark:text-slate-100">{{ $p->name }}</td>
-                    <td><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $p->participant_code }}</code></td>
+                    <td><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $p->hash_id }}</code></td>
                     <td>{{ $p->email }}</td>
                     <td>{{ $p->phone ?? '-' }}</td>
                     <td>

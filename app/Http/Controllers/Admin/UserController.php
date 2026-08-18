@@ -16,7 +16,7 @@ class UserController extends Controller
 
     public function index()
     {
-        $users = $this->userRepository->paginateSorted(
+        $users = $this->userRepository->paginateSortedNonParticipant(
             ['name', 'email', 'role', 'is_active', 'last_login', 'created_at'],
             15,
         );
@@ -78,7 +78,7 @@ class UserController extends Controller
         $oldStatus = $user->is_active;
         $this->userService->toggleActive($user);
 
-        $newStatus = !$oldStatus;
+        $newStatus = ! $oldStatus;
         $this->userService->logActivity(auth()->user(), 'toggle_user_active', ['user_id' => $user->id, 'was_active' => $oldStatus, 'now_active' => $newStatus]);
 
         return redirect()->back()->with('success', 'Status user berhasil diubah');

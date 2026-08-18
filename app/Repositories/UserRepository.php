@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\User;
+use App\Support\Sort;
 
 class UserRepository extends BaseRepository
 {
@@ -29,6 +30,16 @@ class UserRepository extends BaseRepository
     public function findActiveUsers()
     {
         return $this->model->where('is_active', true)->get();
+    }
+
+    public function paginateSortedNonParticipant(array $allowed, int $perPage = 15, array $relations = [], string $default = 'created_at', string $defaultDirection = 'desc')
+    {
+        return Sort::apply(
+            $this->model->whereNotIn('role', ['participant'])->with($relations),
+            $allowed,
+            $default,
+            $defaultDirection,
+        )->paginate($perPage)->withQueryString();
     }
 
     public function updateLastLogin(User $user): void

@@ -31,7 +31,7 @@ class EventParticipantSeederTest extends TestCase
         $this->seed(EventParticipantSeeder::class);
     }
 
-    public function test_seeder_writes_participant_code_as_qr_code(): void
+    public function test_seeder_writes_hash_id_as_qr_code(): void
     {
         $this->runSeeder();
 
@@ -40,7 +40,7 @@ class EventParticipantSeederTest extends TestCase
         $this->assertTrue($registrations->isNotEmpty());
 
         foreach ($registrations as $registration) {
-            $this->assertSame($registration->participant->participant_code, $registration->qr_code);
+            $this->assertSame($registration->participant->hash_id, $registration->qr_code);
             $this->assertStringStartsNotWith('SH3-', (string) $registration->qr_code);
         }
 
@@ -60,11 +60,11 @@ class EventParticipantSeederTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertSame($registration->participant->participant_code, $registration->fresh()->qr_code);
+        $this->assertSame($registration->participant->hash_id, $registration->fresh()->qr_code);
 
         $this->post("/admin/attendance/event-participant/{$registration->id}/generate-qr")
             ->assertRedirect();
 
-        $this->assertSame($registration->participant->participant_code, $registration->fresh()->qr_code);
+        $this->assertSame($registration->participant->hash_id, $registration->fresh()->qr_code);
     }
 }

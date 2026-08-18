@@ -14,43 +14,35 @@ return new class extends Migration
 
     public function up(): void
     {
-        Schema::table('participants', function (Blueprint $table) {
-            $table->string('participant_code')->nullable()->after('hash_id');
-        });
-
+        // Backfill: overwrite old SH3xxxxxxxx values with sequential format.
         DB::table('participants')
             ->orderBy('id')
             ->chunkById(500, function ($participants) {
                 foreach ($participants as $participant) {
                     DB::table('participants')->where('id', $participant->id)->update([
-                        'participant_code' => $this->codeFor($participant),
+                        'hash_id' => $this->codeFor($participant),
                     ]);
                 }
             });
 
         Schema::table('participants', function (Blueprint $table) {
-            $table->string('participant_code')->nullable(false)->change();
-            $table->unique('participant_code');
+            $table->string('hash_id')->nullable(false)->change();
         });
 
-        Schema::table('participants', function (Blueprint $table) {
-            $table->dropColumn('hash_id');
-        });
+        // Add unique constraint only if it doesn't already exist (000100 may have added it).
+        $raw = DB::select("SHOW INDEX FROM participants WHERE Key_name = 'participants_hash_id_unique'");
+        if (empty($raw)) {
+            Schema::table('participants', function (Blueprint $table) {
+                $table->unique('hash_id');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('participants', function (Blueprint $table) {
-            $table->dropUnique(['participant_code']);
-            $table->dropColumn('participant_code');
-        });
-
-        // hash_id is still present unless 2026_08_14_000100 was rolled back first.
-        if (! Schema::hasColumn('participants', 'hash_id')) {
-            Schema::table('participants', function (Blueprint $table) {
-                $table->string('hash_id')->nullable()->unique()->after('user_id');
-            });
-        }
+        // Data migration: old SH3xxxxxxxx values are overwritten and cannot be restored.
+        // No-op to avoid conflicts with 000001_rename's down() which may have already
+        // renamed hash_id → participant_code (carrying the unique index name with it).
     }
 
     private function codeFor(object $participant): string

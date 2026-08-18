@@ -22,8 +22,8 @@ class Sh3ParticipantImportTest extends TestCase
     {
         $this->runImport();
 
-        $codes = Participant::where('participant_code', '!=', Participant::OTS_AGGREGATOR_CODE)
-            ->pluck('participant_code');
+        $codes = Participant::where('hash_id', '!=', Participant::OTS_AGGREGATOR_CODE)
+            ->pluck('hash_id');
 
         $this->assertSame(19, $codes->count());
         $this->assertSame(19, $codes->unique()->count());
@@ -44,9 +44,9 @@ class Sh3ParticipantImportTest extends TestCase
     {
         $this->runImport();
 
-        $this->assertSame(1, Participant::where('participant_code', Participant::OTS_AGGREGATOR_CODE)->count());
+        $this->assertSame(1, Participant::where('hash_id', Participant::OTS_AGGREGATOR_CODE)->count());
         $this->assertDatabaseHas('participants', [
-            'participant_code' => Participant::OTS_AGGREGATOR_CODE,
+            'hash_id' => Participant::OTS_AGGREGATOR_CODE,
             'name' => 'Manual OTS NON MEMBER',
             'is_active' => true,
         ]);
@@ -78,10 +78,10 @@ class Sh3ParticipantImportTest extends TestCase
         $this->runImport();
         $this->runImport();
 
-        $this->assertSame(19, Participant::where('participant_code', '!=', Participant::OTS_AGGREGATOR_CODE)->count());
-        $this->assertSame(1, Participant::where('participant_code', Participant::OTS_AGGREGATOR_CODE)->count());
+        $this->assertSame(19, Participant::where('hash_id', '!=', Participant::OTS_AGGREGATOR_CODE)->count());
+        $this->assertSame(1, Participant::where('hash_id', Participant::OTS_AGGREGATOR_CODE)->count());
         $this->assertSame(19, User::where('role', 'participant')->count());
-        $this->assertSame(0, Participant::select('participant_code')->groupBy('participant_code')->havingRaw('count(*) > 1')->count());
+        $this->assertSame(0, Participant::select('hash_id')->groupBy('hash_id')->havingRaw('count(*) > 1')->count());
         $this->assertSame(0, User::select('username')->whereNotNull('username')->groupBy('username')->havingRaw('count(*) > 1')->count());
     }
 

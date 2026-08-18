@@ -94,8 +94,8 @@ class Participant extends Model
     protected static function booted(): void
     {
         static::creating(function (Participant $participant) {
-            if (empty($participant->participant_code)) {
-                $participant->participant_code = app(ParticipantCodeService::class)
+            if (empty($participant->hash_id)) {
+                $participant->hash_id = app(ParticipantCodeService::class)
                     ->next($participant->membership_type === 'none' ? 'NM' : '');
             }
         });

@@ -54,7 +54,7 @@ Sistem memiliki dua domain otentikasi yang sama sekali terpisah:
 ### Gate Definitions
 
 Gate didefinisikan di `AppServiceProvider` untuk setiap role admin:
-`admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, `merchandise`.
+`admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, `merchandise`, `gallery`.
 
 `participant` tidak memiliki Gate admin; aksesnya melalui API authenticated atau endpoint publik.
 

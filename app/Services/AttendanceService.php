@@ -125,7 +125,7 @@ class AttendanceService
             ]);
         }
 
-        $participant = Participant::where('participant_code', $decoded['participant_code'])->first();
+        $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
 
         if (! $participant) {
             throw ValidationException::withMessages([
@@ -135,7 +135,7 @@ class AttendanceService
 
         if ($eventId === null) {
             return [
-                'participant_code' => $decoded['participant_code'],
+                'hash_id' => $decoded['hash_id'],
                 'name' => $participant->name,
                 'status' => $decoded['status'],
                 'registered_events' => $this->eventParticipantRepository
@@ -160,7 +160,7 @@ class AttendanceService
         }
 
         return [
-            'participant_code' => $decoded['participant_code'],
+            'hash_id' => $decoded['hash_id'],
             'name' => $participant->name,
             'status' => $decoded['status'],
             'event_id' => $eventId,
@@ -183,7 +183,7 @@ class AttendanceService
                 return [
                     'event_id' => $attendance->eventParticipant?->event_id,
                     'participant_id' => $attendance->eventParticipant?->participant_id,
-                    'participant_code' => $attendance->eventParticipant?->participant?->participant_code,
+                    'hash_id' => $attendance->eventParticipant?->participant?->hash_id,
                     'status' => $attendance->status,
                     'check_in_time' => $attendance->check_in_time?->toISOString(),
                     'check_out_time' => $attendance->check_out_time?->toISOString(),

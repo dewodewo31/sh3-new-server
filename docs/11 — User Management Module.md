@@ -13,7 +13,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('admin_full_access','admin_laman','admin_member',
-              'admin_bnh','organizer','bendahara','sponsor','merchandise','participant'),
+              'admin_bnh','organizer','bendahara','sponsor','merchandise','gallery','participant'),
     avatar VARCHAR(255) NULL,
     is_active BOOLEAN DEFAULT TRUE,
     last_login TIMESTAMP NULL,
@@ -52,6 +52,7 @@ CREATE TABLE user_activity_logs (
 | Bendahara | Payments (+ view memberships) |
 | Sponsor | Sponsors |
 | Merchandise | Merchandise (+ view payments) |
+| Gallery | Galleries & Albums only |
 | Participant | API publik (mobile/web) |
 
 ## Aktivitas Logging

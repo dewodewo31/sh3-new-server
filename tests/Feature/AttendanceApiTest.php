@@ -65,7 +65,7 @@ class AttendanceApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => $participant->participant_code,
+            'qr_code' => $participant->hash_id,
         ]);
     }
 
@@ -192,10 +192,10 @@ class AttendanceApiTest extends TestCase
         $this->register($event, $this->participant);
 
         $this->postJson('/api/v1/attendance/scan', [
-            'qr_code' => $this->participant->participant_code,
+            'qr_code' => $this->participant->hash_id,
         ])
             ->assertOk()
-            ->assertJsonPath('data.participant_code', $this->participant->participant_code)
+            ->assertJsonPath('data.hash_id', $this->participant->hash_id)
             ->assertJsonPath('data.name', $this->participant->name)
             ->assertJsonPath('data.status', 'non_member')
             ->assertJsonPath('data.registered_events.0.event_id', $event->id)
@@ -209,12 +209,12 @@ class AttendanceApiTest extends TestCase
 
         $this->postJson('/api/v1/attendance/scan', [
             'event_id' => $event->id,
-            'qr_code' => $this->participant->participant_code,
+            'qr_code' => $this->participant->hash_id,
         ])
             ->assertOk()
             ->assertJsonPath('data.event_id', $event->id)
             ->assertJsonPath('data.participant_id', $this->participant->id)
-            ->assertJsonPath('data.participant_code', $this->participant->participant_code)
+            ->assertJsonPath('data.hash_id', $this->participant->hash_id)
             ->assertJsonPath('data.registration_status', 'confirmed')
             ->assertJsonPath('data.is_attended', false);
     }
@@ -225,7 +225,7 @@ class AttendanceApiTest extends TestCase
 
         $this->postJson('/api/v1/attendance/scan', [
             'event_id' => $event->id,
-            'qr_code' => $this->participant->participant_code,
+            'qr_code' => $this->participant->hash_id,
         ])
             ->assertUnprocessable()
             ->assertJsonPath('errors.participant.0', 'Peserta tidak terdaftar di event ini.');
@@ -294,7 +294,7 @@ class AttendanceApiTest extends TestCase
         $attendances = [
             [
                 'event_id' => $event->id,
-                'participant_code' => $this->participant->participant_code,
+                'hash_id' => $this->participant->hash_id,
                 'check_in_time' => now()->toDateTimeString(),
                 'check_out_time' => null,
             ],
@@ -326,7 +326,7 @@ class AttendanceApiTest extends TestCase
         $this->postJson('/api/v1/attendance/sync-up', ['attendances' => [
             [
                 'event_id' => $event->id,
-                'participant_code' => '9999',
+                'hash_id' => '9999',
                 'check_in_time' => now()->toDateTimeString(),
             ],
         ]])
@@ -343,7 +343,7 @@ class AttendanceApiTest extends TestCase
         $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
             [
                 'event_id' => $event->id,
-                'participant_code' => $member->participant_code,
+                'hash_id' => $member->hash_id,
                 'member_name' => 'OTS Member',
                 'check_in_time' => now()->toDateTimeString(),
             ],
@@ -355,7 +355,7 @@ class AttendanceApiTest extends TestCase
         $this->assertDatabaseHas('event_participants', [
             'event_id' => $event->id,
             'participant_id' => $member->id,
-            'qr_code' => 'OTS-'.$member->participant_code.'EV'.$event->id,
+            'qr_code' => 'OTS-'.$member->hash_id.'EV'.$event->id,
             'payment_status' => 'confirmed',
         ]);
     }
@@ -367,7 +367,7 @@ class AttendanceApiTest extends TestCase
         $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
             [
                 'event_id' => $event->id,
-                'participant_code' => 'NM0099',
+                'hash_id' => 'NM0099',
                 'member_name' => 'OTS Baru',
                 'check_in_time' => now()->toDateTimeString(),
             ],
@@ -376,7 +376,7 @@ class AttendanceApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('synced_ots_count', 1);
 
-        $ots = Participant::where('participant_code', 'NM0099')->first();
+        $ots = Participant::where('hash_id', 'NM0099')->first();
 
         $this->assertNotNull($ots);
         $this->assertSame('OTS Baru', $ots->name);
@@ -398,13 +398,13 @@ class AttendanceApiTest extends TestCase
         $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
             [
                 'event_id' => $event->id,
-                'participant_code' => Participant::OTS_AGGREGATOR_CODE,
+                'hash_id' => Participant::OTS_AGGREGATOR_CODE,
                 'member_name' => 'Manual OTS',
                 'check_in_time' => now()->toDateTimeString(),
             ],
             [
                 'event_id' => $secondEvent->id,
-                'participant_code' => Participant::OTS_AGGREGATOR_CODE,
+                'hash_id' => Participant::OTS_AGGREGATOR_CODE,
                 'member_name' => 'Manual OTS',
                 'check_in_time' => now()->toDateTimeString(),
             ],
@@ -412,7 +412,7 @@ class AttendanceApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('synced_ots_count', 2);
 
-        $sentinel = Participant::where('participant_code', Participant::OTS_AGGREGATOR_CODE)->get();
+        $sentinel = Participant::where('hash_id', Participant::OTS_AGGREGATOR_CODE)->get();
 
         $this->assertCount(1, $sentinel);
         $this->assertSame('Manual OTS NON MEMBER', $sentinel->first()->name);
@@ -448,23 +448,23 @@ class AttendanceApiTest extends TestCase
         $this->assertDatabaseCount('attendances', 0);
     }
 
-    public function test_sync_up_ignores_legacy_ots_payload(): void
+    public function test_sync_up_processes_non_sentinel_ots_as_regular_participant(): void
     {
         $event = $this->createEvent();
 
         $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
             [
                 'event_id' => $event->id,
-                'hash_id' => 'MANUAL_OTS_001',
+                'hash_id' => 'NM9999',
                 'member_name' => 'Budi',
                 'check_in_time' => now()->toDateTimeString(),
             ],
         ]])
             ->assertOk()
-            ->assertJsonPath('synced_ots_count', 0);
+            ->assertJsonPath('synced_ots_count', 1);
 
-        $this->assertDatabaseCount('event_participants', 0);
-        $this->assertDatabaseMissing('participants', ['name' => 'Budi']);
+        $this->assertDatabaseHas('participants', ['name' => 'Budi', 'hash_id' => 'NM9999']);
+        $this->assertDatabaseCount('event_participants', 1);
     }
 
     public function test_sync_down_returns_delta_since_timestamp(): void
@@ -487,7 +487,7 @@ class AttendanceApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.event_id', $event->id)
             ->assertJsonPath('data.0.participant_id', $this->participant->id)
-            ->assertJsonPath('data.0.participant_code', $this->participant->participant_code)
+            ->assertJsonPath('data.0.hash_id', $this->participant->hash_id)
             ->assertJsonPath('data.0.status', 'present');
     }
 
@@ -513,7 +513,7 @@ class AttendanceApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 100000,
             'payment_status' => 'rejected',
-            'qr_code' => $this->participant->participant_code,
+            'qr_code' => $this->participant->hash_id,
         ]);
 
         $this->postJson('/api/v1/attendance/check-in', $this->checkInPayload($event, $this->participant))
@@ -536,7 +536,7 @@ class AttendanceApiTest extends TestCase
             'registration_type' => 'paid',
             'amount' => 100000,
             'payment_status' => 'refunded',
-            'qr_code' => $this->participant->participant_code,
+            'qr_code' => $this->participant->hash_id,
         ]);
 
         $this->postJson('/api/v1/attendance/check-in', $this->checkInPayload($event, $this->participant))

@@ -64,7 +64,7 @@ class AdminAttendanceScanTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => $participant->participant_code,
+            'qr_code' => $participant->hash_id,
         ]);
     }
 
@@ -94,7 +94,7 @@ class AdminAttendanceScanTest extends TestCase
         $event = $this->createEvent();
         $registration = $this->register($event, $this->participant);
 
-        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->participant_code))
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->hash_id))
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.participant_name', $this->participant->name)
@@ -107,7 +107,7 @@ class AdminAttendanceScanTest extends TestCase
         $this->assertTrue($registration->fresh()->is_attended);
     }
 
-    public function test_process_scan_unknown_participant_code_returns_422(): void
+    public function test_process_scan_unknown_hash_id_returns_422(): void
     {
         $event = $this->createEvent();
 
@@ -120,7 +120,7 @@ class AdminAttendanceScanTest extends TestCase
     {
         $event = $this->createEvent();
 
-        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->participant_code))
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->hash_id))
             ->assertUnprocessable()
             ->assertJsonPath('message', 'Peserta tidak terdaftar di event ini.');
     }
@@ -130,10 +130,10 @@ class AdminAttendanceScanTest extends TestCase
         $event = $this->createEvent();
         $this->register($event, $this->participant);
 
-        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->participant_code))
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->hash_id))
             ->assertOk();
 
-        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->participant_code))
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->hash_id))
             ->assertUnprocessable()
             ->assertJsonPath('message', 'Peserta sudah melakukan check-in.');
     }
@@ -141,7 +141,7 @@ class AdminAttendanceScanTest extends TestCase
     public function test_process_scan_requires_event_id(): void
     {
         $this->post('/admin/attendance/scan', [
-            'qr_code' => $this->participant->participant_code,
+            'qr_code' => $this->participant->hash_id,
         ])
             ->assertSessionHasErrors('event_id');
     }
