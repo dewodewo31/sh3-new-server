@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AttendanceController;
+use App\Http\Controllers\Admin\BookkeepingController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
@@ -91,6 +92,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
             Route::put('/payments/{id}/confirm', [PaymentController::class, 'confirm'])->name('payments.confirm');
             Route::put('/payments/{id}/reject', [PaymentController::class, 'reject'])->name('payments.reject');
+
+            Route::resource('bookkeepings', BookkeepingController::class);
         });
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
