@@ -4,7 +4,7 @@ Dokumen ini adalah indeks hasil sinkronisasi dokumentasi dengan implementasi Lar
 
 ## Overview
 
-SH3 Event Management adalah aplikasi Laravel 13 untuk panel admin berbasis Blade/AdminLTE dan REST API `/api/v1` untuk peserta. Fitur yang terimplementasi mencakup autentikasi, user/role, peserta, membership, event, kategori, pembayaran polymorphic, attendance/QR, galeri, sponsor, merchandise, organisasi, dan notifikasi database/broadcast.
+SH3 Event Management adalah aplikasi Laravel 13 untuk panel admin berbasis Blade/AdminLTE dan REST API `/api/v1` untuk peserta. Fitur yang terimplementasi mencakup autentikasi, user/role, peserta, membership, event, kategori, pembayaran polymorphic, attendance/QR, galeri, sponsor, merchandise, organisasi, notifikasi database/broadcast, dan **guest sponsor** (sejak 2026-08-18).
 
 ## Architecture and Responsibilities
 
@@ -34,16 +34,16 @@ Routes + Middleware + Form Requests + Resources
 
 | Artefak | Implementasi | Dokumentasi modul | Status |
 |---|---:|---:|---|
-| Controllers | 29 | 29 | tercakup melalui dokumen modul dan route index ini |
-| Services | 10 | 10 | tercakup |
-| Repositories | 15 | 15 | tercakup |
-| Models | 18 | 18 | tercakup |
-| Routes terdaftar | 75 (API) + 74 (Web/console) = 149 | 149 | tercakup |
-| API routes | 75 | 75 | tercakup |
-| Migrations | 23 | 23 | tercakup dalam schema/migration notes |
+| Controllers | 33 | 33 | tercakup melalui dokumen modul dan route index ini |
+| Services | 15 | 15 | tercakup |
+| Repositories | 18 | 18 | tercakup |
+| Models | 22 | 22 | tercakup |
+| Routes terdaftar | 68 (API) + 108 (Web/console) = 176 | 176 | tercakup |
+| API routes | 68 | 68 | tercakup |
+| Migrations | 36 | 36 | tercakup dalam schema/migration notes |
 | Middleware aplikasi | 3 | 3 | tercakup |
-| Form Requests | 24 | 24 | tercakup sebagai validation layer |
-| API Resources | 9 | 9 | tercakup sebagai response layer |
+| Form Requests | 32 | 32 | tercakup sebagai validation layer |
+| API Resources | 10 | 10 | tercakup sebagai response layer |
 | Notifications | 1 | 1 | `AdminNotification` |
 | Events aplikasi | 0 | 0 | tidak ada event class aplikasi |
 | Listeners aplikasi | 0 | 0 | tidak ada listener class aplikasi |
@@ -59,9 +59,10 @@ Routes + Middleware + Form Requests + Resources
 - API memakai `auth:sanctum` pada route privat.
 - `RoleMiddleware` mengharuskan user login dan menolak role yang tidak diizinkan dengan HTTP 403.
 - `AdminMiddleware` dan `EnsureApiMeta` adalah middleware aplikasi yang tersedia.
-- Role user: `admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, `merchandise`, `participant`.
+- Role user: `admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, `merchandise`, `gallery`, **`guest_sponsor`** (sejak 2026-08-18), `participant`.
 - Gate yang didefinisikan di `AppServiceProvider`: `admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, dan `merchandise`.
 - `participant` tidak memiliki Gate admin; aksesnya berjalan melalui API authenticated atau endpoint publik.
+- `sponsor` dan `guest_sponsor` **tidak dapat login ke web admin** (login web ditolak; keduanya memakai API). Role `sponsor` sejak 2026-08-18 **tidak lagi memiliki akses Admin Panel** (breaking).
 
 ## Route and API Index
 
@@ -73,15 +74,15 @@ Semua API memakai prefix `/api/v1`.
 
 ### Authenticated API
 
-Auth, profile, participant, event registration/management, payment, membership, attendance, merchandise orders, dan notification mengikuti route aktual di `routes/api.php`. Endpoint konfirmasi payment adalah `POST /payments/confirm/{id}`, bukan `PUT`.
+Auth, profile, participant, event registration/management, payment, membership, attendance, merchandise orders, dan notification mengikuti route aktual di `routes/api.php`. Endpoint konfirmasi payment adalah `POST /payments/confirm/{id}`, bukan `PUT`. Sejak 2026-08-18 tersedia endpoint **guest sponsor**: `POST /guest-sponsor/auth/login` (publik), serta `GET /guest-sponsor/auth/me`, `POST /guest-sponsor/attendance/scan`, `POST /guest-sponsor/attendance/check-in`, `POST /guest-sponsor/attendance/check-out`, `GET /guest-sponsor/attendance/my` (auth).
 
 ### Admin Web
 
-Semua route admin memakai `/admin` dan session `auth`. Resource routes tersedia untuk users, participants, events, categories, galleries, **gallery-albums (baru 2026-08-15)**, organization, sponsors, dan merchandise. Route khusus meliputi dashboard, notification actions, membership plans, membership grant/cancel, event publish, payment confirm/reject, serta attendance scan/report/generate QR. Detail role per route adalah sumber otoritatif `routes/web.php`, bukan tabel lama di README.
+Semua route admin memakai `/admin` dan session `auth`. Resource routes tersedia untuk users, participants, events, categories, galleries, gallery-albums, organization, sponsors, dan merchandise. Route khusus meliputi dashboard, notification actions, membership plans, membership grant/cancel, event publish, payment confirm/reject, serta attendance scan/report/generate QR. Sejak 2026-08-18: **guest-sponsors** (resource `admin_full_access`) dan role `sponsor` **dihilangkan** dari grup route sponsors. Detail role per route adalah sumber otoritatif `routes/web.php`, bukan tabel lama di README.
 
 ## Controllers and Services
 
-Controller API tersedia untuk Auth, Event, Participant, Profile, Payment, Membership, Attendance, Merchandise, Gallery, Category, Organization, Sponsor, dan Notification. Controller admin tersedia untuk Dashboard, User, Participant, Event, Category, Gallery, **GalleryAlbum (baru 2026-08-15)**, Organization, Sponsor, Merchandise, Membership, MembershipPlan, Payment, Attendance, dan Notification.
+Controller API tersedia untuk Auth, Event, Participant, Profile, Payment, Membership, Attendance, Merchandise, Gallery, Category, Organization, Sponsor, dan Notification. Controller admin tersedia untuk Dashboard, User, Participant, Event, Category, Gallery, GalleryAlbum, Organization, Sponsor, Merchandise, Membership, MembershipPlan, Payment, Attendance, Notification, dan Bookkeeping. Sejak 2026-08-18: controller **GuestSponsor** (Admin) serta **GuestSponsorAuth** dan **GuestSponsorAttendance** (API).
 
 Service yang terimplementasi:
 
@@ -95,6 +96,7 @@ Service yang terimplementasi:
 - `QRCodeService`: generate/decode QR berisi `participant_code` murni (member `\d{4}`, non-member `NM\d{4}`).
 - `NotificationService`: notify role, admin, user, dan participant.
 - `SidebarService`: data menu/sidebar admin.
+- **`GuestSponsorService`** (sejak 2026-08-18): createAccount (kuota + auto user/QR), generateUsername/QrCode, quota/setQuota, toggleActive, authenticate, isUsableForEvent, checkIn/checkOut, scan, history.
 
 ## Support & Components (baru 2026-08-15)
 
@@ -102,17 +104,17 @@ Service yang terimplementasi:
   oleh `BaseRepository::allSorted()/paginateSorted()` dan banyak repository modul.
 - `resources/views/components/th-sort.blade.php` — Blade component `<x-th-sort column="...">`
   untuk header tabel yang bisa diurutkan.
-- `tests/Feature/Admin/` — 7 file test admin (auth, access control, dashboard, participant,
-  membership, membership plan, user management).
+- `tests/Feature/Admin/` — 12 file test admin (auth, access control, dashboard, participant,
+  membership, membership plan, user management, bookkeeping, guest sponsor admin/api).
 - `tests/Feature/Sh3ParticipantImportTest.php` — test seeder import peserta.
 - `database/seeders/Sh3ParticipantImportSeeder.php` — import peserta dari data spreadsheet
   (idempotent, keyed on `participant_code`).
 
 ## Models and Relationships
 
-Model terdeteksi: `User`, `UserActivityLog`, `Participant`, `Category`, `Event`, `EventSchedule`, `EventParticipant`, `MembershipPlan`, `MembershipHistory`, `Payment`, `Attendance`, `AttendanceLog`, `Gallery`, `GalleryAlbum`, `Sponsor`, `OrganizationMember`, `Merchandise`, dan `MerchandiseOrder`.
+Model terdeteksi: `User`, `UserActivityLog`, `Participant`, `Category`, `Event`, `EventSchedule`, `EventParticipant`, `MembershipPlan`, `MembershipHistory`, `Payment`, `Attendance`, `AttendanceLog`, `Gallery`, `GalleryAlbum`, `Sponsor`, `OrganizationMember`, `Merchandise`, `MerchandiseOrder`, `Bookkeeping`, dan sejak 2026-08-18 **`GuestSponsor`**, **`GuestSponsorAttendance`**, **`GuestSponsorAttendanceLog`**.
 
-Relasi utama: user-participant/activity logs; participant-membership histories/event participants/payments/orders/organization members; event-category/schedules/participants/galleries/sponsors; payment morph ke event participant, merchandise order, dan membership history; gallery-event/album; organization hierarchy parent-child; merchandise-orders; attendance-event participant dan attendance logs.
+Relasi utama: user-participant/activity logs; participant-membership histories/event participants/payments/orders/organization members; event-category/schedules/participants/galleries/sponsors; payment morph ke event participant, merchandise order, dan membership history; gallery-event/album; organization hierarchy parent-child; merchandise-orders; attendance-event participant dan attendance logs; guest sponsor-user/sponsor/event/attendances/attendance logs.
 
 ## Validation, Responses, and Errors
 
@@ -120,7 +122,7 @@ Validasi berada pada Form Request di `app/Http/Requests` (termasuk `LoginRequest
 
 ## Database Schema and Migration Changes
 
-Schema aktif terdiri dari users/cache/jobs, participants, categories, user activity logs, membership histories, events, event participants, merchandise, payments, organization members, galleries, sponsors, attendance logs, serta migration tambahan untuk attendance, Sanctum tokens, participant role, membership pending status, notifications, membership plans, membership type string, dan organization hierarchy. Ada 22 migration files. Gunakan migration aktual sebagai sumber kolom, foreign key, cascade, dan enum; SQL contoh lama di `docs/readme.md` bukan schema executable.
+Schema aktif terdiri dari users/cache/jobs, participants, categories, user activity logs, membership histories, events, event participants, merchandise, payments, organization members, galleries, sponsors, attendance logs, serta migration tambahan untuk attendance, Sanctum tokens, participant role, membership pending status, notifications, membership plans, membership type string, organization hierarchy, dan sejak 2026-08-18 **guest sponsor** (role enum, kuota pivot `event_sponsors.max_guest_accounts`, `guest_sponsors`, `guest_sponsor_attendances` + logs). Gunakan migration aktual sebagai sumber kolom, foreign key, cascade, dan enum; SQL contoh lama di `docs/readme.md` bukan schema executable.
 
 ## Notifications, Events, Listeners, Jobs, Scheduler
 
@@ -185,7 +187,8 @@ Payload dan field response per modul harus dirujuk ke Request/Resource aktual ka
 - `participants.membership_type` adalah VARCHAR(50) (bukan ENUM) setelah migration `2026_07_31_100001`.
 - `membership_histories.status` menyertakan 'pending' sebagai default (ditambahkan migration `2026_07_31_000001`).
 - `sponsors` menggunakan `tier` (bukan `sponsor_level`) dengan kolom tambahan `year` dan `sort_order`.
-- `users.role` menyertakan 'participant' (ditambahkan migration `2026_07_30_122526`).
+- `users.role` menyertakan 'participant' (ditambahkan migration `2026_07_30_122526`) dan 'gallery' (migration `2026_08_16_000001`) serta **'guest_sponsor'** (migration `2026_08_18_000003`).
+- Pivot `event_sponsors` menyertakan kolom **`max_guest_accounts`** (migration `2026_08_18_000004`) untuk kuota akun guest sponsor.
 
 ## Cross-check Checklist
 

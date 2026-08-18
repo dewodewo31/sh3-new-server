@@ -8,7 +8,8 @@ Schema resmi, enum, foreign key, dan timestamps ada pada migration `2024_01_01_0
 
 ## Routes
 
-- Admin CRUD: `/admin/sponsors` — `admin_full_access`, `admin_laman`, `sponsor`.
+- Admin CRUD: `/admin/sponsors` — `admin_full_access`, `admin_laman`. (Sejak 2026-08-18 role
+  `sponsor` **tidak lagi** memiliki akses Admin Panel — breaking; lihat `docs/20 — Guest Sponsor Module.md`.)
 - API publik: `GET /api/v1/sponsors`.
 
 Detail model, repository, service, request, resource, controller, migration, API response, dan permission dirangkum di `docs/17 — Implementation Sync.md`.

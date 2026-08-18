@@ -2,6 +2,55 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-18 — Modul Guest Sponsor
+
+**Commit:** `203c825` → `5c1ed43` → `c71aa4a` → `c87d117` → `73a92d2`.
+
+### A. Modul Guest Sponsor (akun perwakilan sponsor per event)
+
+Admin dapat membuat akun guest sponsor (username/password + QR unik) dalam kuota per pasangan
+(sponsor, event), dengan masa berlaku dan status aktif, untuk attendance via API.
+
+- **Database (4 migrasi)** — role `guest_sponsor` di ENUM `users.role`; kolom
+  `event_sponsors.max_guest_accounts` (kuota); tabel `guest_sponsors`; tabel
+  `guest_sponsor_attendances` + `guest_sponsor_attendance_logs` (unique index pendek
+  `gsa_guest_event_unique`, `gsal_guest_event_type_unique` untuk menghindari batas 64 karakter MySQL).
+- **Model** — `GuestSponsor`, `GuestSponsorAttendance`, `GuestSponsorAttendanceLog` +
+  `GuestSponsorFactory`; relasi di `User`, `Sponsor`, `Event`.
+- **`GuestSponsorRepository`** — paginateSorted, findByUser/Qr, countAll/Active/Expired,
+  quota/setQuota (syncWithPivotValues), attendance CRUD, attendanceHistory, quotas.
+- **`GuestSponsorService`** — createAccount (cek kuota, auto username `gs_{slug}`, password
+  `Str::random(8)` ditampilkan sekali, QR `GS-{sponsor}-{event}-{seq}`), generateUsername/QrCode,
+  quota/setQuota, toggleActive, authenticate (cek role + is_active + usable), isUsableForEvent
+  (is_active + valid window + event status/end_date), checkIn/checkOut (duplicate & usability),
+  scan (QR + event match + status), history.
+- **Admin Web (`admin_full_access`)** — index (statistik + tabel kuota + daftar akun),
+  create/store, show (detail + QR `QrCode::svg` + edit), update, destroy, toggle-active, quota.
+- **API** — `POST /guest-sponsor/auth/login`, `GET /guest-sponsor/auth/me`,
+  `POST /guest-sponsor/attendance/scan|check-in|check-out`, `GET /guest-sponsor/attendance/my`.
+- **Form Requests** — `GuestSponsorRequest`, `GuestSponsorQuotaRequest`, `GuestSponsorCheckInRequest`.
+- **Views** — `guest-sponsors/{index,create,show}` mengikuti aturan responsive (table-wrap,
+  card padding, stat-card, pagination).
+- **Tests** — `GuestSponsorAdminTest` (12) + `GuestSponsorApiTest` (14).
+
+### B. Breaking — Role `sponsor` kehilangan akses Admin Panel
+
+- Route `admin.sponsors.*` kini hanya `admin_full_access, admin_laman` (sebelumnya menyertakan `sponsor`).
+- Menu Sponsors & Dashboard di `config/sidebar.php` tidak lagi menyertakan role `sponsor`.
+- Login web (`AuthenticatedSessionController::store`) ditolak untuk role `sponsor` dan `guest_sponsor`
+  (keduanya memakai API); dashboard admin kini di-guard `RoleMiddleware`.
+- `AdminAccessControlTest` diperbarui: sponsor → 403 pada sponsors/dashboard/guest-sponsors.
+
+### C. Perbaikan setelah QA
+
+- `GuestSponsorRepository::quotas()` mengembalikan key `remaining` (error `Undefined array key`
+  pada view index).
+- Form tambah akun: dropdown Sponsor & Event hanya menampilkan pasangan yang **sudah punya kuota**,
+  dan dropdown Event dependen terhadap Sponsor yang dipilih (`data-sponsor` + JS).
+- Padding card pada form create/edit (`p-5 sm:p-6`); jarak banner alert terhadap konten (`mb-6`).
+
+---
+
 ## 2026-08-16 — Hash ID Admin, Preview Gambar Event, Role Gallery
 
 > **Riwayat (digantikan 2026-08-17):** kolom "Hash ID" pada panel peserta kini menampilkan

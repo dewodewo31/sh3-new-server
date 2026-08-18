@@ -19,6 +19,7 @@
 15. Modul Notification
 16. Changelog & Perbaikan (lihat `14 — Changelog & Fixes.md`)
 17. Gallery Album (lihat `19 — Gallery Album Module.md`)
+18. Guest Sponsor (lihat `20 — Guest Sponsor Module.md`)
 
 ---
 
@@ -164,7 +165,7 @@ CREATE TABLE users (
     role ENUM(
         'admin_full_access', 'admin_laman', 'admin_member',
         'admin_bnh', 'organizer', 'bendahara', 'sponsor',
-        'merchandise', 'gallery', 'participant'
+        'merchandise', 'gallery', 'guest_sponsor', 'participant'
     ) NOT NULL DEFAULT 'participant',
     avatar VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,

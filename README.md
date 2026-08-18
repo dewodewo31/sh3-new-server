@@ -2,7 +2,7 @@
 
 Sistem manajemen event untuk komunitas lari SH3. Dibangun dengan Laravel 13 dan AdminLTE 3.
 
-**Modul Lengkap**: Authentication, User Management, Participant, Membership, Category, Event, Attendance & QR Code, Gallery, Merchandise, Payment, Sponsor, Organization, Notifications Real-time.
+**Modul Lengkap**: Authentication, User Management, Participant, Membership, Category, Event, Attendance & QR Code, Gallery, Merchandise, Payment, Sponsor, Guest Sponsor, Organization, Notifications Real-time.
 
 ## Persyaratan
 
@@ -14,6 +14,26 @@ Sistem manajemen event untuk komunitas lari SH3. Dibangun dengan Laravel 13 dan 
 - Extension PHP: `BCMath`, `Ctype`, `Fileinfo`, `JSON`, `Mbstring`, `OpenSSL`, `PDO`, `Tokenizer`, `XML`, `GD` atau `Imagick`, `redis`
 
 ## Instalasi
+
+### Opsi A — Docker Compose (disarankan, cepat & siap produksi)
+
+```bash
+docker compose build app     # build image (vendor + frontend assets + extension PHP)
+docker compose up -d         # jalankan app (:8000), mysql, redis
+```
+
+Migrasi, seeder, `storage:link`, queue worker, dan scheduler dijalankan **otomatis** oleh
+`docker-entrypoint.sh`. Buka `http://localhost:8000/login`.
+
+```bash
+docker compose ps            # cek status (semua Up / healthy)
+docker compose logs -f app   # log aplikasi
+docker exec sh3-app php artisan <cmd>   # artisan di dalam container
+```
+
+Menjalankan test di dalam container dan troubleshooting lengkap: lihat **`how-to-run.md`**.
+
+### Opsi B — Manual (development lokal)
 
 ```bash
 # 1. Clone repository
@@ -580,6 +600,12 @@ Semua endpoint API berada di prefix `/api/v1`.
 | GET | `/attendance/sync-down` | Sinkronisasi offline (download) |
 | GET | `/attendance/report` | Laporan absensi |
 | GET | `/attendance/{eventId}` | Absensi per event |
+| POST | `/guest-sponsor/auth/login` | Login guest sponsor (username/password) |
+| GET | `/guest-sponsor/auth/me` | Profil guest sponsor (auth) |
+| POST | `/guest-sponsor/attendance/check-in` | Check-in guest sponsor |
+| POST | `/guest-sponsor/attendance/check-out` | Check-out guest sponsor |
+| POST | `/guest-sponsor/attendance/scan` | Scan QR guest sponsor (auth) |
+| GET | `/guest-sponsor/attendance/my` | Riwayat attendance guest sponsor (auth) |
 | POST | `/merchandise/order` | Order merchandise |
 | GET | `/merchandise/orders` | Daftar order user |
 | GET | `/merchandise/orders/{id}` | Detail order |
@@ -612,7 +638,10 @@ Semua route admin berada di prefix `/admin` (wajib login session-based).
 | GET/POST/PUT/DELETE | `/admin/categories` | admin_full_access, admin_laman |
 | GET/POST/PUT/DELETE | `/admin/galleries` | admin_full_access, admin_laman |
 | GET/POST/PUT/DELETE | `/admin/organization` | admin_full_access, admin_laman |
-| GET/POST/PUT/DELETE | `/admin/sponsors` | admin_full_access, admin_laman, sponsor |
+| GET/POST/PUT/DELETE | `/admin/sponsors` | admin_full_access, admin_laman |
+| GET/POST/PUT/DELETE | `/admin/guest-sponsors` | admin_full_access |
+| POST | `/admin/guest-sponsors/quota` | admin_full_access |
+| POST | `/admin/guest-sponsors/{id}/toggle-active` | admin_full_access |
 | GET/POST/PUT/DELETE | `/admin/merchandise` | admin_full_access, admin_laman, merchandise |
 | GET | `/admin/payments` | admin_full_access, bendahara |
 | GET | `/admin/payments/{id}` | admin_full_access, bendahara |
@@ -673,7 +702,7 @@ Sponsor: tiers platinum/gold/silver/bronze, logo, website, tahun, many-to-many d
 Struktur kepengurusan hierarkis (parent-child). Active/inactive, periode jabatan (start/end), sort_order. API: index, show, stats, tree (pohon), years (filter tahun).
 
 ### 9. Manajemen User & Role
-8 level role: admin_full_access, admin_laman, admin_member, admin_bnh, organizer, bendahara, sponsor, merchandise, participant. CRUD user, toggle active/inactive, avatar upload. User activity logging (login, logout, CRUD).
+9 level role: admin_full_access, admin_laman, admin_member, admin_bnh, organizer, bendahara, sponsor, merchandise, gallery, guest_sponsor, participant. CRUD user, toggle active/inactive, avatar upload. User activity logging (login, logout, CRUD). Role `sponsor` dan `guest_sponsor` tidak dapat login ke web admin (memakai API).
 
 ### 10. Kategori Event
 Kategori: nama, deskripsi, icon, slug, distance_km, sort_order, is_active. Seed: Long Run, Short Run, Major Events, Super Long. API dengan `events_count`.
@@ -681,7 +710,10 @@ Kategori: nama, deskripsi, icon, slug, distance_km, sort_order, is_active. Seed:
 ### 11. Notifikasi Real-time
 Broadcast via Laravel Reverb (WebSocket). Tersimpan di database dengan status read/unread. Notifikasi untuk admin (registrasi baru, pembayaran, order, check-in, membership) dan peserta (registrasi sukses, konfirmasi/reject payment, aktivasi membership). Queueable (ShouldQueue). Badge unread di panel admin.
 
-### 12. Responsive Layout
+### 12. Guest Sponsor
+Akun perwakilan sponsor per event dengan kuota (`event_sponsors.max_guest_accounts`). Admin membuat akun (username/password + QR unik) dalam kuota; akun punya masa berlaku dan status aktif. Login via API (`/api/v1/guest-sponsor/auth/login`) dan attendance via QR (check-in/check-out/scan). Akun kedaluwarsa/event selesai tidak dapat login atau check-in, riwayat attendance tetap tersimpan.
+
+### 13. Responsive Layout
 Seluruh halaman admin mengikuti aturan responsive: container max-w-7xl, table overflow-x-auto, form w-full, card w-full, tanpa horizontal scroll.
 
 ## Arsitektur
@@ -690,16 +722,16 @@ Seluruh halaman admin mengikuti aturan responsive: container max-w-7xl, table ov
 Layered Architecture:
 
 Presentation Layer     → Blade views, API Resources, Middleware, Form Requests
-Business Layer         → Controllers, Services (10), DTO (4)
-Data Layer             → Repositories (15), Models (18), Migrations (22), Seeders
+Business Layer         → Controllers, Services (15), DTO (4)
+Data Layer             → Repositories (18), Models (22), Migrations (36), Seeders
 ```
 
 - Business logic **hanya** di Services — Controller tidak mengandung logika bisnis.
 - Database query **hanya** di Repositories — Service tidak mengandung query langsung.
-- 15 Repositories mewarisi `BaseRepository` (all, find, create, update, delete, paginate).
-- 10 Services: Auth, User, Event, Membership, Payment, Merchandise, Attendance, QRCode, Notification, Sidebar.
-- 18 Models dengan Eloquent Relationships lengkap.
-- 22 Migration files mencakup seluruh tabel.
+- 18 Repositories mewarisi `BaseRepository` (all, find, create, update, delete, paginate).
+- 15 Services: Auth, User, Event, Membership, Payment, Merchandise, Attendance, QRCode, Notification, Sidebar, Gallery, MembershipPricing, ParticipantCode, ParticipantPasswordReset, GuestSponsor.
+- 22 Models dengan Eloquent Relationships lengkap.
+- 36 Migration files mencakup seluruh tabel.
 
 ## Pengembangan
 
