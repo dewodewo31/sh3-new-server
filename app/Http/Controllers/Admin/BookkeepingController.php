@@ -71,6 +71,14 @@ class BookkeepingController extends Controller
         $entry = $this->bookkeepingRepository->findById($id);
         $data = $request->validated();
 
+        if ($data['category'] !== 'sponsor') {
+            $data['sponsor_id'] = null;
+        }
+
+        if ($data['category'] !== 'event_income') {
+            $data['event_id'] = null;
+        }
+
         if ($request->hasFile('receipt')) {
             if ($entry->receipt) {
                 ImageHelper::delete($entry->receipt);

@@ -14,7 +14,7 @@ class BookkeepingRepository extends BaseRepository
 
     public function filtered(array $filters, int $perPage = 15)
     {
-        $query = $this->model->query();
+        $query = $this->model->with(['sponsor', 'event']);
         $this->applyFilters($query, $filters);
 
         Sort::apply($query, ['transaction_date', 'amount', 'type', 'category'], 'transaction_date', 'desc');

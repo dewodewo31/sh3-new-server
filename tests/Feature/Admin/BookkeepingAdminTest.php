@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Bookkeeping;
+use App\Models\Sponsor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -82,6 +83,30 @@ class BookkeepingAdminTest extends TestCase
             'id' => $entry->id,
             'description' => 'Diperbarui',
             'amount' => 75000,
+        ]);
+    }
+
+    public function test_update_clears_stale_sponsor_when_category_changed(): void
+    {
+        $sponsor = Sponsor::factory()->create();
+        $entry = Bookkeeping::factory()->create([
+            'category' => 'sponsor',
+            'sponsor_id' => $sponsor->id,
+        ]);
+        $this->actingAs($this->user('bendahara'));
+
+        $this->put('/admin/bookkeepings/'.$entry->id, [
+            'transaction_date' => '2026-08-18',
+            'description' => 'Ganti ke lain',
+            'type' => 'expense',
+            'amount' => 20000,
+            'category' => 'other',
+        ])->assertRedirect(route('admin.bookkeepings.index'));
+
+        $this->assertDatabaseHas('bookkeepings', [
+            'id' => $entry->id,
+            'category' => 'other',
+            'sponsor_id' => null,
         ]);
     }
 
