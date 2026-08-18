@@ -13,7 +13,7 @@
             </div>
         </div>
 
-        <form action="{{ route('admin.guest-sponsors.store') }}" method="POST">
+        <form action="{{ route('admin.guest-sponsors.store') }}" method="POST" class="p-5 sm:p-6">
             @csrf
             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div class="form-group">
