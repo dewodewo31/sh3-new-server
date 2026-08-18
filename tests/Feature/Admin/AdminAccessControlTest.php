@@ -33,6 +33,7 @@ class AdminAccessControlTest extends TestCase
             '/admin/sponsors',
             '/admin/merchandise',
             '/admin/payments',
+            '/admin/bookkeepings',
             '/admin/attendance/report',
         ];
 
@@ -131,6 +132,13 @@ class AdminAccessControlTest extends TestCase
         $this->actingAs($this->user('organizer'))->get('/admin/payments')->assertForbidden();
         $this->actingAs($this->user('bendahara'))->get('/admin/payments')->assertOk();
         $this->actingAs($this->user('admin_full_access'))->get('/admin/payments')->assertOk();
+    }
+
+    public function test_bookkeepings_allow_admin_full_access_and_bendahara(): void
+    {
+        $this->actingAs($this->user('organizer'))->get('/admin/bookkeepings')->assertForbidden();
+        $this->actingAs($this->user('bendahara'))->get('/admin/bookkeepings')->assertOk();
+        $this->actingAs($this->user('admin_full_access'))->get('/admin/bookkeepings')->assertOk();
     }
 
     public function test_attendance_allow_admin_full_access_and_admin_laman(): void
