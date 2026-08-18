@@ -68,6 +68,7 @@ class GuestSponsorRepository extends BaseRepository
                 'event_title' => $event->title,
                 'max' => (int) $sp->pivot->max_guest_accounts,
                 'used' => $this->countActiveFor($sp->id, $event->id),
+                'remaining' => max(0, (int) $sp->pivot->max_guest_accounts - $this->countActiveFor($sp->id, $event->id)),
             ]))
             ->all();
     }

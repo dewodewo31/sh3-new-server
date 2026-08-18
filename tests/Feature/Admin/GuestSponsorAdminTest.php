@@ -173,6 +173,22 @@ class GuestSponsorAdminTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $account->user_id]);
     }
 
+    public function test_index_renders_quota_section(): void
+    {
+        $this->actingAs($this->user('admin_full_access'));
+        [$sponsor, $event] = $this->makeAccount(5);
+        $account = GuestSponsor::factory()->create([
+            'sponsor_id' => $sponsor->id,
+            'event_id' => $event->id,
+        ]);
+
+        $this->get('/admin/guest-sponsors')
+            ->assertOk()
+            ->assertSee($sponsor->name)
+            ->assertSee($event->title)
+            ->assertSee($account->user->username);
+    }
+
     public function test_sponsor_role_cannot_access_admin_panel(): void
     {
         $this->actingAs($this->user('sponsor'));
