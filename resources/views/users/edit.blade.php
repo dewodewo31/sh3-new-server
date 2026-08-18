@@ -31,7 +31,7 @@
                     <div class="form-group">
                         <label class="form-label">Role</label>
                         <select name="role" id="role" class="form-select @error('role') error @enderror" required>
-                            @foreach(['admin_full_access','admin_laman','admin_member','admin_bnh','organizer','bendahara','sponsor','merchandise'] as $role)
+                            @foreach(['admin_full_access','admin_laman','admin_member','admin_bnh','organizer','bendahara','sponsor','merchandise','gallery'] as $role)
                                 <option value="{{ $role }}" {{ old('role', $user->role) == $role ? 'selected' : '' }}>{{ str_replace('_', ' ', ucwords($role)) }}</option>
                             @endforeach
                         </select>

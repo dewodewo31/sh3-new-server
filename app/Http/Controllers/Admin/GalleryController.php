@@ -18,7 +18,11 @@ class GalleryController extends Controller
 
     public function index()
     {
-        $galleries = $this->galleryRepository->paginate(15, ['event']);
+        $galleries = $this->galleryRepository->paginateSorted(
+            ['title', 'type', 'is_featured', 'created_at'],
+            15,
+            ['event'],
+        );
 
         return view('galleries.index', compact('galleries'));
     }

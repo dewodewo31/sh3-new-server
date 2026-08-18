@@ -79,8 +79,18 @@
             <div class="card-body">
                 <form @submit.prevent="submitManual()" class="space-y-3">
                     <div class="form-group">
+                        <label for="event_id" class="form-label">Event</label>
+                        <select id="event_id" name="event_id" x-model="eventId" class="form-select" required>
+                            <option value="">Pilih event</option>
+                            @foreach ($events as $event)
+                                <option value="{{ $event->id }}">{{ $event->title }}</option>
+                            @endforeach
+                        </select>
+                        <p class="form-hint">QR dicek terhadap peserta event yang dipilih.</p>
+                    </div>
+                    <div class="form-group">
                         <label for="qr_code" class="form-label">Kode QR Peserta</label>
-                        <input type="text" id="qr_code" name="qr_code" x-model="manualCode" placeholder="SH3-1-42-aBcDeFgH" class="form-input font-mono text-xs" aria-label="Kode QR">
+                        <input type="text" id="qr_code" name="qr_code" x-model="manualCode" placeholder="3950 / NM0001" class="form-input font-mono text-xs" aria-label="Kode QR">
                         <p class="form-hint">Gunakan jika kamera tidak tersedia atau QR sulit terbaca.</p>
                     </div>
                     <button type="submit" class="btn btn-outline w-full" :disabled="!manualCode || processing">
@@ -178,6 +188,7 @@
             loading: false,
             processing: false,
             manualCode: '',
+            eventId: '',
             result: null,
             lastScanAt: 0,
 
@@ -248,6 +259,12 @@
             },
 
             async processQr(qrText) {
+                if (!this.eventId) {
+                    this.result = { success: false, message: 'Pilih event terlebih dahulu.' };
+                    showToast('error', 'Check-in gagal', 'Pilih event terlebih dahulu.');
+                    return;
+                }
+
                 this.processing = true;
 
                 try {
@@ -260,7 +277,7 @@
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': csrf,
                         },
-                        body: JSON.stringify({ qr_code: qrText }),
+                        body: JSON.stringify({ event_id: this.eventId, qr_code: qrText }),
                     });
 
                     const data = await response.json();

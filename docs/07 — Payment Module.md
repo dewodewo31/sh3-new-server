@@ -56,6 +56,10 @@ reject → status = rejected
 | GET | `/payments/history` | Riwayat pembayaran user | ✓ |
 | POST | `/payments/confirm/{id}` | Konfirmasi pembayaran (Bendahara/Admin) | ✓ role bendahara |
 
+> **Catatan (fix 2026-08-14):** route `/payments/history` dideklarasikan **sebelum**
+> `/payments/{id}`, dan `{id}` dibatasi `whereNumber('id')` — agar `GET /payments/history`
+> tidak tertelan oleh route detail dan memicu `TypeError` (500).
+
 ## Route Admin (Web)
 
 | Method | Route | Role |

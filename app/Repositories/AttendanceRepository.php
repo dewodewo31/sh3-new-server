@@ -4,6 +4,8 @@ namespace App\Repositories;
 
 use App\Models\Attendance;
 use App\Models\Event;
+use App\Support\Sort;
+use Illuminate\Support\Carbon;
 
 class AttendanceRepository extends BaseRepository
 {
@@ -19,12 +21,15 @@ class AttendanceRepository extends BaseRepository
 
     public function findByEvent(int $eventId)
     {
-        return $this->model
+        $query = $this->model
             ->whereHas('eventParticipant', function ($q) use ($eventId) {
                 $q->where('event_id', $eventId);
             })
-            ->with('eventParticipant.participant')
-            ->get();
+            ->with('eventParticipant.participant');
+
+        Sort::apply($query, ['check_in_time', 'check_out_time', 'status', 'check_in_method'], 'check_in_time', 'asc');
+
+        return $query->get();
     }
 
     public function findPresentByEvent(int $eventId)
@@ -97,7 +102,7 @@ class AttendanceRepository extends BaseRepository
                 });
             })
             ->when(! empty($filters['since']), function ($q) use ($filters) {
-                $q->where('updated_at', '>=', $filters['since']);
+                $q->where('updated_at', '>=', Carbon::parse($filters['since'])->timezone(config('app.timezone')));
             })
             ->orderBy('updated_at')
             ->get();

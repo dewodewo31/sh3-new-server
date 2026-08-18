@@ -62,14 +62,16 @@ CREATE TABLE attendance_logs (
 
 Generator: `app/Services/QRCodeService.php`.
 
-- Format QR tersimpan: `SH3-{event_id}-{participant_id}-{8 karakter acak}`.
-- `QRCodeService::generate()` menghasilkan string tersebut, menyimpannya ke `event_participants.qr_code`.
-- `QRCodeService::decode()` memecah string menjadi 4 bagian; valid hanya jika bagian pertama adalah `SH3`.
+- Format QR tersimpan: **kode peserta (`participant_code`) murni** — member `3950`, non-member `NM0001`.
+- `QRCodeService::generate()` menulis nilai tersebut ke `event_participants.qr_code` (nilai sama
+  untuk semua event peserta yang sama — QR adalah identitas peserta).
+- `QRCodeService::decode()` memvalidasi `^\d{4}$` (member) atau `^NM\d{4}$` (non-member);
+  format lain (termasuk `SH3-...` lama) → `null`/ditolak.
 
 ## Flow Scan
 
 ```
-Scan QR → decode(event_id, participant_id) → cari registrasi
+Scan QR → decode(participant_code) → cari peserta → cari registrasi (event_id opsional)
   → Belum check-in → Check-in (status=present, is_attended=true)
   → Sudah check-in → Check-out
 ```
@@ -84,16 +86,59 @@ Scan QR → decode(event_id, participant_id) → cari registrasi
 
 | Endpoint | Deskripsi |
 |----------|-----------|
-| `POST /api/v1/attendance/sync-up` | Kirim data catatan (event_id, participant_id, type, qr_code) → diproses check-in/out di server |
+| `POST /api/v1/attendance/sync-up` | Kirim data catatan → diproses check-in/out + OTS (payment) di server |
 | `GET /api/v1/attendance/sync-down` | Unduh data attendance untuk digunakan offline |
 
-`syncUp(array $records)` mengembalikan:
+> **Route publik (2026-08-15):** `sync-up` & `sync-down` dipindahkan dari grup `auth:sanctum`
+> ke grup **publik** di `routes/api.php` (device OTS offline tidak memiliki token).
 
-- `processed` — jumlah berhasil (check-in/out)
-- `skipped` — jumlah dilewati (peserta tidak terdaftar / timestamp duplikat / QR tidak valid)
-- `details[]` — rincian per record (`status` = processed/skipped, `reason` bila dilewati)
+### `sync-up` (alur baru 2026-08-15)
 
-`syncDown` mengembalikan daftar `{ event_id, participant_id, status, check_in_time, check_out_time, check_in_method, latitude, longitude, notes, updated_at }`.
+`POST /api/v1/attendance/sync-up` menerima **dua array**:
+
+| Field | Isi |
+|-------|-----|
+| `attendances` | attendance reguler: `{event_id, participant_code, check_in_time, check_out_time}` |
+| `ots_registrations` | pendaftaran OTS (On-The-Spot): `{event_id, participant_code, member_name, check_in_time, check_out_time}` |
+
+Proses di dalam `DB::transaction`:
+
+1. **Attendance reguler** — lookup `EventParticipant` via `event_id` + peserta dengan
+   `participant_code` yang sama (`whereHas('participant', participant_code)`); payload lama
+   (tanpa `participant_code`) di-abaikan diam-diam; update `check_in_at/check_out_at/is_attended`;
+   update/create `attendances` (tanpa duplikasi — attendance yang sudah punya `check_out_time`
+   hanya di-update `check_in_time` + `status=present`).
+2. **OTS** — participant aggregator sentinel `NM0000` (`Participant::OTS_AGGREGATOR_CODE`,
+   `firstOrCreate`) dibuat otomatis untuk OTS manual; OTS member dicari/dibuat via
+   `participant_code`. Satu `EventParticipant` per participant per event (`firstOrCreate`,
+   `qr_code = OTS-{participant_code}EV{event_id}`), `total_events_participated` increment
+   hanya sekali per event, **Payment dibuat otomatis** (`INV-OTS-{random8}`,
+   `payment_type=event_registration`, `payment_method=cash`, `status=confirmed`), dan
+   attendance di-update (dedup) atau dibuat.
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Event attendance synced successfully",
+  "synced_attendance_count": 0,
+  "synced_ots_count": 5
+}
+```
+
+### `syncDown`
+
+`syncDown` mengembalikan daftar `{ event_id, participant_id, participant_code, status, check_in_time, check_out_time, check_in_method, latitude, longitude, notes, updated_at }`.
+
+> `AttendanceService::syncUp(array $records)` (versi per-record: `processed`, `skipped`,
+> `details[]`) masih tersedia namun endpoint API kini memakai logika OTS di
+> `AttendanceController::syncUp()` yang menangani array `attendances` + `ots_registrations`.
+
+> **Catatan sinkronisasi (fix 2026-08-14):** parameter `since` (format ISO, umumnya UTC dari
+> client) di-parse dan dikonversi ke timezone aplikasi (`Asia/Jakarta`) sebelum dibandingkan
+> dengan `updated_at` yang tersimpan dalam timezone lokal. Tanpa konversi, selisih zona waktu
+> (mis. +7 jam) menyebabkan `sync-down` mengirim ulang data yang seharusnya sudah ter-sync.
 
 ## API Endpoints
 

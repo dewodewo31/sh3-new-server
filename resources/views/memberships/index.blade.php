@@ -79,10 +79,10 @@
                 <tr>
                     <th>#</th>
                     <th>Peserta</th>
-                    <th>Tipe</th>
-                    <th>Periode</th>
-                    <th>Harga</th>
-                    <th>Status</th>
+                    <x-th-sort column="membership_type">Tipe</x-th-sort>
+                    <x-th-sort column="start_date">Periode</x-th-sort>
+                    <x-th-sort column="price">Harga</x-th-sort>
+                    <x-th-sort column="status">Status</x-th-sort>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -98,7 +98,7 @@
                     <td>
                         <p class="text-sm text-gray-900 dark:text-slate-100">{{ $h->start_date->format('d/m/Y') }} - {{ $h->end_date->format('d/m/Y') }}</p>
                         @if($h->status === 'active')
-                            <small class="text-gray-400 dark:text-slate-500">Sisa {{ now()->diffInDays($h->end_date, false) }} hari</small>
+                            <small class="text-gray-400 dark:text-slate-500">Sisa {{ (int) now()->diffInDays($h->end_date) }} hari</small>
                         @endif
                     </td>
                     <td>Rp {{ number_format($h->price, 0, ',', '.') }}</td>

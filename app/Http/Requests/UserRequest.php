@@ -22,7 +22,7 @@ class UserRequest extends FormRequest
             'password' => [$this->isMethod('POST') ? 'required' : 'nullable', 'string', 'min:8'],
             'role' => ['required', Rule::in([
                 'admin_full_access', 'admin_laman', 'admin_member',
-                'admin_bnh', 'organizer', 'bendahara', 'sponsor', 'merchandise',
+                'admin_bnh', 'organizer', 'bendahara', 'sponsor', 'merchandise', 'gallery',
             ])],
             'is_active' => ['boolean'],
             'avatar' => ['nullable', 'image', 'max:2048'],

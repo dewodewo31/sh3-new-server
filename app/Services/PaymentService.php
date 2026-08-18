@@ -64,10 +64,16 @@ class PaymentService
 
     public function rejectPayment(Payment $payment, int $confirmedByUserId): void
     {
-        $payment->update([
-            'status' => 'rejected',
-            'confirmed_by' => $confirmedByUserId,
-        ]);
+        DB::transaction(function () use ($payment, $confirmedByUserId) {
+            $payment->update([
+                'status' => 'rejected',
+                'confirmed_by' => $confirmedByUserId,
+            ]);
+
+            if ($payment->paymentable && method_exists($payment->paymentable, 'markAsRejected')) {
+                $payment->paymentable->markAsRejected();
+            }
+        });
 
         $this->notificationService->notifyAdmins(
             'Pembayaran ditolak',

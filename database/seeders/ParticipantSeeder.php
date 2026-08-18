@@ -87,6 +87,8 @@ class ParticipantSeeder extends Seeder
 
             if ($membershipType !== 'none') {
                 [$price, $days] = $memberships[$membershipType];
+                $plan = \App\Models\MembershipPlan::where('key', $membershipType)->first();
+                $price = $plan?->price ?? $price; // ponytail: use plan's actual price, not hardcoded
 
                 MembershipHistory::updateOrCreate(
                     [

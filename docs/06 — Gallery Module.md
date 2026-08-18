@@ -116,6 +116,7 @@ Dapat mengelola Gallery:
 - Admin Full Access
 - Admin Laman
 - Admin BNH
+- Gallery (hanya Galleries & Albums)
 
 ---
 

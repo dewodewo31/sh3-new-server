@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
-use App\Models\AttendanceLog;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\EventParticipant;
@@ -66,7 +65,7 @@ class AttendanceApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->hash_id,
         ]);
     }
 
@@ -86,8 +85,6 @@ class AttendanceApiTest extends TestCase
         $this->postJson('/api/v1/attendance/check-in', [])->assertUnauthorized();
         $this->postJson('/api/v1/attendance/check-out', [])->assertUnauthorized();
         $this->getJson('/api/v1/attendance/report')->assertUnauthorized();
-        $this->postJson('/api/v1/attendance/sync-up', [])->assertUnauthorized();
-        $this->getJson('/api/v1/attendance/sync-down')->assertUnauthorized();
     }
 
     public function test_check_in_success(): void
@@ -189,17 +186,63 @@ class AttendanceApiTest extends TestCase
         ]);
     }
 
-    public function test_scan_valid_qr_returns_decoded_data(): void
+    public function test_scan_without_event_returns_participant_and_registered_events(): void
     {
         $event = $this->createEvent();
+        $this->register($event, $this->participant);
 
         $this->postJson('/api/v1/attendance/scan', [
-            'qr_code' => 'SH3-'.$event->id.'-'.$this->participant->id.'-ABC12345',
+            'qr_code' => $this->participant->hash_id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.hash_id', $this->participant->hash_id)
+            ->assertJsonPath('data.name', $this->participant->name)
+            ->assertJsonPath('data.status', 'non_member')
+            ->assertJsonPath('data.registered_events.0.event_id', $event->id)
+            ->assertJsonPath('data.registered_events.0.event_title', $event->title);
+    }
+
+    public function test_scan_with_event_returns_registration_status(): void
+    {
+        $event = $this->createEvent();
+        $this->register($event, $this->participant);
+
+        $this->postJson('/api/v1/attendance/scan', [
+            'event_id' => $event->id,
+            'qr_code' => $this->participant->hash_id,
         ])
             ->assertOk()
             ->assertJsonPath('data.event_id', $event->id)
             ->assertJsonPath('data.participant_id', $this->participant->id)
-            ->assertJsonPath('data.hash', 'ABC12345');
+            ->assertJsonPath('data.hash_id', $this->participant->hash_id)
+            ->assertJsonPath('data.registration_status', 'confirmed')
+            ->assertJsonPath('data.is_attended', false);
+    }
+
+    public function test_scan_with_event_not_registered_returns_422(): void
+    {
+        $event = $this->createEvent();
+
+        $this->postJson('/api/v1/attendance/scan', [
+            'event_id' => $event->id,
+            'qr_code' => $this->participant->hash_id,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.participant.0', 'Peserta tidak terdaftar di event ini.');
+    }
+
+    public function test_scan_unknown_code_returns_422(): void
+    {
+        $this->postJson('/api/v1/attendance/scan', ['qr_code' => '9999'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.participant.0', 'Kode peserta tidak dikenal.');
+    }
+
+    public function test_scan_legacy_sh3_code_returns_422(): void
+    {
+        $this->postJson('/api/v1/attendance/scan', ['qr_code' => 'SH3-1-2-ABC12345'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.qr_code.0', 'QR Code tidak valid.');
     }
 
     public function test_scan_invalid_qr_returns_422(): void
@@ -248,63 +291,180 @@ class AttendanceApiTest extends TestCase
         $event = $this->createEvent();
         $registration = $this->register($event, $this->participant);
 
-        $records = [
+        $attendances = [
             [
                 'event_id' => $event->id,
-                'participant_id' => $this->participant->id,
-                'type' => 'check_in',
-                'method' => 'qr_code',
+                'hash_id' => $this->participant->hash_id,
+                'check_in_time' => now()->toDateTimeString(),
+                'check_out_time' => null,
             ],
         ];
 
-        $this->postJson('/api/v1/attendance/sync-up', ['records' => $records])
+        $this->postJson('/api/v1/attendance/sync-up', ['attendances' => $attendances])
             ->assertOk()
-            ->assertJsonPath('message', 'Sinkronisasi berhasil')
-            ->assertJsonPath('data.processed', 1)
-            ->assertJsonPath('data.skipped', 0);
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Event attendance synced successfully');
 
-        $this->postJson('/api/v1/attendance/sync-up', ['records' => $records])
+        $this->assertTrue($registration->fresh()->is_attended);
+        $this->assertNotNull($registration->fresh()->check_in_at);
+
+        Attendance::create([
+            'event_participant_id' => $registration->id,
+            'check_in_time' => now(),
+            'status' => 'present',
+        ]);
+
+        $this->postJson('/api/v1/attendance/sync-up', ['attendances' => $attendances])
             ->assertOk()
-            ->assertJsonPath('data.processed', 0)
-            ->assertJsonPath('data.skipped', 1);
-
-        $attendance = Attendance::where('event_participant_id', $registration->id)->first();
-
-        $this->assertNotNull($attendance);
-        $this->assertSame(1, AttendanceLog::where('event_id', $event->id)
-            ->where('participant_id', $this->participant->id)
-            ->where('type', 'check_in')
-            ->count());
+            ->assertJsonPath('synced_attendance_count', 1);
     }
 
     public function test_sync_up_skips_unregistered_participant(): void
     {
         $event = $this->createEvent();
 
-        $this->postJson('/api/v1/attendance/sync-up', ['records' => [
+        $this->postJson('/api/v1/attendance/sync-up', ['attendances' => [
             [
                 'event_id' => $event->id,
-                'participant_id' => $this->participant->id,
-                'type' => 'check_in',
+                'hash_id' => '9999',
+                'check_in_time' => now()->toDateTimeString(),
             ],
         ]])
             ->assertOk()
-            ->assertJsonPath('data.processed', 0)
-            ->assertJsonPath('data.skipped', 1)
-            ->assertJsonPath('data.details.0.reason', 'Peserta tidak terdaftar di event ini.');
+            ->assertJsonPath('synced_attendance_count', 0)
+            ->assertJsonPath('synced_ots_count', 0);
     }
 
-    public function test_sync_up_requires_valid_type(): void
+    public function test_sync_up_processes_ots_registration(): void
+    {
+        $event = $this->createEvent();
+        $member = Participant::factory()->create(['name' => 'OTS Member']);
+
+        $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
+            [
+                'event_id' => $event->id,
+                'hash_id' => $member->hash_id,
+                'member_name' => 'OTS Member',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+        ]])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('synced_ots_count', 1);
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'participant_id' => $member->id,
+            'qr_code' => 'OTS-'.$member->hash_id.'EV'.$event->id,
+            'payment_status' => 'confirmed',
+        ]);
+    }
+
+    public function test_sync_up_creates_new_ots_participant_with_email(): void
     {
         $event = $this->createEvent();
 
-        $this->postJson('/api/v1/attendance/sync-up', ['records' => [
+        $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
             [
                 'event_id' => $event->id,
-                'participant_id' => $this->participant->id,
-                'type' => 'invalid',
+                'hash_id' => 'NM0099',
+                'member_name' => 'OTS Baru',
+                'check_in_time' => now()->toDateTimeString(),
             ],
-        ]])->assertUnprocessable();
+        ]])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('synced_ots_count', 1);
+
+        $ots = Participant::where('hash_id', 'NM0099')->first();
+
+        $this->assertNotNull($ots);
+        $this->assertSame('OTS Baru', $ots->name);
+        $this->assertSame('ots.nm0099@sh3.com', $ots->email);
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'participant_id' => $ots->id,
+            'qr_code' => 'OTS-NM0099EV'.$event->id,
+            'payment_status' => 'confirmed',
+        ]);
+    }
+
+    public function test_sync_up_creates_ots_sentinel_once(): void
+    {
+        $event = $this->createEvent();
+        $secondEvent = $this->createEvent(['title' => 'Second OTS Event']);
+
+        $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
+            [
+                'event_id' => $event->id,
+                'hash_id' => Participant::OTS_AGGREGATOR_CODE,
+                'member_name' => 'Manual OTS',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+            [
+                'event_id' => $secondEvent->id,
+                'hash_id' => Participant::OTS_AGGREGATOR_CODE,
+                'member_name' => 'Manual OTS',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+        ]])
+            ->assertOk()
+            ->assertJsonPath('synced_ots_count', 2);
+
+        $sentinel = Participant::where('hash_id', Participant::OTS_AGGREGATOR_CODE)->get();
+
+        $this->assertCount(1, $sentinel);
+        $this->assertSame('Manual OTS NON MEMBER', $sentinel->first()->name);
+        $this->assertSame('manual.ots@sh3.com', $sentinel->first()->email);
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'participant_id' => $sentinel->first()->id,
+            'qr_code' => 'OTS-'.Participant::OTS_AGGREGATOR_CODE.'EV'.$event->id,
+        ]);
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $secondEvent->id,
+            'participant_id' => $sentinel->first()->id,
+        ]);
+    }
+
+    public function test_sync_up_ignores_legacy_attendance_payload(): void
+    {
+        $event = $this->createEvent();
+        $this->register($event, $this->participant);
+
+        $this->postJson('/api/v1/attendance/sync-up', ['attendances' => [
+            [
+                'event_id' => $event->id,
+                'qr_code' => 'SH3-'.$event->id.'-'.$this->participant->id.'-ABC12345',
+                'hash_id' => '0022',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+        ]])
+            ->assertOk()
+            ->assertJsonPath('synced_attendance_count', 0);
+
+        $this->assertDatabaseCount('attendances', 0);
+    }
+
+    public function test_sync_up_processes_non_sentinel_ots_as_regular_participant(): void
+    {
+        $event = $this->createEvent();
+
+        $this->postJson('/api/v1/attendance/sync-up', ['ots_registrations' => [
+            [
+                'event_id' => $event->id,
+                'hash_id' => 'NM9999',
+                'member_name' => 'Budi',
+                'check_in_time' => now()->toDateTimeString(),
+            ],
+        ]])
+            ->assertOk()
+            ->assertJsonPath('synced_ots_count', 1);
+
+        $this->assertDatabaseHas('participants', ['name' => 'Budi', 'hash_id' => 'NM9999']);
+        $this->assertDatabaseCount('event_participants', 1);
     }
 
     public function test_sync_down_returns_delta_since_timestamp(): void
@@ -327,6 +487,7 @@ class AttendanceApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.event_id', $event->id)
             ->assertJsonPath('data.0.participant_id', $this->participant->id)
+            ->assertJsonPath('data.0.hash_id', $this->participant->hash_id)
             ->assertJsonPath('data.0.status', 'present');
     }
 
@@ -341,5 +502,45 @@ class AttendanceApiTest extends TestCase
         $this->getJson('/api/v1/attendance/sync-down')
             ->assertOk()
             ->assertJsonCount(1, 'data');
+    }
+
+    public function test_rejected_registration_qr_cannot_check_in(): void
+    {
+        $event = $this->createEvent();
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $this->participant->id,
+            'registration_type' => 'paid',
+            'amount' => 100000,
+            'payment_status' => 'rejected',
+            'qr_code' => $this->participant->hash_id,
+        ]);
+
+        $this->postJson('/api/v1/attendance/check-in', $this->checkInPayload($event, $this->participant))
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.participant.0', 'Pendaftaran ini ditolak/dibatalkan dan tidak dapat digunakan untuk check-in.');
+
+        $this->assertDatabaseMissing('attendance_logs', [
+            'event_id' => $event->id,
+            'participant_id' => $this->participant->id,
+            'type' => 'check_in',
+        ]);
+    }
+
+    public function test_refunded_registration_qr_cannot_check_in(): void
+    {
+        $event = $this->createEvent();
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $this->participant->id,
+            'registration_type' => 'paid',
+            'amount' => 100000,
+            'payment_status' => 'refunded',
+            'qr_code' => $this->participant->hash_id,
+        ]);
+
+        $this->postJson('/api/v1/attendance/check-in', $this->checkInPayload($event, $this->participant))
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.participant.0', 'Pendaftaran ini ditolak/dibatalkan dan tidak dapat digunakan untuk check-in.');
     }
 }

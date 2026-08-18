@@ -5,8 +5,11 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\EventParticipant;
+use App\Models\MembershipHistory;
 use App\Models\Participant;
+use App\Models\Payment;
 use App\Models\User;
+use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -166,7 +169,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->hash_id,
         ]);
 
         $this->getJson('/api/v1/events/'.$event->id.'/participants')
@@ -193,7 +196,7 @@ class EventApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->hash_id,
         ]);
 
         $this->getJson('/api/v1/events/'.$event->id.'/participants')
@@ -215,14 +218,14 @@ class EventApiTest extends TestCase
             'registration_type' => 'free',
             'amount' => 0,
             'payment_status' => 'confirmed',
-            'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345',
+            'qr_code' => $participant->hash_id,
         ]);
 
         $this->getJson('/api/v1/events/'.$event->id.'/qr')
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.participant_name', $participant->name)
-            ->assertJsonPath('data.0.qr_code', 'SH3-'.$event->id.'-'.$participant->id.'-ABC12345');
+            ->assertJsonPath('data.0.qr_code', $participant->hash_id);
     }
 
     public function test_register_free_event_success(): void
@@ -309,6 +312,387 @@ class EventApiTest extends TestCase
         $event = $this->createEvent();
 
         $this->postJson('/api/v1/events/'.$event->id.'/register')->assertUnauthorized();
+    }
+
+    public function test_non_member_paid_registration_returns_pending(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', 'pending');
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'payment_status' => 'pending',
+        ]);
+    }
+
+    public function test_admin_rejection_marks_registration_rejected_not_pending(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/register')->assertOk();
+
+        $registration = EventParticipant::where('event_id', $event->id)
+            ->where('participant_id', $participant->id)
+            ->firstOrFail();
+
+        $payment = Payment::create([
+            'participant_id' => $participant->id,
+            'invoice_number' => 'INV/'.now()->format('Ymd').'/REJ001',
+            'payment_type' => 'event_registration',
+            'paymentable_type' => EventParticipant::class,
+            'paymentable_id' => $registration->id,
+            'amount' => 150000,
+            'payment_method' => 'transfer',
+            'payment_proof' => null,
+            'status' => 'pending',
+        ]);
+
+        $bendahara = User::factory()->create(['role' => 'bendahara']);
+
+        $this->app->make(PaymentService::class)->rejectPayment($payment, $bendahara->id);
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id,
+            'status' => 'rejected',
+        ]);
+
+        $this->assertSame('rejected', $registration->fresh()->payment_status);
+
+        $this->getJson('/api/v1/my-events')
+            ->assertOk()
+            ->assertJsonPath('data.0.order.status', 'rejected');
+    }
+
+    public function test_active_member_free_registration_auto_confirmed_and_paid(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        MembershipHistory::factory()->create([
+            'participant_id' => $participant->id,
+            'membership_type' => 'tahunan',
+            'status' => 'active',
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addMonths(11)->toDateString(),
+        ]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5, 'is_free_for_members' => true]);
+
+        $response = $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertOk();
+
+        $registration = EventParticipant::where('event_id', $event->id)
+            ->where('participant_id', $participant->id)
+            ->firstOrFail();
+
+        $this->assertSame('membership', $registration->registration_type);
+        $this->assertSame('confirmed', $registration->payment_status);
+        $this->assertTrue((bool) $registration->is_membership_free);
+        $this->assertEquals(0, (float) $registration->amount);
+        $this->assertNotNull($registration->qr_code);
+        $this->assertNull($registration->payment_id);
+        $this->assertDatabaseMissing('payments', ['participant_id' => $participant->id]);
+
+        $response->assertJsonPath('data.payment_status', 'confirmed')
+            ->assertJsonPath('data.qr_code', $registration->qr_code)
+            ->assertJsonPath('data.ticket_code', $registration->qr_code);
+
+        $this->getJson('/api/v1/my-events')
+            ->assertOk()
+            ->assertJsonPath('data.0.order.status', 'paid')
+            ->assertJsonPath('data.0.order.ticket_code', $registration->qr_code)
+            ->assertJsonPath('data.0.order.attendance.qr_code', $registration->qr_code);
+    }
+
+    public function test_expired_membership_does_not_get_free_auto_registration(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        MembershipHistory::factory()->expired()->create([
+            'participant_id' => $participant->id,
+        ]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5, 'is_free_for_members' => true]);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', 'pending');
+
+        $registration = EventParticipant::where('event_id', $event->id)
+            ->where('participant_id', $participant->id)
+            ->firstOrFail();
+
+        $this->assertSame('paid', $registration->registration_type);
+        $this->assertSame('pending', $registration->payment_status);
+        $this->assertFalse((bool) $registration->is_membership_free);
+        $this->assertGreaterThan(0, (float) $registration->amount);
+    }
+
+    public function test_existing_paid_registration_keeps_paid_status_and_qr(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
+        $qr = $participant->hash_id;
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'amount' => 150000,
+            'payment_status' => 'confirmed',
+            'qr_code' => $qr,
+        ]);
+
+        $this->getJson('/api/v1/my-events')
+            ->assertOk()
+            ->assertJsonPath('data.0.order.status', 'paid')
+            ->assertJsonPath('data.0.order.ticket_code', $qr)
+            ->assertJsonPath('data.0.order.attendance.qr_code', $qr);
+    }
+
+    public function test_pending_registration_blocks_duplicate_registration(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'amount' => 150000,
+            'payment_status' => 'pending',
+            'qr_code' => $participant->hash_id,
+        ]);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.event.0', 'Anda masih memiliki pendaftaran yang sedang diproses.');
+    }
+
+    public function test_paid_registration_blocks_duplicate_and_keeps_qr(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
+        $qr = $participant->hash_id;
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'amount' => 150000,
+            'payment_status' => 'confirmed',
+            'qr_code' => $qr,
+        ]);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.event.0', 'Anda sudah terdaftar di event ini.');
+
+        $this->getJson('/api/v1/my-events')
+            ->assertOk()
+            ->assertJsonPath('data.0.order.status', 'paid')
+            ->assertJsonPath('data.0.order.ticket_code', $qr);
+    }
+
+    public function test_rejected_registration_allows_registering_again(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create([
+            'user_id' => $user->id,
+            'total_events_participated' => 1,
+        ]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
+        $oldQr = $participant->hash_id;
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'amount' => 150000,
+            'payment_status' => 'rejected',
+            'qr_code' => $oldQr,
+        ]);
+
+        $response = $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', 'pending');
+
+        $registration = EventParticipant::where('event_id', $event->id)
+            ->where('participant_id', $participant->id)
+            ->firstOrFail();
+
+        $this->assertSame('pending', $registration->payment_status);
+        $this->assertNotNull($registration->qr_code);
+        $this->assertSame($participant->hash_id, $registration->qr_code);
+        $this->assertSame(1, EventParticipant::where('event_id', $event->id)
+            ->where('participant_id', $participant->id)
+            ->count());
+        $this->assertSame(1, $participant->fresh()->total_events_participated);
+        $this->assertNotNull($registration->payment_id);
+
+        $response->assertJsonPath('data.qr_code', $registration->qr_code);
+    }
+
+    public function test_refunded_registration_allows_registering_again(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5]);
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'amount' => 150000,
+            'payment_status' => 'refunded',
+            'qr_code' => $participant->hash_id,
+        ]);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', 'pending');
+
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'payment_status' => 'pending',
+        ]);
+    }
+
+    public function test_rejected_registration_then_active_member_registers_free_and_paid(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        MembershipHistory::factory()->create([
+            'participant_id' => $participant->id,
+            'membership_type' => 'tahunan',
+            'status' => 'active',
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addMonths(11)->toDateString(),
+        ]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5, 'is_free_for_members' => true]);
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'amount' => 150000,
+            'payment_status' => 'rejected',
+            'qr_code' => $participant->hash_id,
+        ]);
+
+        $response = $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertOk();
+
+        $registration = EventParticipant::where('event_id', $event->id)
+            ->where('participant_id', $participant->id)
+            ->firstOrFail();
+
+        $this->assertSame('membership', $registration->registration_type);
+        $this->assertSame('confirmed', $registration->payment_status);
+        $this->assertTrue((bool) $registration->is_membership_free);
+        $this->assertEquals(0, (float) $registration->amount);
+        $this->assertNotNull($registration->qr_code);
+        $this->assertNull($registration->payment_id);
+
+        $response->assertJsonPath('data.payment_status', 'confirmed')
+            ->assertJsonPath('data.qr_code', $registration->qr_code);
+
+        $this->getJson('/api/v1/my-events')
+            ->assertOk()
+            ->assertJsonPath('data.0.order.status', 'paid')
+            ->assertJsonPath('data.0.order.ticket_code', $registration->qr_code)
+            ->assertJsonPath('data.0.order.attendance.qr_code', $registration->qr_code);
+    }
+
+    public function test_refunded_registration_then_active_member_registers_free_and_paid(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        MembershipHistory::factory()->create([
+            'participant_id' => $participant->id,
+            'membership_type' => 'tahunan',
+            'status' => 'active',
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addMonths(11)->toDateString(),
+        ]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5, 'is_free_for_members' => true]);
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'amount' => 150000,
+            'payment_status' => 'refunded',
+            'qr_code' => $participant->hash_id,
+        ]);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', 'confirmed')
+            ->assertJsonPath('data.qr_code', fn ($qr) => is_string($qr) && $qr !== '');
+
+        $registration = EventParticipant::where('event_id', $event->id)
+            ->where('participant_id', $participant->id)
+            ->firstOrFail();
+
+        $this->assertSame('confirmed', $registration->payment_status);
+        $this->assertTrue((bool) $registration->is_membership_free);
+        $this->assertEquals(0, (float) $registration->amount);
+    }
+
+    public function test_rejected_registration_then_non_member_registers_pending(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 150000, 'quota' => 5, 'is_free_for_members' => true]);
+        EventParticipant::create([
+            'event_id' => $event->id,
+            'participant_id' => $participant->id,
+            'registration_type' => 'paid',
+            'amount' => 150000,
+            'payment_status' => 'rejected',
+            'qr_code' => $participant->hash_id,
+        ]);
+
+        $this->postJson('/api/v1/events/'.$event->id.'/register')
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', 'pending');
+
+        $registration = EventParticipant::where('event_id', $event->id)
+            ->where('participant_id', $participant->id)
+            ->firstOrFail();
+
+        $this->assertSame('paid', $registration->registration_type);
+        $this->assertFalse((bool) $registration->is_membership_free);
+        $this->assertGreaterThan(0, (float) $registration->amount);
+        $this->assertNotNull($registration->payment_id);
     }
 
     private function validEventPayload(array $overrides = []): array

@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Participant;
+use App\Support\Sort;
 
 class ParticipantRepository extends BaseRepository
 {
@@ -24,6 +25,19 @@ class ParticipantRepository extends BaseRepository
             ->get();
     }
 
+    /**
+     * Participants eligible for a new membership grant:
+     * no membership history with status=active AND end_date >= today.
+     * Backend filtering — the dropdown never receives ineligible participants.
+     */
+    public function eligibleForMembership(array $relations = [])
+    {
+        return $this->model->with($relations)
+            ->eligibleForMembership()
+            ->orderBy('name')
+            ->get();
+    }
+
     public function findExpiringMembers(int $days = 7)
     {
         return $this->model->where('membership_type', '!=', 'none')
@@ -33,8 +47,10 @@ class ParticipantRepository extends BaseRepository
 
     public function paginateWithMembership(int $perPage = 15)
     {
-        return $this->model->with(['membershipHistories', 'membershipPlan'])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        $query = $this->model->with(['membershipHistories', 'membershipPlan']);
+
+        Sort::apply($query, ['name', 'email', 'phone', 'membership_type', 'membership_end_date', 'is_active', 'total_events_participated', 'created_at'], 'created_at', 'desc');
+
+        return $query->paginate($perPage)->withQueryString();
     }
 }

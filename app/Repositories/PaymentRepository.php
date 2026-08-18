@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Payment;
+use App\Support\Sort;
 
 class PaymentRepository extends BaseRepository
 {
@@ -30,8 +31,10 @@ class PaymentRepository extends BaseRepository
 
     public function paginateWithParticipant(int $perPage = 15)
     {
-        return $this->model->with('participant')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        $query = $this->model->with('participant');
+
+        Sort::apply($query, ['invoice_number', 'payment_type', 'amount', 'payment_method', 'status', 'created_at'], 'created_at', 'desc');
+
+        return $query->paginate($perPage)->withQueryString();
     }
 }

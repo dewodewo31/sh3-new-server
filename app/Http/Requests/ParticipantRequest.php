@@ -14,7 +14,7 @@ class ParticipantRequest extends FormRequest
 
     public function rules(): array
     {
-        $participantId = $this->route('participant')?->id;
+        $participantId = $this->route('participant')?->id ?? $this->route('id');
 
         return [
             'user_id' => ['nullable', 'exists:users,id'],

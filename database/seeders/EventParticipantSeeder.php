@@ -58,7 +58,7 @@ class EventParticipantSeeder extends Seeder
                         'amount' => $amount,
                         'payment_status' => $amount > 0 ? 'confirmed' : 'confirmed',
                         'is_membership_free' => $isMembershipFree,
-                        'qr_code' => 'SH3-'.$event->id.'-'.$participant->id.'-'.strtoupper(substr(md5($event->id.$participant->id), 0, 8)),
+                        'qr_code' => $participant->hash_id,
                     ]
                 );
 

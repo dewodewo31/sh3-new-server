@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SponsorRequest;
 use App\Repositories\SponsorRepository;
@@ -14,7 +15,11 @@ class SponsorController extends Controller
 
     public function index()
     {
-        $sponsors = $this->sponsorRepository->all();
+        $sponsors = $this->sponsorRepository->allSorted(
+            ['name', 'tier', 'contact_person', 'year', 'is_active'],
+            'name',
+            'asc',
+        );
 
         return view('sponsors.index', compact('sponsors'));
     }
@@ -28,6 +33,10 @@ class SponsorController extends Controller
     {
         $data = $request->validated();
         $data['created_by'] = auth()->id();
+
+        if ($request->hasFile('logo')) {
+            $data['logo'] = ImageHelper::upload($request->file('logo'), 'sponsors');
+        }
 
         $this->sponsorRepository->create($data);
 
@@ -44,7 +53,16 @@ class SponsorController extends Controller
     public function update(int $id, SponsorRequest $request)
     {
         $sponsor = $this->sponsorRepository->findById($id);
-        $this->sponsorRepository->update($sponsor, $request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('logo')) {
+            if ($sponsor->logo) {
+                ImageHelper::delete($sponsor->logo);
+            }
+            $data['logo'] = ImageHelper::upload($request->file('logo'), 'sponsors');
+        }
+
+        $this->sponsorRepository->update($sponsor, $data);
 
         return redirect()->route('admin.sponsors.index')->with('success', 'Sponsor berhasil diupdate');
     }
@@ -52,6 +70,11 @@ class SponsorController extends Controller
     public function destroy(int $id)
     {
         $sponsor = $this->sponsorRepository->findById($id);
+
+        if ($sponsor->logo) {
+            ImageHelper::delete($sponsor->logo);
+        }
+
         $this->sponsorRepository->delete($sponsor);
 
         return redirect()->route('admin.sponsors.index')->with('success', 'Sponsor berhasil dihapus');

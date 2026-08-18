@@ -2,6 +2,51 @@
 
 Ikuti aturan berikut untuk setiap halaman yang memiliki tabel atau konten lebar.
 
+## Sortable Table Columns (WAJIB)
+
+Sejak **2026-08-15**, semua tabel index admin mendukung **sorting kolom**. Gunakan komponen
+`x-th-sort` pada setiap `<th>` yang kolomnya bisa diurutkan.
+
+### Cara Pakai
+
+```blade
+<x-th-sort column="name">Name</x-th-sort>
+<x-th-sort column="created_at">Tanggal</x-th-sort>
+<th>Kategori</th>  {{-- kolom non-sortable tetap pakai <th> biasa --}}
+```
+
+- `column` harus **persis nama kolom database** (whitelist di repository).
+- Tanpa atribut `column` → render teks polos (non-sortable).
+- Link yang dihasilkan mempertahankan query string lain (search/filter) saat toggle sort.
+
+### Backend (WAJIB ikut diterapkan)
+
+Setiap kolom yang dirender `x-th-sort` **harus** masuk whitelist `$allowed` di repository
+agar query `orderBy` aman (anti SQL injection via kolom).
+
+- Repositori memakai helper `App\Support\Sort`:
+
+```php
+Sort::apply($query, ['name', 'created_at', 'status'], 'created_at', 'desc');
+return $query->paginate($perPage)->withQueryString();
+```
+
+- Atau gunakan method `BaseRepository`:
+  - `allSorted(array $allowed, string $default = 'id', string $defaultDirection = 'asc', array $relations = [])`
+  - `paginateSorted(array $allowed, int $perPage = 15, array $relations = [], string $default = 'created_at', string $defaultDirection = 'desc')`
+
+### Query String
+
+- `?sort={kolom}&direction={asc|desc}`
+- Direksi tidak valid / kolom di luar whitelist → fallback ke default repository.
+- `direction` default saat kolom pertama diklik adalah `asc`; klik lagi → toggle ke `desc`.
+
+### CSS
+
+Class `.th-sort`, `.th-sort-icon`, `.th-sort.active`, `.th-sort.asc/.desc` didefinisikan di
+`resources/css/app.css` (`@layer components`). Ikon panah otomatis berubah arah berdasarkan
+class aktif. Jangan override dengan CSS inline.
+
 ## Layout
 
 - Jangan pernah membuat halaman memiliki horizontal scrollbar.

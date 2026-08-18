@@ -19,6 +19,7 @@ class UserSeeder extends Seeder
             ['name' => 'Bendahara', 'username' => 'bendahara', 'email' => 'bendahara@sh3.com', 'role' => 'bendahara'],
             ['name' => 'Sponsor', 'username' => 'sponsor', 'email' => 'sponsor@sh3.com', 'role' => 'sponsor'],
             ['name' => 'Merchandise', 'username' => 'merchandise', 'email' => 'merchandise@sh3.com', 'role' => 'merchandise'],
+            ['name' => 'Admin Gallery', 'username' => 'gallery', 'email' => 'admin.gallery@sh3.com', 'role' => 'gallery'],
         ];
 
         foreach ($users as $user) {

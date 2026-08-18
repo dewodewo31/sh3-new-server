@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Event;
+use App\Support\Sort;
 
 class EventRepository extends BaseRepository
 {
@@ -46,6 +47,14 @@ class EventRepository extends BaseRepository
         return $this->model->where('status', 'ongoing')->get();
     }
 
+    public function findScannable(array $relations = ['category'])
+    {
+        return $this->model->with($relations)
+            ->whereIn('status', ['publish', 'ongoing'])
+            ->orderBy('start_date')
+            ->get();
+    }
+
     public function paginateWithCategory(int $perPage = 15)
     {
         return $this->model->with('category')
@@ -74,8 +83,9 @@ class EventRepository extends BaseRepository
             $query->where('status', $filters['status']);
         }
 
-        return $query->orderBy('created_at', 'desc')
-            ->paginate($perPage)
+        Sort::apply($query, ['title', 'category_id', 'start_date', 'quota', 'price', 'status', 'created_at'], 'created_at', 'desc');
+
+        return $query->paginate($perPage)
             ->withQueryString();
     }
 

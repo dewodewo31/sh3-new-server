@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\MembershipPlan;
+use App\Support\Sort;
 use Illuminate\Database\Eloquent\Collection;
 
 class MembershipPlanRepository extends BaseRepository
@@ -33,7 +34,9 @@ class MembershipPlanRepository extends BaseRepository
             $query->where('is_active', $status === 'active');
         }
 
-        return $query->orderBy('sort_order')->orderBy('id')->paginate($perPage);
+        Sort::apply($query, ['name', 'price', 'duration', 'sort_order', 'is_active', 'created_at'], 'sort_order', 'asc');
+
+        return $query->orderBy('id')->paginate($perPage)->withQueryString();
     }
 
     public function nextSortOrder(): int
@@ -52,5 +55,10 @@ class MembershipPlanRepository extends BaseRepository
     public function findActiveByKey(string $key): ?MembershipPlan
     {
         return $this->model->where('key', $key)->where('is_active', true)->first();
+    }
+
+    public function findByKey(string $key): ?MembershipPlan
+    {
+        return $this->model->where('key', $key)->first();
     }
 }

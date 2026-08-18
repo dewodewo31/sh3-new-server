@@ -2,6 +2,307 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-16 — Hash ID Admin, Preview Gambar Event, Role Gallery
+
+> **Riwayat (digantikan 2026-08-17):** kolom "Hash ID" pada panel peserta kini menampilkan
+> `participant_code` (member `0001`, non-member `NM0001`). Kolom DB `hash_id` dihapus
+> (migration `2026_08_17_000002`), tanpa backward compat.
+
+### A. Hash ID Partisipan di Panel Admin
+
+Tampilkan `hash_id` peserta di panel admin — murni perubahan view, backend sudah menyediakan via accessor `$appends = ['hash_id']` pada model `Participant`.
+
+- **`resources/views/participants/index.blade.php`** — kolom "Hash ID" ditambahkan di tabel daftar peserta (setelah kolom Name). Nilai ditampilkan dalam format `<code>` monospace. Empty-state `colspan` diubah dari 8 → 9.
+- **`resources/views/participants/show.blade.php`** — row "Hash ID" ditambahkan di kartu Data Peserta (setelah row Nama). Format `<code>` monospace.
+
+### B. Preview Banner & Gambar Event di Panel Admin
+
+- **`resources/views/events/index.blade.php`** — kolom "Gambar" (thumbnail) ditambahkan di tabel daftar event (antara Title dan Category). Menggunakan `ImageHelper::getUrl($event->image)`. Empty-state `colspan` diubah dari 8 → 9.
+- **`resources/views/events/show.blade.php`** — blok media (banner full-width + gambar thumbnail) ditambahkan di kartu Detail Event, sebelum grid info. Banner: `max-height:240px`, gambar: `h-24 w-36`. Keduanya conditional (`@if`). Menggunakan `ImageHelper::getUrl()`.
+
+### C. Role 'gallery' + Akun Admin Gallery
+
+Role baru `gallery` ditambahkan untuk akun yang hanya bisa mengelola Galleries & Albums.
+
+- **`database/migrations/2026_08_16_000001_add_gallery_role_to_users.php`** (baru) — menambahkan `'gallery'` ke ENUM role users via `ALTER TABLE`. Guard `mysql` driver. Rollback menghapus `'gallery'`.
+- **`app/Http/Requests/UserRequest.php`** — `'gallery'` ditambahkan ke `Rule::in([...])`.
+- **`resources/views/users/create.blade.php`** & **`edit.blade.php`** — `'gallery'` ditambahkan ke array dropdown role.
+- **`routes/web.php`** — grup route galleries (`admin.galleries.*` + `admin.gallery-albums.*`) dipisah dari grup categories/organization. Middleware gallery: `admin_full_access,admin_laman,gallery`.
+- **`config/sidebar.php`** — `'gallery'` ditambahkan ke roles menu Dashboard, Galleries, dan Albums.
+- **`database/seeders/UserSeeder.php`** — entry `Admin Gallery` (`admin.gallery@sh3.com` / `password` / role `gallery`).
+- **`README.md`** — baris kredensial Admin Gallery ditambahkan di tabel Default Credentials.
+
+---
+
+## 2026-08-15 — Sync-Up OTS (Payment + Attendance), Re-Registration Flow, Sortable Tables, Gallery Album & Seeder Import
+
+### A. Sync-Up OTS: Sinkronisasi Offline Lengkap (Payment + Attendance + Dedup)
+
+**Commit:** `a445031` → `b72e698` → `9be35b7` — `app/Http/Controllers/API/AttendanceController.php` dirombak besar-besaran.
+
+#### Route Publik (bukan lagi auth-only)
+
+- **`routes/api.php`** — `POST /api/v1/attendance/sync-up` dan `GET /api/v1/attendance/sync-down`
+  dipindahkan dari grup `auth:sanctum` ke grup **publik** (sebelumnya hanya bisa dipanggil
+  dengan token; device OTS offline tidak memiliki token). Kini bisa dipanggil tanpa autentikasi.
+
+#### Payload `sync-up`
+
+Request `POST /api/v1/attendance/sync-up` kini menerima **dua array**:
+
+```json
+{
+  "attendances": [
+    {
+      "event_id": 1,
+      "participant_code": "0001",
+      "check_in_time": "2026-08-17 07:30:00",
+      "check_out_time": null
+    }
+  ],
+  "ots_registrations": [
+    {
+      "event_id": 1,
+      "participant_code": "NM0001",
+      "member_name": "Budi",
+      "check_in_time": "2026-08-17 08:00:00",
+      "check_out_time": null
+    }
+  ]
+}
+```
+
+#### Alur proses `sync-up`
+
+1. **Attendance reguler** (`attendances[]`):
+   - `EventParticipant` dicari via `event_id` + peserta dengan `participant_code` yang sama
+   (`whereHas('participant', participant_code)`). Payload tanpa `participant_code`
+   (format lama) **di-abaikan diam-diam** (`synced_attendance_count` 0).
+   - `event_participants` di-update: `check_in_at`, `check_out_at`, `is_attended = true`.
+   - `attendances` di-*update* bila sudah ada (tanpa duplikasi), atau dibuat bila belum ada.
+   - Jika attendance sudah punya `check_out_time`, hanya `check_in_time` + `status=present`
+     yang di-update (mencegah menimpa waktu keluar yang sudah tercatat).
+2. **OTS member** (`ots_registrations[]`):
+   - Participant aggregator sentinel `NM0000` (`Participant::OTS_AGGREGATOR_CODE`, `firstOrCreate`,
+     `name = 'Manual OTS NON MEMBER'`, `email = manual.ots@sh3.com`) dibuat otomatis untuk OTS manual.
+   - OTS member: participant dicari/dibuat via `participant_code`.
+   - **Satu `EventParticipant` per participant per event** (`firstOrCreate` dengan
+     `qr_code = OTS-{participant_code}EV{event_id}`, `registration_type = paid`, `payment_status = confirmed`).
+   - `total_events_participated` di-increment **hanya sekali per event** (tracking `$processedEvents`).
+   - **Payment dibuat otomatis** untuk setiap scan OTS: `INV-OTS-{random8}`, tipe
+     `event_registration`, method `cash`, status `confirmed`, terhubung polymorphic ke
+     `EventParticipant`.
+   - Attendance di-*update* bila sudah ada (dedup), dibuat bila belum, dengan
+     `notes = 'Manual OTS: ...'` atau `'OTS Member: ...'`.
+   - `event_participants.check_in_at/check_out_at` di-sinkronkan ulang.
+
+#### Fix OTS dedup & re-registration (`9be35b7`)
+
+- **`app/Services/EventService.php`** — re-registrasi sekarang **memperbarui** `EventParticipant`
+  yang sudah ada (reset `is_attended=false`, `check_in_at/out_at=null`, `payment_id`,
+  `registration_type`, `amount`, `payment_status`) dan **menghapus attendance lama**
+  (`$registration->attendance()->delete()`) alih-alih menolak/duplikasi.
+- `total_events_participated` hanya di-increment pada **registrasi pertama** (bila `$existing` null).
+- Keanggotaan gratis kini memakai hasil terstruktur `membershipService->checkEligibility()`
+  (`$eligibility['is_eligible']`), bukan hitungan manual.
+- **`app/Models/EventParticipant.php`** — method baru `markAsRejected()`.
+- **`app/Services/PaymentService.php`** — `rejectPayment()` dibungkus `DB::transaction` dan
+  memanggil `$paymentable->markAsRejected()` bila method ada (status `event_participants`
+  kini ikut berubah menjadi `rejected` saat pembayaran ditolak).
+- **`app/Http/Controllers/API/EventController.php`** — pengecekan `payment_method`/`payment_proof`
+  didasarkan pada `$registration->amount > 0` (bukan `$event->price`), sehingga re-registrasi
+  membership-free tidak memaksa upload bukti bayar. `orderStatus()` memperbaiki status
+  `rejected` (bukan lagi `cancelled`) dan `is_membership_free`.
+
+#### Verifikasi
+
+- `tests/Feature/AttendanceApiTest.php` (+116 baris) dan `tests/Feature/EventApiTest.php`
+  (baru, +384 baris) menambah cakupan alur attendance dan re-registration.
+
+### B. Sortable Tables (Kolom Tabel Bisa Diurutkan) — Admin
+
+Semua tabel index admin kini mendukung **sorting kolom** lewat query string
+`?sort={kolom}&direction={asc|desc}` tanpa reload halaman.
+
+#### Komponen Baru
+
+- **`app/Support/Sort.php`** (baru) — helper statis:
+  - `resolve(array $allowed, string $default, string $defaultDirection)` — membaca `sort` &
+    `direction` dari request, memvalidasi terhadap whitelist kolom, fallback ke default.
+  - `apply(Builder $query, array $allowed, ...)` — menerapkan `orderBy` dengan aman.
+  - `active($column)`, `nextDirection($column)`, `isAsc($column)`, `url($column)` —
+    membangun URL sort yang mempertahankan query string lain (search/filter) sambil toggle arah.
+  - `directionLabel($column)` — label aksesibilitas.
+- **`resources/views/components/th-sort.blade.php`** (baru) — Blade component:
+  ```blade
+  <x-th-sort column="name">Name</x-th-sort>
+  ```
+  Merender link sort dengan ikon panah atas/bawah; class aktif `active asc/desc` diset
+  otomatis. Tanpa `column` → render teks polos.
+- **`resources/css/app.css`** — class `.th-sort`, `.th-sort-icon`, `.th-sort.active`,
+  `.th-sort.asc/.desc` (Tailwind `@layer components`).
+
+#### Repository (BaseRepository + per-modul)
+
+- **`app/Repositories/BaseRepository.php`** — method baru:
+  - `allSorted(array $allowed, string $default = 'id', string $defaultDirection = 'asc', array $relations = [])`
+  - `paginateSorted(array $allowed, int $perPage = 15, array $relations = [], string $default = 'created_at', string $defaultDirection = 'desc')`
+  (keduanya memakai `Sort::apply` + `->withQueryString()` pada paginate).
+- Repository lain memakai `Sort::apply` langsung: `AttendanceRepository` (check_in_time),
+  `EventRepository` (created_at), `MembershipHistoryRepository`, `MembershipPlanRepository`
+  (sort_order), `MerchandiseRepository`, `ParticipantRepository`, `PaymentRepository`,
+  `GalleryAlbumRepository`.
+
+#### Controller & View yang Diperbarui
+
+- `Admin\CategoryController` → `allSorted(['name','slug','distance_km','sort_order','is_active'], 'sort_order', 'asc')`
+- `Admin\GalleryController` → `paginateSorted(['title','type','is_featured','created_at'], 15, ['event'])`
+- `Admin\OrganizationController` → `allSorted([...], 'sort_order', 'asc')`
+- `Admin\SponsorController` → `allSorted([...], 'name', 'asc')`
+- `Admin\UserController` → `paginateSorted(['name','email','role','is_active','last_login','created_at'], 15)`
+- View index: `attendance`, `categories`, `events`, `galleries`, `membership_plans`,
+  `memberships`, `merchandise`, `organizations`, `participants`, `payments`, `sponsors`,
+  `users`, `gallery-albums` — `<th>` diganti `<x-th-sort column="...">`.
+
+### C. Gallery Album Module (CRUD Admin)
+
+Modul baru untuk mengelola **album galeri** (mengelompokkan gallery per event).
+
+- **`app/Http/Controllers/Admin/GalleryAlbumController.php`** (baru) — index, create, store,
+  edit, update, destroy; upload cover via `ImageHelper::upload(..., 'albums')`, hapus cover lama,
+  dan `logActivity()` (create_album/update_album/delete_album).
+- **`app/Repositories/GalleryAlbumRepository.php`** (baru) — `paginateWithRelations(15)`
+  dengan relasi `event`, `withCount('galleries')`, dan `Sort::apply`.
+- **`app/Http/Requests/GalleryAlbumRequest.php`** (baru) — `event_id` (nullable, exists),
+  `title` (required), `description` (nullable), `cover_image` (image, max 4096).
+- **`resources/views/gallery-albums/`** (baru) — `index.blade.php`, `create.blade.php`, `edit.blade.php`.
+- **`routes/web.php`** — `Route::resource('gallery-albums', ...)` dalam grup role
+  `admin_full_access,admin_laman`.
+- **`config/sidebar.php`** — item menu "Albums" (ikon album) di bawah Gallery,
+  aktif untuk `admin.gallery-albums.*`.
+- **`app/Models/GalleryAlbum.php`** — model sudah ada; relasi `event()` dan `galleries()`.
+
+> Tabel `gallery_albums` sudah ada sejak awal (migration `2024_01_01_000012`). Modul ini
+> menambahkan antarmuka admin CRUD-nya. Detail lengkap: `docs/19 — Gallery Album Module.md`.
+
+### D. Fix Checkbox `is_free_for_members` (Hidden Value)
+
+- **`resources/views/events/create.blade.php`** & **`edit.blade.php`** — ditambahkan
+  `<input type="hidden" name="is_free_for_members" value="0">` sebelum checkbox.
+  Sebelumnya, bila checkbox tidak dicentang, field tidak terkirim → Laravel menganggap
+  `false`/default `true` (bila kolom `boolean` default true). Kini unchecked selalu mengirim `0`.
+
+### E. Seeder Import Peserta SH3
+
+> **Riwayat (digantikan 2026-08-17):** seeder kini keyed on `participant_code` (kolom `hash_id` dihapus).
+
+- **`database/seeders/Sh3ParticipantImportSeeder.php`** (baru) — import peserta SH3 dari data
+  spreadsheet ke tabel `participants` + `users` (role participant). **Idempotent** (keyed on
+  `hash_id`), bisa dijalankan ulang tanpa duplikat:
+  ```bash
+  php artisan db:seed --class=Sh3ParticipantImportSeeder
+  ```
+  - Membuat `User` (username + password hashed) untuk login participant API.
+  - Menangani email kosong → dummy (`dummy+{hash_id}@example.com`), email duplikat → dummy,
+    username invalid → normalisasi, username bentrok → suffix `_1`, `_2`, dst.
+  - Menghasilkan summary & laporan conflict/error.
+- **`tests/Feature/Sh3ParticipantImportTest.php`** (baru) — 19 peserta terimport, password
+  hashed & login bekerja, idempotent pada re-run, dummy email, normalisasi username.
+
+### F. Test Suite Admin (baru)
+
+- **`tests/Feature/Admin/`** (baru, 7 file, ±957 baris):
+  - `AdminAuthTest.php` — login web admin (guest redirect, login valid/invalid, logout).
+  - `AdminAccessControlTest.php` — matrix role per halaman (dashboard, users, membership
+    plans, participants, memberships, events, categories, galleries, organization, sponsors,
+    merchandise, payments, attendance).
+  - `AdminDashboardTest.php`, `AdminParticipantTest.php`, `AdminMembershipTest.php`,
+    `AdminMembershipPlanTest.php`, `AdminUserManagementTest.php` — CRUD & akses halaman admin.
+
+---
+
+## 2026-08-14 — Deploy Produksi: Fix Sync-Down, Payments History, Participants, Reverb TLS & PHP 8.3
+
+### Perubahan Kode
+
+- **`app/Repositories/AttendanceRepository.php`** — fix sinkronisasi `sync-down`:
+  Parameter `since` (ISO UTC dari client) kini di-parse dan dikonversi ke timezone aplikasi
+  (`Carbon::parse(...)->timezone(config('app.timezone'))`) sebelum dibandingkan dengan `updated_at`
+  yang tersimpan dalam timezone lokal (Asia/Jakarta). Sebelumnya selisih 7 jam menyebabkan
+  data yang sudah ter-sync tetap terkirim ulang.
+- **`routes/api.php`** — fix route `/api/v1/payments/history` tertelan oleh `/payments/{id}`:
+  Route `history` dipindah ke atas route `{id}` dan `{id}` diberi constrain `->whereNumber('id')`.
+  Sebelumnya `GET /payments/history` memanggil `PaymentController::show()` dengan `id='history'`
+  → `TypeError` (500).
+- **`app/Http/Controllers/API/ParticipantController.php`** — fix `paginate(['user'])`:
+  Argumen pertama `paginate()` adalah `int $perPage`, bukan array relasi.
+  Diubah menjadi `paginate(15, ['user'])` → `GET /api/v1/participants` tidak lagi 500.
+- **`app/Http/Requests/ParticipantRequest.php`** — fix validasi unique email saat update:
+  Route param bernama `{id}` (bukan `{participant}`), sehingga `Route::unique('participants')->ignore()`
+  gagal dan email sendiri dianggap "already taken". Kini `$participantId` diambil dari `route('participant')`
+  atau `route('id')`.
+- **`config/reverb.php`** — Reverb kini dapat berjalan **secure (WSS/HTTPS langsung di port 8080)**
+  memakai sertifikat Let's Encrypt: TLS diisi dari `REVERB_TLS_CERT` / `REVERB_TLS_KEY`
+  (default `/etc/reverb/fullchain.pem` & `/etc/reverb/privkey.pem`). Sesuai `.env`
+  `REVERB_SCHEME=https`. Sebelumnya `'tls' => []` (plain HTTP) sehingga broadcast dari PHP
+  ke `https://server-sh3.cloud:8080` gagal (`SSL connection timeout`).
+
+### Infrastruktur / Konfigurasi Server
+
+- Project di-deploy pada **PHP 8.3** (branch `prod`). Branch `main` memerlukan PHP 8.4.
+- Sertifikat TLS untuk Reverb disalin ke `/etc/reverb/` (ownership `www-data`, `privkey.pem` mode `600`)
+  karena `/etc/letsencrypt` tidak dapat dibaca oleh user `www-data` (Reverb dijalankan sebagai `www-data`).
+- `phpunit.xml` disesuaikan ke database lokal (`127.0.0.1`, user `sh3_user`, DB `db_server_new_test`)
+  menggantikan nilai Docker (`DB_HOST=mysql`, root) yang tidak tersedia di server.
+
+### Verifikasi
+
+- `php artisan test` → **164/164 PASS** (520 assertions).
+- API publik & autentikasi (auth, events, membership, payments, participants, merchandise,
+  attendance, notifications, organization, galleries) → 200 OK di `https://server-sh3.cloud`.
+- Broadcast real-time berhasil dikirim melalui **WSS/HTTPS** ke Reverb (handshake WebSocket 101).
+- Panel admin (`/admin/*`) login via email dan seluruh halaman 200.
+- Upload foto profil & QR scan attendance berfungsi.
+
+---
+
+## 2026-08-14 — Participant Forgot/Reset Password (Tanpa Email / Pihak Ketiga)
+
+> **Riwayat (digantikan 2026-08-17):** verifikasi kini memakai **Username + `participant_code`**
+> (member `0001` / non-member `NM0001`). Lihat `docs/18 — Participant Password Reset.md`.
+
+Fitur reset password khusus **Participant** tanpa email / OTP / SMS / WA / pihak ke-3.
+Verifikasi hanya **Username + Hash ID** (kode peserta). Terpisah dari reset password Admin.
+
+### Endpoint (publik, via API)
+| Method | Path                                        | Keterangan                                      |
+|--------|---------------------------------------------|-------------------------------------------------|
+| POST   | `/api/v1/participant/auth/verify-reset`     | Verifikasi username + hash_id                   |
+| POST   | `/api/v1/participant/auth/reset-password`   | Reset password (throttle 5/15 mnt per IP)       |
+
+### File
+- `app/Http/Controllers/API/ParticipantAuthController.php` (baru)
+- `app/Services/ParticipantPasswordResetService.php` (baru)
+- `app/Http/Requests/ParticipantVerifyResetRequest.php`, `ParticipantResetPasswordRequest.php` (baru)
+- `routes/api.php` — 2 route publik (`reset-password` + `throttle:5,15`)
+- `app/Models/Participant.php` — `hash_id` kini kolom unik (kode peserta `SH3XXXXXXX`), auto-generate + migrasi backfill
+- `database/migrations/2026_08_14_000100_add_hash_id_to_participants_table.php` (baru)
+- `tests/Feature/ParticipantPasswordResetTest.php` (baru, 10 kasus) — **PASS**
+
+### Keamanan
+- `Hash::make()`; token participant di-revoke setelah reset.
+- Hanya pemilik kombinasi username + hash_id yang bisa reset; peserta lain / Admin ditolak dengan pesan generik.
+- `hash_id` peserta lain tidak dibocorkan.
+- Rate limit 5 / 15 mnt / IP pada `reset-password`.
+
+### Audit Log
+- `user_activity_logs`: `action = 'Participant Password Reset'`, `details = {participant_id, username}`, `ip_address`, `user_agent`.
+
+### Dokumentasi
+- `docs/18 — Participant Password Reset.md` (baru).
+
+---
+
 ## 2026-08-06 — Dedicated Participant Authentication (Username-based)
 
 ### Latar Belakang
@@ -227,6 +528,9 @@ Sistem otentikasi sebelumnya menggunakan **shared `LoginRequest`** untuk kedua j
 | `GET /my-events` | **Baru** (auth) — event yang diikuti user + status order (`EventController::myEvents()`). |
 
 ### API — Response/Resource
+
+> **Riwayat (digantikan 2026-08-17):** `ParticipantResource` kini meng-expose
+> `participant_code`, bukan `hash_id`.
 
 - **`EventResource`**: menambahkan `image_url`, `banner_url`, `registered_count` (hitung `eventParticipants` pending+confirmed), `creator` (id+nama), dan `galleries` (array URL foto).
 - **`ParticipantResource`**: menambahkan `hash_id`.

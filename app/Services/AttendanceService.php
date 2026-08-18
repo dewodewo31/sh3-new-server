@@ -34,6 +34,12 @@ class AttendanceService
                 ]);
             }
 
+            if (! in_array($registration->payment_status, ['pending', 'confirmed'], true)) {
+                throw ValidationException::withMessages([
+                    'participant' => ['Pendaftaran ini ditolak/dibatalkan dan tidak dapat digunakan untuk check-in.'],
+                ]);
+            }
+
             $attendance = $this->attendanceRepository->findByEventParticipant($registration->id);
 
             if ($attendance && $attendance->check_in_time) {
@@ -88,6 +94,12 @@ class AttendanceService
                 ]);
             }
 
+            if (! in_array($registration->payment_status, ['pending', 'confirmed'], true)) {
+                throw ValidationException::withMessages([
+                    'participant' => ['Pendaftaran ini ditolak/dibatalkan dan tidak dapat digunakan untuk check-out.'],
+                ]);
+            }
+
             $attendance = $this->attendanceRepository->findByEventParticipant($registration->id);
 
             if (! $attendance || ! $attendance->check_in_time) {
@@ -103,7 +115,7 @@ class AttendanceService
         });
     }
 
-    public function scanQRCode(string $qrData): array
+    public function scanQRCode(string $qrData, ?int $eventId = null): array
     {
         $decoded = $this->qrCodeService->decode($qrData);
 
@@ -113,7 +125,50 @@ class AttendanceService
             ]);
         }
 
-        return $decoded;
+        $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
+
+        if (! $participant) {
+            throw ValidationException::withMessages([
+                'participant' => ['Kode peserta tidak dikenal.'],
+            ]);
+        }
+
+        if ($eventId === null) {
+            return [
+                'hash_id' => $decoded['hash_id'],
+                'name' => $participant->name,
+                'status' => $decoded['status'],
+                'registered_events' => $this->eventParticipantRepository
+                    ->findEventsByParticipant($participant->id)
+                    ->map(fn (EventParticipant $ep) => [
+                        'event_id' => $ep->event_id,
+                        'event_title' => $ep->event?->title,
+                        'payment_status' => $ep->payment_status,
+                        'is_attended' => (bool) $ep->is_attended,
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+        }
+
+        $registration = $this->eventParticipantRepository->findByEventAndParticipant($eventId, $participant->id);
+
+        if (! $registration) {
+            throw ValidationException::withMessages([
+                'participant' => ['Peserta tidak terdaftar di event ini.'],
+            ]);
+        }
+
+        return [
+            'hash_id' => $decoded['hash_id'],
+            'name' => $participant->name,
+            'status' => $decoded['status'],
+            'event_id' => $eventId,
+            'participant_id' => $participant->id,
+            'registration_status' => $registration->payment_status,
+            'is_attended' => (bool) $registration->is_attended,
+            'check_in_time' => $registration->check_in_at?->toISOString(),
+        ];
     }
 
     public function report(array $filters = []): array
@@ -128,6 +183,7 @@ class AttendanceService
                 return [
                     'event_id' => $attendance->eventParticipant?->event_id,
                     'participant_id' => $attendance->eventParticipant?->participant_id,
+                    'hash_id' => $attendance->eventParticipant?->participant?->hash_id,
                     'status' => $attendance->status,
                     'check_in_time' => $attendance->check_in_time?->toISOString(),
                     'check_out_time' => $attendance->check_out_time?->toISOString(),

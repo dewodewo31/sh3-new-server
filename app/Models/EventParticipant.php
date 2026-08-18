@@ -45,4 +45,9 @@ class EventParticipant extends Model
     {
         $this->update(['payment_status' => 'confirmed']);
     }
+
+    public function markAsRejected(): void
+    {
+        $this->update(['payment_status' => 'rejected']);
+    }
 }

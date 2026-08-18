@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\CategoryController;
+use App\Http\Controllers\API\ParticipantAuthController;
 use App\Http\Controllers\API\EventController;
 use App\Http\Controllers\API\GalleryController;
 use App\Http\Controllers\API\MembershipController;
@@ -25,11 +26,26 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 
+    Route::post('/participant/auth/verify-reset', [ParticipantAuthController::class, 'verifyReset']);
+    Route::post('/participant/auth/reset-password', [ParticipantAuthController::class, 'resetPassword'])->middleware('throttle:5,15');
+
     Route::get('/events/upcoming', [EventController::class, 'upcoming']);
     Route::get('/events', [EventController::class, 'index']);
     Route::get('/events/{id}', [EventController::class, 'show']);
     Route::get('/events/{id}/participants', [EventController::class, 'participants']);
     Route::get('/galleries', [GalleryController::class, 'index']);
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/merchandise', [MerchandiseController::class, 'index']);
+    Route::get('/merchandise/{id}', [MerchandiseController::class, 'show'])->whereNumber('id');
+    Route::get('/sponsors', [SponsorController::class, 'index']);
+    Route::get('/organization', [OrganizationController::class, 'index']);
+    Route::get('/organization/{id}', [OrganizationController::class, 'show'])->whereNumber('id');
+    Route::get('/organization/stats', [OrganizationController::class, 'stats']);
+    Route::get('/organization/tree', [OrganizationController::class, 'tree']);
+    Route::get('/organization/years', [OrganizationController::class, 'years']);
+
+    Route::post('/attendance/sync-up', [AttendanceController::class, 'syncUp']);
+    Route::get('/attendance/sync-down', [AttendanceController::class, 'syncDown']);
 
     Route::get('/sponsors', [SponsorController::class, 'index']);
     Route::get('/categories', [CategoryController::class, 'index']);
@@ -64,8 +80,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
 
         Route::post('/payments/create', [PaymentController::class, 'store']);
-        Route::get('/payments/{id}', [PaymentController::class, 'show']);
         Route::get('/payments/history', [PaymentController::class, 'history']);
+        Route::get('/payments/{id}', [PaymentController::class, 'show'])->whereNumber('id');
 
         Route::middleware('role:admin_full_access,bendahara')->group(function () {
             Route::post('/payments/confirm/{id}', [PaymentController::class, 'confirm'])->whereNumber('id');
@@ -80,9 +96,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn']);
         Route::post('/attendance/check-out', [AttendanceController::class, 'checkOut']);
         Route::post('/attendance/scan', [AttendanceController::class, 'scan']);
-        Route::post('/attendance/sync-up', [AttendanceController::class, 'syncUp']);
         Route::get('/attendance/report', [AttendanceController::class, 'report']);
-        Route::get('/attendance/sync-down', [AttendanceController::class, 'syncDown']);
         Route::get('/attendance/{eventId}', [AttendanceController::class, 'byEvent']);
 
         Route::post('/merchandise/order', [MerchandiseController::class, 'order']);

@@ -17,11 +17,11 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Name</th>
-                    <th>Tier</th>
-                    <th>Contact</th>
-                    <th>Year</th>
-                    <th>Active</th>
+                    <x-th-sort column="name">Name</x-th-sort>
+                    <x-th-sort column="tier">Tier</x-th-sort>
+                    <x-th-sort column="contact_person">Contact</x-th-sort>
+                    <x-th-sort column="year">Year</x-th-sort>
+                    <x-th-sort column="is_active">Active</x-th-sort>
                     <th>Aksi</th>
                 </tr>
             </thead>

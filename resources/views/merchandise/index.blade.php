@@ -17,10 +17,10 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Name</th>
-                    <th>Price</th>
-                    <th>Stock</th>
-                    <th>Status</th>
+                    <x-th-sort column="name">Name</x-th-sort>
+                    <x-th-sort column="price">Price</x-th-sort>
+                    <x-th-sort column="stock">Stock</x-th-sort>
+                    <x-th-sort column="status">Status</x-th-sort>
                     <th>Aksi</th>
                 </tr>
             </thead>

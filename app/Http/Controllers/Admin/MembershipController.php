@@ -28,7 +28,7 @@ class MembershipController extends Controller
 
     public function create()
     {
-        $participants = $this->participantRepository->all(['membershipPlan']);
+        $participants = $this->participantRepository->eligibleForMembership(['membershipPlan']);
         $plans = $this->membershipService->plans();
 
         return view('memberships.create', compact('participants', 'plans'));

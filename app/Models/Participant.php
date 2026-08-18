@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Services\ParticipantCodeService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -11,9 +12,9 @@ class Participant extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    public const OTS_AGGREGATOR_CODE = 'NM0000';
 
-    protected $appends = ['hash_id'];
+    protected $guarded = [];
 
     protected function casts(): array
     {
@@ -76,12 +77,27 @@ class Participant extends Model
         return $this->membership_end_date && $this->membership_end_date >= now()->toDateString();
     }
 
-    protected function hashId(): Attribute
+    /**
+     * Single source of truth for the admin grant participant dropdown:
+     * participants WITHOUT a currently-active membership (status=active AND
+     * end_date >= today). cancelled/expired/past-end_date histories do not
+     * disqualify a participant. Used by both the create form query and the
+     * POST validation, so frontend filtering can never be bypassed.
+     */
+    public function scopeEligibleForMembership(Builder $query): Builder
     {
-        return Attribute::make(
-            get: fn () => $this->isMembershipActive()
-                ? sprintf('%04d', $this->id)
-                : 'NM-'.sprintf('%04d', $this->id),
-        );
+        return $query->whereDoesntHave('membershipHistories', function (Builder $q) {
+            $q->active(); // MembershipHistory::scopeActive — single source of truth
+        });
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Participant $participant) {
+            if (empty($participant->hash_id)) {
+                $participant->hash_id = app(ParticipantCodeService::class)
+                    ->next($participant->membership_type === 'none' ? 'NM' : '');
+            }
+        });
     }
 }
