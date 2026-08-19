@@ -18,10 +18,10 @@ class GalleryResource extends JsonResource
             'description' => $this->description,
             'source' => $this->source,
             'url' => $this->source === 'gdrive'
-                ? $this->google_drive_url
+                ? ImageHelper::gdriveThumbUrl($this->google_drive_url, $this->google_drive_file_id)
                 : ImageHelper::getUrl($this->file_path),
             'thumb' => $this->source === 'gdrive'
-                ? $this->google_drive_url
+                ? ImageHelper::gdriveThumbUrl($this->google_drive_url, $this->google_drive_file_id)
                 : ($this->thumbnail_path
                     ? ImageHelper::getUrl($this->thumbnail_path)
                     : ImageHelper::getUrl($this->file_path)),

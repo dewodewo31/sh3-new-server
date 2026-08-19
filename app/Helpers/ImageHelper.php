@@ -22,10 +22,19 @@ class ImageHelper
 
     public static function getUrl(?string $path): ?string
     {
-        if (!$path) {
+        if (! $path) {
             return null;
         }
 
         return Storage::disk('public')->url($path);
+    }
+
+    public static function gdriveThumbUrl(?string $url, ?string $fileId): ?string
+    {
+        if ($fileId) {
+            return 'https://drive.google.com/thumbnail?id='.$fileId.'&sz=w800';
+        }
+
+        return $url;
     }
 }

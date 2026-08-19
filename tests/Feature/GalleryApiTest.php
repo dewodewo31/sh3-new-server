@@ -98,4 +98,54 @@ class GalleryApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(0, 'data.galleries');
     }
+
+    public function test_gdrive_gallery_uses_thumbnail_url_when_file_id_present(): void
+    {
+        $this->createGallery([
+            'title' => 'Drive Photo',
+            'source' => 'gdrive',
+            'is_featured' => true,
+            'google_drive_url' => 'https://drive.google.com/file/d/abc123def/view?usp=sharing',
+            'google_drive_file_id' => 'abc123def',
+        ]);
+
+        $this->getJson('/api/v1/galleries')
+            ->assertOk()
+            ->assertJsonPath('data.0.url', 'https://drive.google.com/thumbnail?id=abc123def&sz=w800')
+            ->assertJsonPath('data.0.thumb', 'https://drive.google.com/thumbnail?id=abc123def&sz=w800');
+    }
+
+    public function test_gdrive_gallery_falls_back_to_raw_url_without_file_id(): void
+    {
+        $rawUrl = 'https://drive.google.com/file/d/xyz789/view';
+
+        $this->createGallery([
+            'title' => 'Drive Photo No Id',
+            'source' => 'gdrive',
+            'is_featured' => true,
+            'google_drive_url' => $rawUrl,
+            'google_drive_file_id' => null,
+        ]);
+
+        $this->getJson('/api/v1/galleries')
+            ->assertOk()
+            ->assertJsonPath('data.0.url', $rawUrl);
+    }
+
+    public function test_event_detail_gdrive_gallery_uses_thumbnail_url(): void
+    {
+        $event = $this->createEvent();
+        $this->createGallery([
+            'title' => 'Drive Photo',
+            'source' => 'gdrive',
+            'is_featured' => true,
+            'event_id' => $event->id,
+            'google_drive_url' => 'https://drive.google.com/file/d/thumb456/view',
+            'google_drive_file_id' => 'thumb456',
+        ]);
+
+        $this->getJson("/api/v1/events/{$event->id}")
+            ->assertOk()
+            ->assertJsonPath('data.galleries.0', 'https://drive.google.com/thumbnail?id=thumb456&sz=w800');
+    }
 }

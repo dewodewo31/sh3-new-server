@@ -53,7 +53,7 @@ class EventResource extends JsonResource
                         ['id', 'asc'],
                     ])
                     ->map(fn ($gallery) => $gallery->source === 'gdrive'
-                        ? $gallery->google_drive_url
+                        ? ImageHelper::gdriveThumbUrl($gallery->google_drive_url, $gallery->google_drive_file_id)
                         : ImageHelper::getUrl($gallery->file_path))
                     ->values();
             }, []),
