@@ -11,9 +11,11 @@ use App\Models\Payment;
 use App\Repositories\EventParticipantRepository;
 use App\Repositories\EventRepository;
 use App\Services\EventService;
+use App\Services\FileService;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class EventController extends Controller
 {
@@ -22,13 +24,23 @@ class EventController extends Controller
         private EventParticipantRepository $eventParticipantRepository,
         private EventService $eventService,
         private PaymentService $paymentService,
+        private FileService $fileService,
     ) {}
 
     public function index(): JsonResponse
     {
-        $events = $this->eventRepository->findPublic(['category']);
+        $cached = Cache::get('api:events:list');
 
-        return response()->json(['data' => EventResource::collection($events)]);
+        if ($cached) {
+            return response()->json($cached);
+        }
+
+        $events = $this->eventRepository->findPublic(['category']);
+        $payload = ['data' => EventResource::collection($events)];
+
+        Cache::put('api:events:list', $payload, 60);
+
+        return response()->json($payload);
     }
 
     public function show(int $id): JsonResponse
@@ -41,6 +53,7 @@ class EventController extends Controller
     public function store(EventRequest $request): JsonResponse
     {
         $event = $this->eventRepository->create($request->validated());
+        Cache::forget('api:events:list');
 
         return response()->json(['data' => new EventResource($event), 'message' => 'Event berhasil dibuat'], 201);
     }
@@ -49,6 +62,7 @@ class EventController extends Controller
     {
         $event = $this->eventRepository->findById($id);
         $this->eventRepository->update($event, $request->validated());
+        Cache::forget('api:events:list');
 
         return response()->json(['data' => new EventResource($event->fresh()), 'message' => 'Event berhasil diupdate']);
     }
@@ -57,6 +71,7 @@ class EventController extends Controller
     {
         $event = $this->eventRepository->findById($id);
         $this->eventRepository->delete($event);
+        Cache::forget('api:events:list');
 
         return response()->json(['message' => 'Event berhasil dihapus']);
     }
@@ -65,6 +80,7 @@ class EventController extends Controller
     {
         $event = $this->eventRepository->findById($id);
         $this->eventService->cancelEvent($event);
+        Cache::forget('api:events:list');
 
         return response()->json(['message' => 'Event berhasil dibatalkan']);
     }
@@ -92,7 +108,7 @@ class EventController extends Controller
 
             $paymentProof = null;
             if ($request->hasFile('payment_proof')) {
-                $paymentProof = ImageHelper::upload($request->file('payment_proof'), 'payments');
+                $paymentProof = $this->fileService->upload($request->file('payment_proof'), 'payments');
             }
 
             $payment = $this->paymentService->createPayment([

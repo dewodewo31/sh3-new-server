@@ -2,20 +2,23 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EventRequest;
 use App\Repositories\CategoryRepository;
 use App\Repositories\EventRepository;
+use App\Services\EventService;
+use App\Services\FileService;
 use App\Services\UserService;
+use Illuminate\Support\Facades\Cache;
 
 class EventController extends Controller
 {
-        public function __construct(
+    public function __construct(
         private EventRepository $eventRepository,
         private CategoryRepository $categoryRepository,
-        private \App\Services\EventService $eventService,
+        private EventService $eventService,
         private UserService $userService,
+        private FileService $fileService,
     ) {}
 
     public function index()
@@ -41,11 +44,12 @@ class EventController extends Controller
 
         foreach (['image', 'banner'] as $field) {
             if ($request->hasFile($field)) {
-                $data[$field] = ImageHelper::upload($request->file($field), 'events');
+                $data[$field] = $this->fileService->upload($request->file($field), 'events');
             }
         }
 
         $event = $this->eventRepository->create($data);
+        Cache::forget('api:events:list');
 
         $this->userService->logActivity(auth()->user(), 'create_event', ['event_id' => $event->id, 'title' => $event->title]);
 
@@ -74,15 +78,15 @@ class EventController extends Controller
         $data['updated_by'] = auth()->id();
 
         foreach (['image', 'banner'] as $field) {
-            if ($request->hasFile($field)) {
-                if ($event->{$field}) {
-                    ImageHelper::delete($event->{$field});
-                }
-                $data[$field] = ImageHelper::upload($request->file($field), 'events');
-            }
+            $data[$field] = $this->fileService->uploadOrReplace(
+                $event->{$field},
+                $request->file($field),
+                'events',
+            );
         }
 
         $this->eventRepository->update($event, $data);
+        Cache::forget('api:events:list');
 
         $this->userService->logActivity(auth()->user(), 'update_event', ['event_id' => $event->id, 'title' => $event->title]);
 
@@ -93,11 +97,10 @@ class EventController extends Controller
     {
         $event = $this->eventRepository->findById($id);
         foreach (['image', 'banner'] as $field) {
-            if ($event->{$field}) {
-                ImageHelper::delete($event->{$field});
-            }
+            $this->fileService->delete($event->{$field});
         }
         $this->eventRepository->delete($event);
+        Cache::forget('api:events:list');
 
         $this->userService->logActivity(auth()->user(), 'delete_event', ['event_id' => $id, 'title' => $event->title]);
 
@@ -110,6 +113,7 @@ class EventController extends Controller
         
         try {
             $this->eventService->publishEvent($event);
+        Cache::forget('api:events:list');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
@@ -125,6 +129,7 @@ class EventController extends Controller
 
         try {
             $this->eventService->cancelEvent($event);
+        Cache::forget('api:events:list');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
