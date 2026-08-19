@@ -73,4 +73,40 @@ class GalleryAlbumAdminTest extends TestCase
 
         $this->assertDatabaseMissing('gallery_albums', ['title' => 'Invalid Folder']);
     }
+
+    public function test_create_form_renders_gdrive_folder_url_field(): void
+    {
+        $this->actingAs($this->admin());
+
+        $this->get('/admin/gallery-albums/create')
+            ->assertOk()
+            ->assertSee('gdrive_folder_url')
+            ->assertSee('Anyone with the link can view');
+    }
+
+    public function test_index_renders_drive_badge_for_album_with_folder_url(): void
+    {
+        GalleryAlbum::create([
+            'title' => 'Album With Drive',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv',
+        ]);
+        $this->actingAs($this->admin());
+
+        $this->get('/admin/gallery-albums')
+            ->assertOk()
+            ->assertSee('Album With Drive')
+            ->assertSee('href="https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv"', false)
+            ->assertSee('>Drive</a>', false);
+    }
+
+    public function test_index_does_not_render_drive_link_for_album_without_folder_url(): void
+    {
+        GalleryAlbum::create(['title' => 'Album Without Drive']);
+        $this->actingAs($this->admin());
+
+        $this->get('/admin/gallery-albums')
+            ->assertOk()
+            ->assertSee('Album Without Drive')
+            ->assertDontSee('href="https://drive.google.com', false);
+    }
 }

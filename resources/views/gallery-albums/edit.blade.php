@@ -35,6 +35,12 @@
                         <img src="{{ \App\Helpers\ImageHelper::getUrl($album->cover_image) }}" alt="{{ $album->title }}" class="mt-2 h-20 rounded-md border border-slate-200 object-cover">
                     @endif
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Google Drive Folder URL</label>
+                    <input type="url" name="gdrive_folder_url" value="{{ old('gdrive_folder_url', $album->gdrive_folder_url) }}" class="form-input @error('gdrive_folder_url') error @enderror" placeholder="https://drive.google.com/drive/folders/FOLDER_ID">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Opsional. Folder harus disetel 'Anyone with the link can view'.</p>
+                    @error('gdrive_folder_url') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
                 <div class="md:col-span-2 form-group">
                     <label class="form-label">Description</label>
                     <textarea name="description" rows="3" class="form-textarea @error('description') error @enderror">{{ old('description', $album->description) }}</textarea>

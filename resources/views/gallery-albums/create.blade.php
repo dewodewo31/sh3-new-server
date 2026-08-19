@@ -32,6 +32,12 @@
                     <input type="file" name="cover_image" class="form-input @error('cover_image') error @enderror">
                     @error('cover_image') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Google Drive Folder URL</label>
+                    <input type="url" name="gdrive_folder_url" value="{{ old('gdrive_folder_url') }}" class="form-input @error('gdrive_folder_url') error @enderror" placeholder="https://drive.google.com/drive/folders/FOLDER_ID">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Opsional. Folder harus disetel 'Anyone with the link can view'.</p>
+                    @error('gdrive_folder_url') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
                 <div class="md:col-span-2 form-group">
                     <label class="form-label">Description</label>
                     <textarea name="description" rows="3" class="form-textarea @error('description') error @enderror">{{ old('description') }}</textarea>
