@@ -33,6 +33,13 @@ Migration (semua `2026_08_18`):
 - `GET /guest-sponsors/{id}` — detail + QR + edit.
 - `PUT /guest-sponsors/{id}`, `DELETE /guest-sponsors/{id}`.
 
+### Scan Admin Attendance (sejak 2026-08-19)
+
+- `POST /admin/attendance/scan` (Full Access, Laman) kini otomatis mendeteksi QR guest sponsor
+  (`GS-{sponsor}-{event}-{seq}`) via `QRCodeService::isGuestSponsorCode()` dan meneruskan ke
+  `AttendanceController::processGuestSponsorScan()` → check-in guest sponsor pada event yang dipilih.
+- Validasi: QR dikenal, event cocok, dan `GuestSponsorService::checkIn` (duplicate check + usability).
+
 ### API (`/api/v1`)
 
 - `POST /guest-sponsor/auth/login` — login (username/password) → Sanctum token.

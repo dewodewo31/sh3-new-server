@@ -690,7 +690,7 @@ Paket membership **dinamis** via tabel `membership_plans` (CRUD admin). Seed awa
 Sistem pembayaran polymorphic — satu tabel `payments` melayani `EventParticipant` (registrasi event), `MerchandiseOrder` (order merchandise), dan `MembershipHistory` (membership). Method: transfer, cash, qris. Status: pending → confirmed/rejected/refunded. Upload bukti bayar. Konfirmasi/reject oleh bendahara.
 
 ### 5. Absensi & QR Code
-Check-in/check-out via QR scan. QR berisi kode peserta (`participant_code`) murni — member `3950`, non-member `NM0001`. Dukungan self-scan dan admin-scan. Mode offline: `syncUp`/`syncDown` API. Tracking latitude/longitude. Scanner admin: 20fps, native BarcodeDetector, cooldown 1,5 detik. Generate QR per peserta event dari panel admin.
+Check-in/check-out via QR scan. QR berisi kode peserta (`participant_code`) murni — member `3950`, non-member `NM0001`. Dukungan self-scan dan admin-scan. Scanner admin juga mendukung QR guest sponsor (`GS-{sponsor}-{event}-{seq}`, sejak 2026-08-19). Mode offline: `syncUp`/`syncDown` API. Tracking latitude/longitude. Scanner admin: 20fps, native BarcodeDetector, cooldown 1,5 detik. Generate QR per peserta event dari panel admin.
 
 ### 6. Galeri
 Upload foto/video per event. Featured image, sort_order, thumbnail. Album galeri (GalleryAlbum). API publik mengembalikan foto dengan URL penuh + thumb + info event. Masonry gallery + lightbox di frontend.
@@ -711,7 +711,7 @@ Kategori: nama, deskripsi, icon, slug, distance_km, sort_order, is_active. Seed:
 Broadcast via Laravel Reverb (WebSocket). Tersimpan di database dengan status read/unread. Notifikasi untuk admin (registrasi baru, pembayaran, order, check-in, membership) dan peserta (registrasi sukses, konfirmasi/reject payment, aktivasi membership). Queueable (ShouldQueue). Badge unread di panel admin.
 
 ### 12. Guest Sponsor
-Akun perwakilan sponsor per event dengan kuota (`event_sponsors.max_guest_accounts`). Admin membuat akun (username/password + QR unik) dalam kuota; akun punya masa berlaku dan status aktif. Login via API (`/api/v1/guest-sponsor/auth/login`) dan attendance via QR (check-in/check-out/scan). Akun kedaluwarsa/event selesai tidak dapat login atau check-in, riwayat attendance tetap tersimpan.
+Akun perwakilan sponsor per event dengan kuota (`event_sponsors.max_guest_accounts`). Admin membuat akun (username/password + QR unik) dalam kuota; akun punya masa berlaku dan status aktif. Login via API (`/api/v1/guest-sponsor/auth/login`) dan attendance via QR (check-in/check-out/scan API, plus scan QR langsung dari panel admin sejak 2026-08-19). Akun kedaluwarsa/event selesai tidak dapat login atau check-in, riwayat attendance tetap tersimpan.
 
 ### 13. Responsive Layout
 Seluruh halaman admin mengikuti aturan responsive: container max-w-7xl, table overflow-x-auto, form w-full, card w-full, tanpa horizontal scroll.

@@ -2,6 +2,27 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-19 — Scan Attendance Admin Mendukung Guest Sponsor
+
+`POST /admin/attendance/scan` kini dapat melakukan check-in **guest sponsor** dari panel admin,
+tidak hanya peserta reguler.
+
+- `QRCodeService::isGuestSponsorCode()` — deteksi QR guest sponsor (pola `GS-\d+-\d+-\d{4}`).
+- `AttendanceController::processScan()` — meneruskan QR guest sponsor ke
+  `processGuestSponsorScan()` (findByQr → cek event match → `GuestSponsorService::checkIn`).
+- Response berisi `guest_sponsor=true`, `sponsor_name`, dan `event_title`.
+- View `resources/views/attendance/scan.blade.php` — placeholder manual kode QR kini menerima
+  format `3950 / NM0001 / GS-1-2-0001`, hasil scan menampilkan nama sponsor, dan badge
+  "Check-in guest sponsor berhasil" bila `guest_sponsor=true`.
+- **Tests** — `AdminAttendanceScanTest` (+4): check-in sukses, QR tak dikenal (422),
+  event mismatch (422), dan duplicate check-in (422).
+- `OrganizationMemberResource` — `holder` kini null-safe (hanya dirender bila relasi `participant` ada).
+- `.dockerignore` — tambah `public/build`.
+- `how-to-run.md` — dirombak: dua cara menjalankan (Docker Compose disarankan, atau manual),
+  langkah build/test, dan catatan `APP_URL`.
+
+---
+
 ## 2026-08-18 — Modul Guest Sponsor
 
 **Commit:** `203c825` → `5c1ed43` → `c71aa4a` → `c87d117` → `73a92d2`.

@@ -67,6 +67,8 @@ Generator: `app/Services/QRCodeService.php`.
   untuk semua event peserta yang sama — QR adalah identitas peserta).
 - `QRCodeService::decode()` memvalidasi `^\d{4}$` (member) atau `^NM\d{4}$` (non-member);
   format lain (termasuk `SH3-...` lama) → `null`/ditolak.
+- **QR Guest Sponsor** (sejak 2026-08-19): format `GS-{sponsor_id}-{event_id}-{seq:04d}`
+  (mis. `GS-1-2-0001`). `QRCodeService::isGuestSponsorCode()` memvalidasi pola `^GS-\d+-\d+-\d{4}$`.
 
 ## Flow Scan
 
@@ -76,9 +78,20 @@ Scan QR → decode(participant_code) → cari peserta → cari registrasi (event
   → Sudah check-in → Check-out
 ```
 
+**Admin scan (sejak 2026-08-19)** juga mengenali QR **guest sponsor**:
+
+```
+Scan QR → isGuestSponsorCode(GS-...)?
+  → Ya → GuestSponsorService::checkIn (validasi event match + duplicate + usability)
+  → Tidak → alur peserta reguler di atas
+```
+
 - `checkIn()`: memvalidasi peserta terdaftar, menolak double check-in, membuat/meperbarui `attendances` + update `event_participants`, menulis `attendance_logs`, dan notifikasi admin.
 - `checkOut()`: mensyaratkan sudah check-in, lalu set `check_out_time`.
 - `scanQRCode()`: validasi QR melalui `QRCodeService::decode()`.
+- `AttendanceController::processScan()` (Admin) mendeteksi QR guest sponsor terlebih dahulu dan
+  meneruskan ke `processGuestSponsorScan()` — response berisi `guest_sponsor=true`,
+  `sponsor_name`, dan `event_title`.
 
 ## Offline Sinkronisasi
 
@@ -164,11 +177,15 @@ Semua endpoint absensi butuh auth (`auth:sanctum`).
 | POST | `/admin/attendance/scan` | Full Access, Laman |
 | POST | `/admin/attendance/event-participant/{id}/generate-qr` | Full Access, Laman |
 
+> Sejak 2026-08-19, `POST /admin/attendance/scan` juga menerima QR **guest sponsor**
+> (`GS-...`) dan melakukan check-in guest sponsor pada event yang dipilih.
+
 ## File Terkait
 
 - `app/Services/AttendanceService.php` — check-in/out, scan, report, syncUp/syncDown
-- `app/Services/QRCodeService.php` — generate & decode QR
+- `app/Services/QRCodeService.php` — generate, decode, dan `isGuestSponsorCode()`
 - `app/Repositories/AttendanceRepository.php` — query attendance & sync
+- `app/Services/GuestSponsorService.php`, `app/Repositories/GuestSponsorRepository.php` — check-in guest sponsor via scan admin
 - `app/Models/Attendance.php`, `app/Models/AttendanceLog.php`, `app/Models/EventParticipant.php`
 - `app/Http/Controllers/Admin/AttendanceController.php`, `app/Http/Controllers/API/AttendanceController.php`
 

@@ -675,12 +675,13 @@ CREATE TABLE attendance_logs (
 ### **QR Code Format**
 
 `QRCodeService::generate()` menulis `participant_code` peserta (member `3950` / non-member
-`NM0001`) ke `event_participants.qr_code`.
+`NM0001`) ke `event_participants.qr_code`. QR guest sponsor memakai format `GS-{sponsor}-{event}-{seq}`
+(dideteksi `QRCodeService::isGuestSponsorCode()`, sejak 2026-08-19).
 
 ### **Attendance Features**
 
 1. **Generate QR Code** — Generate QR untuk setiap peserta
-2. **Scan QR Code** — Scan dengan mobile atau webcam
+2. **Scan QR Code** — Scan dengan mobile atau webcam (admin juga mendukung QR guest sponsor `GS-...`)
 3. **Check-in/out** — Catat waktu masuk/keluar
 4. **Sync Up/Down** — Sinkronisasi offline (device tanpa koneksi)
 5. **Attendance Report** — Laporan kehadiran

@@ -82,7 +82,7 @@ Semua route admin memakai `/admin` dan session `auth`. Resource routes tersedia 
 
 ## Controllers and Services
 
-Controller API tersedia untuk Auth, Event, Participant, Profile, Payment, Membership, Attendance, Merchandise, Gallery, Category, Organization, Sponsor, dan Notification. Controller admin tersedia untuk Dashboard, User, Participant, Event, Category, Gallery, GalleryAlbum, Organization, Sponsor, Merchandise, Membership, MembershipPlan, Payment, Attendance, Notification, dan Bookkeeping. Sejak 2026-08-18: controller **GuestSponsor** (Admin) serta **GuestSponsorAuth** dan **GuestSponsorAttendance** (API).
+Controller API tersedia untuk Auth, Event, Participant, Profile, Payment, Membership, Attendance, Merchandise, Gallery, Category, Organization, Sponsor, dan Notification. Controller admin tersedia untuk Dashboard, User, Participant, Event, Category, Gallery, GalleryAlbum, Organization, Sponsor, Merchandise, Membership, MembershipPlan, Payment, Attendance, Notification, dan Bookkeeping. Sejak 2026-08-18: controller **GuestSponsor** (Admin) serta **GuestSponsorAuth** dan **GuestSponsorAttendance** (API). Sejak 2026-08-19: `AttendanceController` (Admin) menangani scan QR **guest sponsor** lewat `processGuestSponsorScan()`.
 
 Service yang terimplementasi:
 
@@ -93,7 +93,7 @@ Service yang terimplementasi:
 - `PaymentService`: create, confirm, reject (kini juga memanggil `markAsRejected()` pada paymentable), dan aktivasi paymentable polymorphic.
 - `MerchandiseService`: product/order, stock, cancellation, payment proof.
 - `AttendanceService`: check-in/out, scan, report, sync up/down.
-- `QRCodeService`: generate/decode QR berisi `participant_code` murni (member `\d{4}`, non-member `NM\d{4}`).
+- `QRCodeService`: generate/decode QR berisi `participant_code` murni (member `\d{4}`, non-member `NM\d{4}`) serta `isGuestSponsorCode()` (pola `GS-\d+-\d+-\d{4}`) untuk deteksi QR guest sponsor.
 - `NotificationService`: notify role, admin, user, dan participant.
 - `SidebarService`: data menu/sidebar admin.
 - **`GuestSponsorService`** (sejak 2026-08-18): createAccount (kuota + auto user/QR), generateUsername/QrCode, quota/setQuota, toggleActive, authenticate, isUsableForEvent, checkIn/checkOut, scan, history.
