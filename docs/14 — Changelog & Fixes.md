@@ -2,6 +2,39 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-08-19 — Architecture Refactoring: Controller → Service Delegation
+
+Seluruh business logic yang sebelumnya inline di controllers dipindahkan ke services.
+**Zero behavior change** — semua API contract, response format, dan test results identik
+(331 pass, 7 pre-existing fail).
+
+### Perubahan
+
+| Controller | Service | Logic yang Dipindahkan |
+|---|---|---|
+| `API\AttendanceController::syncUp()` | `AttendanceService::syncUpOffline()` | Offline sync + OTS payment + attendance dedup |
+| `API\AuthController::register()` | `AuthService::register()` + `generateUsername()` | Participant registration + auto username |
+| `API\ProfileController` | `ProfileService` (baru) | `update()`, `uploadPhoto()`, `getProfilePayload()` |
+| `API\GalleryController::index()` | `GalleryService::getAllPublic()` | Gallery query (service sudah ada, controller sekarang inject langsung) |
+| `API\NotificationController` | `NotificationService::getLatest()`, `getUnreadCount()`, `markAsRead()`, `markAllAsRead()` | Notification query/format/read logic |
+| `Admin\NotificationController` | `NotificationService` (sama) | Synchronize web + API notification controllers |
+| `Admin\DashboardController::buildRecentActivity()` | `DashboardService` (baru) | Dashboard recent activity query |
+
+### File Baru
+- `app/Services/ProfileService.php` — profile update, photo upload, payload building
+- `app/Services/DashboardService.php` — admin dashboard recent activity
+
+### Service yang Diperluas
+- `NotificationService` — tambah `getLatest()`, `getUnreadCount()`, `getById()`, `markAsRead()`, `markAllAsRead()`, `format()`
+- `AuthService` — tambah `register()`, `generateUsername()` (dari AuthController)
+- `AttendanceService` — tambah `syncUpOffline()` (dari AttendanceController)
+
+### Catatan
+- `NotificationService::getLatest()` mengembalikan `\Illuminate\Support\Collection` (bukan `Eloquent\Collection`) karena `->map()` downgrades tipe.
+- Docker rebuild diperlukan setelah perubahan (code baked into image).
+
+---
+
 ## 2026-08-19 — Scan Attendance Admin Mendukung Guest Sponsor
 
 `POST /admin/attendance/scan` kini dapat melakukan check-in **guest sponsor** dari panel admin,

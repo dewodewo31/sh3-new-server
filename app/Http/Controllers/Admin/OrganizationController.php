@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrganizationMemberRequest;
 use App\Repositories\OrganizationMemberRepository;
+use App\Services\FileService;
+use Illuminate\Support\Facades\Cache;
 
 class OrganizationController extends Controller
 {
     public function __construct(
         private OrganizationMemberRepository $organizationMemberRepository,
+        private FileService $fileService,
     ) {}
 
     public function index()
@@ -34,10 +36,12 @@ class OrganizationController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('avatar')) {
-            $data['avatar'] = ImageHelper::upload($request->file('avatar'), 'organizations');
+            $data['avatar'] = $this->fileService->upload($request->file('avatar'), 'organizations');
         }
 
         $this->organizationMemberRepository->create($data);
+        Cache::forget('api:org:tree');
+        Cache::forget('api:org:years');
 
         return redirect()->route('admin.organizations.index')->with('success', 'Anggota organisasi berhasil ditambahkan');
     }
@@ -55,13 +59,16 @@ class OrganizationController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('avatar')) {
-            if ($member->avatar) {
-                ImageHelper::delete($member->avatar);
-            }
-            $data['avatar'] = ImageHelper::upload($request->file('avatar'), 'organizations');
+            $data['avatar'] = $this->fileService->uploadOrReplace(
+                $member->avatar,
+                $request->file('avatar'),
+                'organizations',
+            );
         }
 
         $this->organizationMemberRepository->update($member, $data);
+        Cache::forget('api:org:tree');
+        Cache::forget('api:org:years');
 
         return redirect()->route('admin.organizations.index')->with('success', 'Data anggota berhasil diupdate');
     }
@@ -70,11 +77,11 @@ class OrganizationController extends Controller
     {
         $member = $this->organizationMemberRepository->findById($id);
 
-        if ($member->avatar) {
-            ImageHelper::delete($member->avatar);
-        }
+        $this->fileService->delete($member->avatar);
 
         $this->organizationMemberRepository->delete($member);
+        Cache::forget('api:org:tree');
+        Cache::forget('api:org:years');
 
         return redirect()->route('admin.organizations.index')->with('success', 'Anggota berhasil dihapus');
     }

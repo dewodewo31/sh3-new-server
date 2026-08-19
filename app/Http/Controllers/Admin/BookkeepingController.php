@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BookkeepingRequest;
 use App\Repositories\BookkeepingRepository;
 use App\Repositories\EventRepository;
 use App\Repositories\SponsorRepository;
+use App\Services\FileService;
 
 class BookkeepingController extends Controller
 {
@@ -15,6 +15,7 @@ class BookkeepingController extends Controller
         private BookkeepingRepository $bookkeepingRepository,
         private SponsorRepository $sponsorRepository,
         private EventRepository $eventRepository,
+        private FileService $fileService,
     ) {}
 
     public function index()
@@ -42,7 +43,7 @@ class BookkeepingController extends Controller
         $data['created_by'] = auth()->id();
 
         if ($request->hasFile('receipt')) {
-            $data['receipt'] = ImageHelper::upload($request->file('receipt'), 'bookkeepings');
+            $data['receipt'] = $this->fileService->upload($request->file('receipt'), 'bookkeepings');
         }
 
         $this->bookkeepingRepository->create($data);
@@ -80,10 +81,8 @@ class BookkeepingController extends Controller
         }
 
         if ($request->hasFile('receipt')) {
-            if ($entry->receipt) {
-                ImageHelper::delete($entry->receipt);
-            }
-            $data['receipt'] = ImageHelper::upload($request->file('receipt'), 'bookkeepings');
+            $this->fileService->delete($entry->receipt);
+            $data['receipt'] = $this->fileService->upload($request->file('receipt'), 'bookkeepings');
         }
 
         $this->bookkeepingRepository->update($entry, $data);
@@ -95,9 +94,7 @@ class BookkeepingController extends Controller
     {
         $entry = $this->bookkeepingRepository->findById($id);
 
-        if ($entry->receipt) {
-            ImageHelper::delete($entry->receipt);
-        }
+        $this->fileService->delete($entry->receipt);
 
         $this->bookkeepingRepository->delete($entry);
 

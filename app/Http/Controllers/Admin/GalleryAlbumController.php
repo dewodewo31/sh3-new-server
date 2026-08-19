@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GalleryAlbumRequest;
 use App\Repositories\EventRepository;
 use App\Repositories\GalleryAlbumRepository;
+use App\Services\FileService;
 use App\Services\UserService;
 
 class GalleryAlbumController extends Controller
@@ -15,6 +15,7 @@ class GalleryAlbumController extends Controller
         private GalleryAlbumRepository $galleryAlbumRepository,
         private EventRepository $eventRepository,
         private UserService $userService,
+        private FileService $fileService,
     ) {}
 
     public function index()
@@ -36,7 +37,7 @@ class GalleryAlbumController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('cover_image')) {
-            $data['cover_image'] = ImageHelper::upload($request->file('cover_image'), 'albums');
+            $data['cover_image'] = $this->fileService->upload($request->file('cover_image'), 'albums');
         }
 
         $album = $this->galleryAlbumRepository->create($data);
@@ -60,10 +61,11 @@ class GalleryAlbumController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('cover_image')) {
-            if ($album->cover_image) {
-                ImageHelper::delete($album->cover_image);
-            }
-            $data['cover_image'] = ImageHelper::upload($request->file('cover_image'), 'albums');
+            $data['cover_image'] = $this->fileService->uploadOrReplace(
+                $album->cover_image,
+                $request->file('cover_image'),
+                'albums',
+            );
         }
 
         $this->galleryAlbumRepository->update($album, $data);
@@ -77,9 +79,7 @@ class GalleryAlbumController extends Controller
     {
         $album = $this->galleryAlbumRepository->findById($id);
 
-        if ($album->cover_image) {
-            ImageHelper::delete($album->cover_image);
-        }
+        $this->fileService->delete($album->cover_image);
 
         $this->galleryAlbumRepository->delete($album);
 

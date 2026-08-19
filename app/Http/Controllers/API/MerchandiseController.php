@@ -9,6 +9,7 @@ use App\Http\Requests\UploadPaymentRequest;
 use App\Http\Resources\MerchandiseResource;
 use App\Repositories\MerchandiseOrderRepository;
 use App\Repositories\MerchandiseRepository;
+use App\Services\FileService;
 use App\Services\MerchandiseService;
 use Illuminate\Http\JsonResponse;
 
@@ -18,6 +19,7 @@ class MerchandiseController extends Controller
         private MerchandiseRepository $merchandiseRepository,
         private MerchandiseOrderRepository $merchandiseOrderRepository,
         private MerchandiseService $merchandiseService,
+        private FileService $fileService,
     ) {}
 
     public function index(): JsonResponse
@@ -121,7 +123,7 @@ class MerchandiseController extends Controller
             return response()->json(['message' => 'Order tidak ditemukan.'], 404);
         }
 
-        $paymentProof = ImageHelper::upload($request->file('payment_proof'), 'payments');
+        $paymentProof = $this->fileService->upload($request->file('payment_proof'), 'payments');
 
         $this->merchandiseService->uploadPayment(
             $order,

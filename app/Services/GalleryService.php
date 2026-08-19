@@ -16,7 +16,7 @@ class GalleryService
 
     public function getAllPublic(): object
     {
-        return $this->galleryRepository->model
+        return $this->galleryRepository->query()
             ->with(['event.category', 'album'])
             ->where('type', 'image')
             ->orderBy('is_featured', 'desc')
@@ -27,7 +27,7 @@ class GalleryService
 
     public function getByEvent(int $eventId): object
     {
-        return $this->galleryRepository->model
+        return $this->galleryRepository->query()
             ->where('event_id', $eventId)
             ->where('type', 'image')
             ->orderBy('is_featured', 'desc')
@@ -100,7 +100,7 @@ class GalleryService
 
     public function getAlbumsWithGalleries(): object
     {
-        return $this->galleryRepository->model
+        return $this->galleryRepository->query()
             ->with('album')
             ->orderBy('sort_order')
             ->get()

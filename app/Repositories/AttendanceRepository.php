@@ -95,7 +95,7 @@ class AttendanceRepository extends BaseRepository
     public function findSyncDown(array $filters = [])
     {
         return $this->model
-            ->with('eventParticipant')
+            ->with('eventParticipant.participant')
             ->when(! empty($filters['event_id']), function ($q) use ($filters) {
                 $q->whereHas('eventParticipant', function ($query) use ($filters) {
                     $query->where('event_id', $filters['event_id']);

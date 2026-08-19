@@ -15,7 +15,7 @@ Database               → MySQL, Redis
 ### Rules
 
 - Controllers **must not** contain business logic — delegate to Services.
-- Services **must not** contain database queries — delegate to Repositories.
+- Services may contain direct Eloquent queries for data access. Use Repositories for reusable query patterns (CRUD, search, paginate). Services own transaction boundaries.
 - Repositories **must not** contain business logic — only data access.
 - Views **must not** contain raw queries or complex logic.
 

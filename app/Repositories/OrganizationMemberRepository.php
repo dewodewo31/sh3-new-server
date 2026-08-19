@@ -43,7 +43,7 @@ class OrganizationMemberRepository extends BaseRepository
         }
 
         return $query->orderBy('sort_order')
-            ->with('participant')
+            ->with('participant.membershipPlan')
             ->paginate($perPage)
             ->withQueryString();
     }

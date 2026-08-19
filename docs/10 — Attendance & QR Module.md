@@ -95,7 +95,8 @@ Scan QR → isGuestSponsorCode(GS-...)?
 
 ## Offline Sinkronisasi
 
-`AttendanceService` mendukung device offline (mode tanpa koneksi):
+`AttendanceService::syncUpOffline()` mendukung device offline (mode tanpa koneksi). Controller
+mendelegasikan seluruh logika ke service ini:
 
 | Endpoint | Deskripsi |
 |----------|-----------|
@@ -146,7 +147,7 @@ Response:
 
 > `AttendanceService::syncUp(array $records)` (versi per-record: `processed`, `skipped`,
 > `details[]`) masih tersedia namun endpoint API kini memakai logika OTS di
-> `AttendanceController::syncUp()` yang menangani array `attendances` + `ots_registrations`.
+> `AttendanceService::syncUpOffline()` yang menangani array `attendances` + `ots_registrations`.
 
 > **Catatan sinkronisasi (fix 2026-08-14):** parameter `since` (format ISO, umumnya UTC dari
 > client) di-parse dan dikonversi ke timezone aplikasi (`Asia/Jakarta`) sebelum dibandingkan

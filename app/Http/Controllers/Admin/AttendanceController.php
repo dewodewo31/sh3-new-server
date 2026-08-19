@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Participant;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\EventParticipantRepository;
 use App\Repositories\EventRepository;
@@ -75,48 +74,10 @@ class AttendanceController extends Controller
             return $this->processGuestSponsorScan($request, $qrData);
         }
 
-        $decoded = $this->qrCodeService->decode($qrData);
-
-        if (! $decoded) {
-            return response()->json([
-                'success' => false,
-                'message' => 'QR Code tidak valid. Pastikan format kode benar (contoh: 3950 atau NM0001).',
-            ], 422);
-        }
-
-        $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
-
-        if (! $participant) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kode peserta tidak dikenal.',
-            ], 422);
-        }
-
-        $registration = $this->eventParticipantRepository->findByEventAndParticipant(
-            $request->event_id,
-            $participant->id,
-        );
-
-        if (! $registration) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Peserta tidak terdaftar di event ini.',
-            ], 422);
-        }
-
-        if (! $registration->qr_code || $registration->qr_code !== $decoded['hash_id']) {
-            return response()->json([
-                'success' => false,
-                'message' => 'QR Code tidak dikenali. Silakan gunakan QR terbaru milik peserta.',
-            ], 422);
-        }
-
         try {
-            $this->attendanceService->checkIn(
-                $registration->event,
-                $registration->participant,
-                ['method' => 'qr_code'],
+            $data = $this->attendanceService->scanAndCheckInAdmin(
+                (int) $request->event_id,
+                $qrData,
             );
         } catch (ValidationException $e) {
             return response()->json([
@@ -128,12 +89,7 @@ class AttendanceController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Check-in berhasil!',
-            'data' => [
-                'participant_name' => $registration->participant->name,
-                'event_title' => $registration->event->title,
-                'check_in_time' => now()->format('d/m/Y H:i:s'),
-                'already_checked_in' => false,
-            ],
+            'data' => $data,
         ]);
     }
 

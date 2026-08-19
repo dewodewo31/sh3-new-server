@@ -13,6 +13,25 @@ INFRASTRUCTURE LAYER
   Database (MySQL) → Queue → Mail → Notification
 ```
 
+### Architecture Rules
+
+- **Controllers** — thin routing layer. Delegates all business logic and data access to Services. No Eloquent queries, no DB::transaction, no business rules.
+- **Services** — business logic, orchestration, and data access (via direct Eloquent queries or Repositories). Owns transaction boundaries.
+- **Repositories** — reusable data-access helpers extending `BaseRepository`. Used for common CRUD patterns; Services may also query directly when repository abstraction adds no value.
+- **Models** — Eloquent models with relationships, casts, scopes, lifecycle hooks. No business logic.
+
+### Controllers That Delegate to Services
+
+| Controller | Service | Method(s) Moved |
+|---|---|---|
+| `API\AttendanceController` | `AttendanceService` | `syncUp()` → `syncUpOffline()` |
+| `API\AuthController` | `AuthService` | `register()`, `generateUsername()` |
+| `API\ProfileController` | `ProfileService` | `update()`, `uploadPhoto()`, `getProfilePayload()` |
+| `API\GalleryController` | `GalleryService` | `index()` → `getAllPublic()` |
+| `API\NotificationController` | `NotificationService` | `index()`, `markAsRead()`, `markAllAsRead()`, `unreadCount()` |
+| `Admin\NotificationController` | `NotificationService` | Same as above (web + JSON) |
+| `Admin\DashboardController` | `DashboardService` | `buildRecentActivity()` |
+
 ## Authentication
 
 ### Two-Factor Auth Design

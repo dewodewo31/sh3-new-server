@@ -4,15 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MembershipPlanRequest;
-use App\Models\MembershipHistory;
-use App\Models\Participant;
 use App\Repositories\MembershipPlanRepository;
+use App\Services\MembershipService;
 use Illuminate\Http\Request;
 
 class MembershipPlanController extends Controller
 {
     public function __construct(
         private MembershipPlanRepository $membershipPlanRepository,
+        private MembershipService $membershipService,
     ) {}
 
     public function index(Request $request)
@@ -29,6 +29,7 @@ class MembershipPlanController extends Controller
     public function store(MembershipPlanRequest $request)
     {
         $this->membershipPlanRepository->create($this->validatedData($request));
+        $this->membershipService->invalidatePlansCache();
 
         return redirect()->route('admin.membership-plans.index')->with('success', 'Plan membership berhasil dibuat');
     }
@@ -37,6 +38,7 @@ class MembershipPlanController extends Controller
     {
         $plan = $this->membershipPlanRepository->findById($id);
         $this->membershipPlanRepository->update($plan, $this->validatedData($request));
+        $this->membershipService->invalidatePlansCache();
 
         return redirect()->route('admin.membership-plans.index')->with('success', 'Plan membership berhasil diupdate');
     }
@@ -45,15 +47,13 @@ class MembershipPlanController extends Controller
     {
         $plan = $this->membershipPlanRepository->findById($id);
 
-        $used = MembershipHistory::where('membership_type', $plan->key)->exists()
-            || Participant::where('membership_type', $plan->key)->exists();
-
-        if ($used) {
+        if (! $this->membershipService->canDeletePlan($plan->key)) {
             return redirect()->route('admin.membership-plans.index')
                 ->with('error', 'Plan tidak bisa dihapus karena sudah dipakai oleh peserta.');
         }
 
         $this->membershipPlanRepository->delete($plan);
+        $this->membershipService->invalidatePlansCache();
 
         return redirect()->route('admin.membership-plans.index')->with('success', 'Plan membership berhasil dihapus');
     }

@@ -2,21 +2,23 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SubscribeMembershipRequest;
 use App\Http\Resources\MembershipHistoryResource;
 use App\Http\Resources\ParticipantResource;
 use App\Repositories\MembershipHistoryRepository;
+use App\Services\FileService;
 use App\Services\MembershipService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class MembershipController extends Controller
 {
     public function __construct(
         private MembershipService $membershipService,
         private MembershipHistoryRepository $membershipHistoryRepository,
+        private FileService $fileService,
     ) {}
 
     public function show(): JsonResponse
@@ -34,9 +36,9 @@ class MembershipController extends Controller
 
     public function plans(): JsonResponse
     {
-        return response()->json([
-            'data' => $this->membershipService->plans(),
-        ]);
+        $data = Cache::remember('api:membership:plans', 3600, fn () => $this->membershipService->plans());
+
+        return response()->json(['data' => $data]);
     }
 
     public function history(): JsonResponse
@@ -65,7 +67,7 @@ class MembershipController extends Controller
         $paymentProof = null;
 
         if ($request->hasFile('payment_proof')) {
-            $paymentProof = ImageHelper::upload($request->file('payment_proof'), 'payments');
+            $paymentProof = $this->fileService->upload($request->file('payment_proof'), 'payments');
         }
 
         $history = $this->membershipService->requestSubscription(

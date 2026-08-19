@@ -23,7 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-install -j"$(nproc)" \
       pdo pdo_mysql mbstring xml bcmath intl gd zip \
     && pecl install redis \
-    && docker-php-ext-enable redis
+    && docker-php-ext-enable redis \
+    && echo "opcache.jit_buffer_size=64M" > /usr/local/etc/php/conf.d/opcache-jit.ini
 
 WORKDIR /var/www/html
 
@@ -47,6 +48,7 @@ RUN cp .env.example .env \
       -e 's|^SESSION_DRIVER=.*|SESSION_DRIVER=redis|' \
       -e 's|^CACHE_STORE=.*|CACHE_STORE=redis|' \
       -e 's|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=redis|' \
+      -e 's|^APP_NAME=.*|APP_NAME="Samarinda Hash House Harriers"|' \
       -e 's|^APP_URL=.*|APP_URL=http://localhost:8000|' \
       .env \
  && php artisan key:generate

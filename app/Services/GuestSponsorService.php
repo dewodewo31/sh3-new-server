@@ -115,6 +115,26 @@ class GuestSponsorService
         ]);
     }
 
+    public function updateAccount(GuestSponsor $guestSponsor, array $data): void
+    {
+        $this->guestSponsorRepository->update($guestSponsor, [
+            'valid_from' => $data['valid_from'] ?? $guestSponsor->valid_from?->toDateString(),
+            'valid_until' => $data['valid_until'] ?? $guestSponsor->valid_until?->toDateString(),
+            'is_active' => $data['is_active'] ?? $guestSponsor->is_active,
+        ]);
+
+        $userData = [];
+        if (! empty($data['name'])) {
+            $userData['name'] = $data['name'];
+        }
+        if (! empty($data['password'])) {
+            $userData['password'] = $data['password'];
+        }
+        if ($userData) {
+            $this->userRepository->update($guestSponsor->user, $userData);
+        }
+    }
+
     public function authenticate(string $username, string $password): User
     {
         $user = $this->userRepository->findFirstBy('username', $username);

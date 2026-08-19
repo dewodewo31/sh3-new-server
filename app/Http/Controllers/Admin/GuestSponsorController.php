@@ -75,29 +75,16 @@ class GuestSponsorController extends Controller
     public function update(int $id, GuestSponsorRequest $request)
     {
         $guestSponsor = $this->guestSponsorRepository->findById($id, ['user']);
-        $data = $request->validated();
 
-        $this->guestSponsorRepository->update($guestSponsor, [
-            'valid_from' => $data['valid_from'] ?? $guestSponsor->valid_from?->toDateString(),
-            'valid_until' => $data['valid_until'] ?? $guestSponsor->valid_until?->toDateString(),
+        $this->guestSponsorService->updateAccount($guestSponsor, [
+            ...$request->validated(),
             'is_active' => $request->boolean('is_active'),
         ]);
-
-        $userData = [];
-        if (! empty($data['name'])) {
-            $userData['name'] = $data['name'];
-        }
-        if (! empty($data['password'])) {
-            $userData['password'] = $data['password'];
-        }
-        if ($userData) {
-            $this->userRepository->update($guestSponsor->user, $userData);
-        }
 
         return redirect()
             ->route('admin.guest-sponsors.show', $id)
             ->with('success', 'Akun guest sponsor berhasil diupdate')
-            ->with('new_password', $data['password'] ?? null);
+            ->with('new_password', $request->input('password') ?? null);
     }
 
     public function destroy(int $id)

@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MerchandiseRequest;
 use App\Repositories\MerchandiseRepository;
+use App\Services\FileService;
 
 class MerchandiseController extends Controller
 {
     public function __construct(
         private MerchandiseRepository $merchandiseRepository,
+        private FileService $fileService,
     ) {}
 
     public function index()
@@ -31,7 +32,7 @@ class MerchandiseController extends Controller
         $data['created_by'] = auth()->id();
 
         if ($request->hasFile('image')) {
-            $data['image'] = ImageHelper::upload($request->file('image'), 'merchandise');
+            $data['image'] = $this->fileService->upload($request->file('image'), 'merchandise');
         }
 
         $this->merchandiseRepository->create($data);
@@ -52,10 +53,11 @@ class MerchandiseController extends Controller
         $data = $this->prepareData($request, $request->validated());
 
         if ($request->hasFile('image')) {
-            if ($item->image) {
-                ImageHelper::delete($item->image);
-            }
-            $data['image'] = ImageHelper::upload($request->file('image'), 'merchandise');
+            $data['image'] = $this->fileService->uploadOrReplace(
+                $item->image,
+                $request->file('image'),
+                'merchandise',
+            );
         }
 
         $this->merchandiseRepository->update($item, $data);
@@ -67,9 +69,7 @@ class MerchandiseController extends Controller
     {
         $item = $this->merchandiseRepository->findById($id);
 
-        if ($item->image) {
-            ImageHelper::delete($item->image);
-        }
+        $this->fileService->delete($item->image);
 
         $this->merchandiseRepository->delete($item);
 

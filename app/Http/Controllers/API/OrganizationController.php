@@ -7,6 +7,7 @@ use App\Http\Resources\OrganizationMemberResource;
 use App\Repositories\OrganizationMemberRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class OrganizationController extends Controller
 {
@@ -39,11 +40,15 @@ class OrganizationController extends Controller
 
     public function tree(): JsonResponse
     {
-        return response()->json(['data' => $this->organizationMemberRepository->tree()]);
+        $data = Cache::remember('api:org:tree', 3600, fn () => $this->organizationMemberRepository->tree());
+
+        return response()->json(['data' => $data]);
     }
 
     public function years(): JsonResponse
     {
-        return response()->json(['data' => $this->organizationMemberRepository->years()]);
+        $data = Cache::remember('api:org:years', 3600, fn () => $this->organizationMemberRepository->years());
+
+        return response()->json(['data' => $data]);
     }
 }

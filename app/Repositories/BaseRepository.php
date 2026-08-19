@@ -70,4 +70,12 @@ abstract class BaseRepository
     {
         return $this->model->count();
     }
+
+    /**
+     * Return a fresh query builder on the model for chaining (with, where, orderBy, etc.).
+     */
+    public function query()
+    {
+        return $this->model->newQuery();
+    }
 }

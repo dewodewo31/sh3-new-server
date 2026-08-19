@@ -46,6 +46,11 @@ class MembershipService
             ->all();
     }
 
+    public function invalidatePlansCache(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget('api:membership:plans');
+    }
+
     public function findPlan(string $type): ?MembershipPlan
     {
         return $this->membershipPlanRepository->findByKey($type);
@@ -276,6 +281,12 @@ class MembershipService
                 MembershipHistory::STATUS_EXPIRED,
             ])->sum('price'),
         ];
+    }
+
+    public function canDeletePlan(string $planKey): bool
+    {
+        return ! MembershipHistory::where('membership_type', $planKey)->exists()
+            && ! Participant::where('membership_type', $planKey)->exists();
     }
 
     private function cancelActiveHistories(Participant $participant, ?int $exceptId = null): void

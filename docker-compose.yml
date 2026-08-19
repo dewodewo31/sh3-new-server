@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: sh3-app
+    environment:
+      - APP_NAME=Samarinda Hash House Harriers
     ports:
       - "8000:8000"
     depends_on:

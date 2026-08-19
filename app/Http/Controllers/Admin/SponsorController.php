@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SponsorRequest;
 use App\Repositories\SponsorRepository;
+use App\Services\FileService;
 
 class SponsorController extends Controller
 {
     public function __construct(
         private SponsorRepository $sponsorRepository,
+        private FileService $fileService,
     ) {}
 
     public function index()
@@ -35,7 +36,7 @@ class SponsorController extends Controller
         $data['created_by'] = auth()->id();
 
         if ($request->hasFile('logo')) {
-            $data['logo'] = ImageHelper::upload($request->file('logo'), 'sponsors');
+            $data['logo'] = $this->fileService->upload($request->file('logo'), 'sponsors');
         }
 
         $this->sponsorRepository->create($data);
@@ -56,10 +57,11 @@ class SponsorController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('logo')) {
-            if ($sponsor->logo) {
-                ImageHelper::delete($sponsor->logo);
-            }
-            $data['logo'] = ImageHelper::upload($request->file('logo'), 'sponsors');
+            $data['logo'] = $this->fileService->uploadOrReplace(
+                $sponsor->logo,
+                $request->file('logo'),
+                'sponsors',
+            );
         }
 
         $this->sponsorRepository->update($sponsor, $data);
@@ -71,9 +73,7 @@ class SponsorController extends Controller
     {
         $sponsor = $this->sponsorRepository->findById($id);
 
-        if ($sponsor->logo) {
-            ImageHelper::delete($sponsor->logo);
-        }
+        $this->fileService->delete($sponsor->logo);
 
         $this->sponsorRepository->delete($sponsor);
 

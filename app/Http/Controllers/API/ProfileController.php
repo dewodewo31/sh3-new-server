@@ -6,56 +6,39 @@ use App\Helpers\ImageHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\UploadProfilePhotoRequest;
-use App\Http\Resources\ParticipantResource;
-use App\Http\Resources\UserResource;
+use App\Services\ProfileService;
 use Illuminate\Http\JsonResponse;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        private ProfileService $profileService,
+    ) {}
+
     public function show(): JsonResponse
     {
         $user = auth()->user();
+        $data = $this->profileService->getProfilePayload($user);
 
-        if (! $this->currentParticipant($user)) {
+        if (! $data['participant']) {
             return response()->json(['message' => 'Profil peserta tidak ditemukan.'], 404);
         }
 
-        return response()->json([
-            'data' => $this->profilePayload($user),
-        ]);
+        return response()->json(['data' => $data]);
     }
 
     public function update(UpdateProfileRequest $request): JsonResponse
     {
         $user = auth()->user();
-        $participant = $this->currentParticipant($user);
 
-        if (! $participant) {
+        if (! $this->profileService->getCurrentParticipant($user)) {
             return response()->json(['message' => 'Profil peserta tidak ditemukan.'], 404);
         }
 
-        $data = $request->validated();
-
-        $user->update([
-            'name' => $data['name'],
-            'email' => $data['email'],
-        ]);
-
-        $participantData = [
-            'name' => $data['name'],
-            'email' => $data['email'],
-        ];
-
-        foreach ($this->participantFields() as $field) {
-            if (array_key_exists($field, $data)) {
-                $participantData[$field] = $data[$field];
-            }
-        }
-
-        $participant->update($participantData);
+        $result = $this->profileService->update($user, $request->validated());
 
         return response()->json([
-            'data' => $this->profilePayload($user->fresh()),
+            'data' => $this->profileService->getProfilePayload($result),
             'message' => 'Profil berhasil diupdate',
         ]);
     }
@@ -64,16 +47,11 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
-        if (! $this->currentParticipant($user)) {
+        if (! $this->profileService->getCurrentParticipant($user)) {
             return response()->json(['message' => 'Profil peserta tidak ditemukan.'], 404);
         }
 
-        if ($user->avatar) {
-            ImageHelper::delete($user->avatar);
-        }
-
-        $avatar = ImageHelper::upload($request->file('avatar'), 'avatars');
-        $user->update(['avatar' => $avatar]);
+        $avatar = $this->profileService->uploadPhoto($user, $request->file('avatar'));
 
         return response()->json([
             'data' => [
@@ -82,35 +60,5 @@ class ProfileController extends Controller
             ],
             'message' => 'Foto profil berhasil diupload',
         ]);
-    }
-
-    private function currentParticipant($user)
-    {
-        return $user?->participants()->first();
-    }
-
-    private function profilePayload($user): array
-    {
-        $participant = $user->participants()->with('membershipHistories')->first();
-
-        return [
-            'user' => new UserResource($user),
-            'participant' => $participant ? new ParticipantResource($participant) : null,
-        ];
-    }
-
-    private function participantFields(): array
-    {
-        return [
-            'phone',
-            'gender',
-            'date_of_birth',
-            'address',
-            'emergency_contact',
-            'emergency_phone',
-            'medical_conditions',
-            'blood_type',
-            'jersey_size',
-        ];
     }
 }

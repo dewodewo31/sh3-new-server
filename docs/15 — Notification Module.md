@@ -5,11 +5,17 @@ Notifikasi real-time (WebSocket/Reverb) sekaligus tersimpan di database dengan s
 ## Komponen
 
 - `App\Notifications\AdminNotification` — notifikasi queueable (`ShouldQueue`) dengan channel `database` + `broadcast`; menyimpan `title`, `body`, `icon`, `url`; `broadcastType()` = `admin.notification`.
-- `App\Services\NotificationService` — helper untuk mengirim notifikasi ke banyak target:
+- `App\Services\NotificationService` — helper untuk mengirim & mengelola notifikasi:
   - `notifyAdmins()` — ke semua role admin (`admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, `merchandise`).
   - `notifyRoles(array $roles, ...)` — ke user dengan role tertentu & `is_active`.
   - `notifyUser(User $user, ...)` — ke satu user.
   - `notifyParticipant(Participant $participant, ...)` — ke user pemilik participant (skip bila user tidak aktif).
+  - `getLatest(int $limit = 20)` — mengembalikan collection notifikasi terbaru + `unread_count`.
+  - `getUnreadCount()` — jumlah notifikasi yang belum dibaca.
+  - `getById(int $id)` — satu notifikasi berdasarkan ID.
+  - `markAsRead(int $id)` — tandai satu notifikasi dibaca.
+  - `markAllAsRead()` — tandai semua notifikasi dibaca.
+  - `format($notification)` — format satu notifikasi ke array standar (id, title, body, icon, url, read_at, created_at).
 
 Notifikasi dikirim secara otomatis dari berbagai Service (mis. membership grant, order merchandise, payment confirm, check-in admin, dll).
 

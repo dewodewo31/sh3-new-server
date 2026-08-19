@@ -4,20 +4,19 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\GalleryResource;
-use App\Models\Gallery;
+use App\Services\GalleryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class GalleryController extends Controller
 {
+    public function __construct(
+        private GalleryService $galleryService,
+    ) {}
+
     public function index(): JsonResponse
     {
-        $galleries = Gallery::with(['event.category', 'album'])
-            ->where('type', 'image')
-            ->orderBy('is_featured', 'desc')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get();
+        $galleries = $this->galleryService->getAllPublic();
 
         return response()->json([
             'data' => GalleryResource::collection($galleries),
@@ -47,10 +46,8 @@ class GalleryController extends Controller
             ]);
         }
 
-        $galleryService = app(\App\Services\GalleryService::class);
-
         if ($validated['source'] === 'local') {
-            $gallery = $galleryService->storeLocal(
+            $gallery = $this->galleryService->storeLocal(
                 array_merge($validated, ['type' => $validated['type'] ?? 'image']),
                 $request->file('file')
             );
