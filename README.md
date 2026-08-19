@@ -553,7 +553,8 @@ Semua endpoint API berada di prefix `/api/v1`.
 | GET | `/events/{id}` | Detail event (galleries, sponsors, registered_count, creator) |
 | GET | `/events/{id}/participants` | Daftar peserta event (publik) |
 | GET | `/categories` | Daftar kategori event + jumlah event |
-| GET | `/galleries` | Semua foto galeri event (URL penuh + thumb) |
+| GET | `/galleries` | Semua foto galeri event (URL penuh + thumb, hanya `is_featured=true`) |
+| GET | `/gallery-albums` | Daftar album galeri publik (termasuk link folder Google Drive) |
 | GET | `/sponsors` | Daftar sponsor |
 | GET | `/organization` | Struktur organisasi |
 | GET | `/organization/stats` | Statistik organisasi |
@@ -693,7 +694,11 @@ Sistem pembayaran polymorphic — satu tabel `payments` melayani `EventParticipa
 Check-in/check-out via QR scan. QR berisi kode peserta (`participant_code`) murni — member `3950`, non-member `NM0001`. Dukungan self-scan dan admin-scan. Scanner admin juga mendukung QR guest sponsor (`GS-{sponsor}-{event}-{seq}`, sejak 2026-08-19). Mode offline: `syncUp`/`syncDown` API. Tracking latitude/longitude. Scanner admin: 20fps, native BarcodeDetector, cooldown 1,5 detik. Generate QR per peserta event dari panel admin.
 
 ### 6. Galeri
-Upload foto/video per event. Featured image, sort_order, thumbnail. Album galeri (GalleryAlbum). API publik mengembalikan foto dengan URL penuh + thumb + info event. Masonry gallery + lightbox di frontend.
+Upload foto/video per event. Featured image, sort_order, thumbnail. Album galeri (GalleryAlbum).
+API publik mengembalikan **hanya gambar featured (terpilih)** dengan URL penuh + thumb + info event
+(sumber Google Drive dirender via `thumbnail?id=...&sz=w800`). Album mendukung **link folder
+Google Drive** (`gdrive_folder_url`) yang ditampilkan sebagai link eksternal.
+Masonry gallery + lightbox di frontend.
 
 ### 7. Sponsor & Merchandise
 Sponsor: tiers platinum/gold/silver/bronze, logo, website, tahun, many-to-many dengan event. Merchandise: nama, deskripsi, price, size_options (JSON), stock, image, status. Order merchandise via API (auto-create payment, stock decrement, cancel restore stock).

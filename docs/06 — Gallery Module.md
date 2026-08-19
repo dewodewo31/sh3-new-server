@@ -169,9 +169,8 @@ Sistem akan:
 
 1. Memvalidasi URL Google Drive.
 2. Mengekstrak Google Drive File ID.
-3. Mengubah URL menjadi format public preview.
-4. Menyimpan metadata ke database.
-5. Menampilkan gambar menggunakan URL Google Drive.
+3. Menyimpan metadata ke database.
+4. Menampilkan gambar menggunakan **Google Drive Thumbnail URL** (`thumbnail?id=FILE_ID&sz=w800`).
 
 Tidak ada proses upload ulang ke server.
 
@@ -193,11 +192,17 @@ https://drive.google.com/open?id=FILE_ID
 https://drive.google.com/uc?id=FILE_ID
 ```
 
-Semua otomatis dikonversi menjadi:
+Semua otomatis dikonversi menjadi thumbnail URL:
 
 ```
-https://drive.google.com/uc?id=FILE_ID
+https://drive.google.com/thumbnail?id=FILE_ID&sz=w800
 ```
+
+> **Catatan**: format `uc?id=FILE_ID` **tidak lagi dipakai** — sejak Januari 2024 Google
+> Drive mengembalikan HTTP 403 untuk `uc?id=` tanpa cookie download. Konversi kini memakai
+> endpoint `thumbnail?id=FILE_ID&sz=w800` (via `ImageHelper::gdriveThumbUrl()`). Jika
+> `google_drive_file_id` kosong, URL mentah yang diinput admin dikembalikan apa adanya
+> (fallback).
 
 File harus disetel menjadi:
 
@@ -250,7 +255,9 @@ Jika gagal:
 
 ## GET `/api/v1/galleries`
 
-Mengembalikan seluruh gallery image.
+Mengembalikan **hanya gallery image yang ditandai featured** (`is_featured = true`).
+Gambar yang tidak dipilih admin (featured) **tidak** muncul di API publik — sesuai keputusan
+produk bahwa galeri publik hanya menampilkan gambar terpilih.
 
 Contoh response:
 
@@ -265,9 +272,9 @@ Contoh response:
 
             "source":"gdrive",
 
-            "url":"https://drive.google.com/uc?id=xxxxxxxx",
+            "url":"https://drive.google.com/thumbnail?id=xxxxxxxx&sz=w800",
 
-            "thumb":"https://drive.google.com/uc?id=xxxxxxxx",
+            "thumb":"https://drive.google.com/thumbnail?id=xxxxxxxx&sz=w800",
 
             "type":"image",
 
@@ -288,6 +295,10 @@ Urutan:
 1. is_featured DESC
 2. sort_order ASC
 3. id ASC
+
+Filter `is_featured = true` diterapkan di `GalleryService::getAllPublic()` dan
+`GalleryService::getByEvent()` (digunakan `EventResource` untuk seksi galleries
+pada `GET /api/v1/events/{id}`).
 
 ---
 
@@ -349,7 +360,7 @@ Response:
 
         "galleries":[
             {
-                "url":"https://drive.google.com/uc?id=FILE_ID"
+                "url":"https://drive.google.com/thumbnail?id=FILE_ID&sz=w800"
             },
             {
                 "url":"https://example.com/storage/galleries/photo.jpg"
@@ -360,6 +371,8 @@ Response:
 ```
 
 Frontend tidak perlu mengetahui apakah gambar berasal dari Local Storage maupun Google Drive.
+
+> Seksi `galleries` pada event detail juga hanya berisi gambar **featured**.
 
 ---
 
@@ -431,6 +444,7 @@ Saat URL Google Drive ditempel:
 - Frontend selalu menggunakan field `url`.
 - Google Drive File ID disimpan agar URL dapat dibangun ulang jika diperlukan.
 - Link Google Drive wajib bersifat publik (**Anyone with the link**).
+- **API publik hanya menampilkan gallery `is_featured = true`** (gambar terpilih oleh admin).
 - Gallery tetap diurutkan berdasarkan:
   1. `is_featured DESC`
   2. `sort_order ASC`
@@ -443,5 +457,6 @@ Saat URL Google Drive ditempel:
 - Penyimpanan Google Drive tidak meng-upload ulang file ke server.
 - Server hanya menyimpan metadata dan Google Drive File ID.
 - Jika file Google Drive dihapus atau akses publik dicabut, gallery akan dianggap tidak tersedia hingga link diperbaiki.
+- URL gambar Google Drive dirender via endpoint thumbnail (`thumbnail?id=FILE_ID&sz=w800`) karena `uc?id=` sudah tidak berfungsi (HTTP 403 sejak Januari 2024).
 - Desain ini tetap kompatibel dengan Local Storage sehingga tidak mengubah struktur API maupun frontend.
 ```

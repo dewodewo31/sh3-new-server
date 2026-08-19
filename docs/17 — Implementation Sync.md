@@ -200,3 +200,28 @@ Payload dan field response per modul harus dirujuk ke Request/Resource aktual ka
 - Notification ↔ Roles: `NotificationService` dan `AdminNotification` dicatat.
 - Scheduler ↔ Console: 4 command aplikasi telah didaftarkan ke scheduler (`events:update-status` everyMinute, `membership:expire` dailyAt 00:00, `membership:auto-renew` dailyAt 01:00, `notifications:cleanup --days=30` dailyAt 02:00).
 - Policy/Enum/Job/Event/Listener: tidak ada class aplikasi yang terdeteksi.
+
+---
+
+## Sinkronisasi 2026-08-19 — Gallery Featured-Only & GDrive Folder Link
+
+Perubahan perilaku & penambahan sejak sinkronisasi sebelumnya:
+
+- **Galeri publik hanya menampilkan gambar featured**: `GalleryService::getAllPublic()` dan
+  `getByEvent()` kini menambahkan `->where('is_featured', true)`; `EventResource` (seksi
+  `galleries`) menerapkan filter yang sama. Keputusan produk: gambar yang tidak dipilih
+  admin (featured) tidak tampil di API publik.
+- **URL gambar Google Drive**: `ImageHelper::gdriveThumbUrl()` baru — URL gambar gdrive
+  dirender sebagai `https://drive.google.com/thumbnail?id=FILE_ID&sz=w800` (format `uc?id=`
+  sudah HTTP 403 sejak Januari 2024). Fallback ke URL mentah bila `google_drive_file_id`
+  kosong. Dipakai di `GalleryResource` (url/thumb) dan `EventResource` (galleries).
+- **Album galeri — link folder Google Drive**: kolom baru `gallery_albums.gdrive_folder_url`
+  (migration `2026_08_19_000001`) + validasi `GalleryAlbumRequest` (wajib URL domain
+  `drive.google.com`) + field pada form create/edit + badge "Drive" (link eksternal) pada
+  index. Tanpa Google Drive API / OAuth / iframe.
+- **Endpoint API publik baru**: `GET /api/v1/gallery-albums` → `GalleryAlbumRepository::allPublic()`
+  + `GalleryAlbumResource` (id, event, title, description, cover_image, gdrive_folder_url,
+  galleries_count).
+- **Tests baru**: `tests/Feature/GalleryApiTest.php` (9 test) dan
+  `tests/Feature/Admin/GalleryAlbumAdminTest.php` (7 test) — total 16 test tambahan terkait
+  perubahan ini, semuanya PASS di dalam container.

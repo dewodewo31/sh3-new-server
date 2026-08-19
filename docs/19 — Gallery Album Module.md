@@ -19,6 +19,9 @@ Fitur yang diimplementasikan:
 3. Sorting kolom `title` & `created_at` pada halaman index (`Sort::apply`).
 4. Statistik jumlah gallery per album (`withCount('galleries')`).
 5. Activity logging (`create_album`, `update_album`, `delete_album`).
+6. **Link folder Google Drive** (`gdrive_folder_url`) pada album — ditampilkan sebagai
+   tombol/badge "Drive" di index, disimpan & divalidasi (hanya domain `drive.google.com`).
+7. **Endpoint API publik** `GET /api/v1/gallery-albums` (2026-08-19).
 
 ---
 
@@ -33,6 +36,7 @@ CREATE TABLE gallery_albums (
     title VARCHAR(255) NOT NULL,
     description TEXT NULL,
     cover_image VARCHAR(255) NULL,
+    gdrive_folder_url TEXT NULL,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     FOREIGN KEY (event_id)
@@ -40,6 +44,9 @@ CREATE TABLE gallery_albums (
         ON DELETE SET NULL
 );
 ```
+
+> Kolom `gdrive_folder_url` ditambahkan oleh migration `2026_08_19_000001_add_gdrive_folder_url_to_gallery_albums.php`
+> — link folder Google Drive opsional per album (dibuka sebagai link eksternal, tanpa API key / OAuth).
 
 ### Relasi
 
@@ -57,6 +64,8 @@ CREATE TABLE gallery_albums (
 - `app/Http/Controllers/Admin/GalleryAlbumController.php` — controller CRUD (baru, 2026-08-15).
 - `app/Repositories/GalleryAlbumRepository.php` — query (baru).
 - `app/Http/Requests/GalleryAlbumRequest.php` — validasi (baru).
+- `app/Http/Resources/GalleryAlbumResource.php` — resource API publik (baru, 2026-08-19).
+- `app/Http/Controllers/API/GalleryAlbumController.php` — controller API publik (baru, 2026-08-19).
 - `resources/views/gallery-albums/index.blade.php` — daftar album (baru).
 - `resources/views/gallery-albums/create.blade.php` — form tambah (baru).
 - `resources/views/gallery-albums/edit.blade.php` — form edit (baru).
@@ -106,6 +115,7 @@ if ($request->hasFile('cover_image')) {
 | `title` | `required`, `string`, `max:255` |
 | `description` | `nullable`, `string` |
 | `cover_image` | `nullable`, `image`, `max:4096` (4 MB) |
+| `gdrive_folder_url` | `nullable`, `string`, `max:2048`, `url`, `regex:/drive\.google\.com/` |
 
 ---
 
@@ -172,3 +182,36 @@ Tercatat di tabel `user_activity_logs` via `UserService::logActivity()`.
 Saat membuat/update gallery (modul `docs/06 — Gallery Module.md`), admin dapat memilih album
 melalui field `gallery_album_id`. Album yang sudah dibuat di halaman ini akan muncul pada
 dropdown album di form gallery.
+
+---
+
+## Public API
+
+### GET `/api/v1/gallery-albums`
+
+Endpoint publik (tanpa auth) — daftar album untuk halaman galeri frontend.
+
+- `GalleryAlbumRepository::allPublic()`: `with('event')->withCount('galleries')->orderBy('title')`.
+- Response via `GalleryAlbumResource::collection()`.
+
+Contoh response:
+
+```json
+{
+    "data": [
+        {
+            "id": 1,
+            "event_id": null,
+            "title": "SH3 Anniversary",
+            "description": null,
+            "cover_image": null,
+            "gdrive_folder_url": "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv",
+            "galleries_count": 12,
+            "event": null
+        }
+    ]
+}
+```
+
+Frontend menampilkan link `gdrive_folder_url` sebagai tombol/link eksternal menuju folder
+Google Drive (tanpa iframe, tanpa Google Drive API/OAuth).
