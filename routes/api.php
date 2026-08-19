@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
 
     Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     Route::get('/auth/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
     Route::post('/auth/refresh', [AuthController::class, 'refresh'])->middleware('auth:sanctum');
@@ -31,7 +31,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/participant/auth/verify-reset', [ParticipantAuthController::class, 'verifyReset']);
     Route::post('/participant/auth/reset-password', [ParticipantAuthController::class, 'resetPassword'])->middleware('throttle:5,15');
 
-    Route::post('/guest-sponsor/auth/login', [GuestSponsorAuthController::class, 'login']);
+    Route::post('/guest-sponsor/auth/login', [GuestSponsorAuthController::class, 'login'])->middleware('throttle:login');
 
     Route::get('/events/upcoming', [EventController::class, 'upcoming']);
     Route::get('/events', [EventController::class, 'index']);

@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureRateLimiting();
+
         Gate::define('admin_full_access', fn ($user) => $user->role === 'admin_full_access');
 
         Gate::define('admin_laman', fn ($user) => in_array($user->role, ['admin_full_access', 'admin_laman']));
@@ -35,5 +40,14 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('sponsor', fn ($user) => in_array($user->role, ['admin_full_access', 'sponsor']));
 
         Gate::define('merchandise', fn ($user) => in_array($user->role, ['admin_full_access', 'admin_laman', 'merchandise']));
+    }
+
+    private function configureRateLimiting(): void
+    {
+        RateLimiter::for('login', function (Request $request) {
+            $key = ($request->input('username') ?? '').'|'.$request->ip();
+
+            return Limit::perMinute(5)->by($key);
+        });
     }
 }
