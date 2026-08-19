@@ -10,3 +10,4 @@ storage/framework/views/*
 storage/framework/testing/*
 .env
 docker-compose.override.yml
+public/build

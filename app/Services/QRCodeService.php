@@ -27,4 +27,9 @@ class QRCodeService
 
         return null;
     }
+
+    public function isGuestSponsorCode(string $qrData): bool
+    {
+        return (bool) preg_match('/^GS-\d+-\d+-\d{4}$/', $qrData);
+    }
 }

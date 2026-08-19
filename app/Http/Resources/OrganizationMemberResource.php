@@ -22,7 +22,7 @@ class OrganizationMemberResource extends JsonResource
             'is_active' => $this->is_active,
             'period_start' => $this->period_start?->toDateString(),
             'period_end' => $this->period_end?->toDateString(),
-            'holder' => new ParticipantResource($this->whenLoaded('participant')),
+            'holder' => $this->when(! empty($this->participant), fn () => new ParticipantResource($this->participant)),
             'children' => OrganizationMemberResource::collection($this->whenLoaded('children')),
         ];
     }

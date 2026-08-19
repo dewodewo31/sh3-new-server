@@ -7,7 +7,9 @@ use App\Models\Participant;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\EventParticipantRepository;
 use App\Repositories\EventRepository;
+use App\Repositories\GuestSponsorRepository;
 use App\Services\AttendanceService;
+use App\Services\GuestSponsorService;
 use App\Services\QRCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +22,8 @@ class AttendanceController extends Controller
         private AttendanceRepository $attendanceRepository,
         private EventParticipantRepository $eventParticipantRepository,
         private AttendanceService $attendanceService,
+        private GuestSponsorService $guestSponsorService,
+        private GuestSponsorRepository $guestSponsorRepository,
         private QRCodeService $qrCodeService,
     ) {}
 
@@ -66,6 +70,11 @@ class AttendanceController extends Controller
         ]);
 
         $qrData = trim($request->qr_code);
+
+        if ($this->qrCodeService->isGuestSponsorCode($qrData)) {
+            return $this->processGuestSponsorScan($request, $qrData);
+        }
+
         $decoded = $this->qrCodeService->decode($qrData);
 
         if (! $decoded) {
@@ -122,6 +131,54 @@ class AttendanceController extends Controller
             'data' => [
                 'participant_name' => $registration->participant->name,
                 'event_title' => $registration->event->title,
+                'check_in_time' => now()->format('d/m/Y H:i:s'),
+                'already_checked_in' => false,
+            ],
+        ]);
+    }
+
+    public function processGuestSponsorScan(Request $request, string $qrData): JsonResponse
+    {
+        $guestSponsor = $this->guestSponsorRepository->findByQr($qrData);
+
+        if (! $guestSponsor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'QR Code guest sponsor tidak dikenal.',
+            ], 422);
+        }
+
+        if ($guestSponsor->event_id !== (int) $request->event_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'QR Code ini tidak untuk event tersebut.',
+            ], 422);
+        }
+
+        $event = $this->eventRepository->findById($request->event_id);
+
+        try {
+            $this->guestSponsorService->checkIn(
+                $guestSponsor,
+                $event,
+                ['method' => 'qr_code'],
+                auth()->id(),
+                $request->ip(),
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first() ?? 'Terjadi kesalahan.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Check-in guest sponsor berhasil!',
+            'data' => [
+                'guest_sponsor' => true,
+                'sponsor_name' => $guestSponsor->sponsor?->name,
+                'event_title' => $event->title,
                 'check_in_time' => now()->format('d/m/Y H:i:s'),
                 'already_checked_in' => false,
             ],

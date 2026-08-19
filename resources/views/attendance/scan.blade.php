@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Scan QR Attendance')
-@section('subtitle', 'Scan QR peserta untuk check-in secara real-time')
+@section('subtitle', 'Scan QR peserta atau guest sponsor untuk check-in secara real-time')
 
 @section('breadcrumb')
     @include('includes.breadcrumb', ['items' => [
@@ -89,9 +89,9 @@
                         <p class="form-hint">QR dicek terhadap peserta event yang dipilih.</p>
                     </div>
                     <div class="form-group">
-                        <label for="qr_code" class="form-label">Kode QR Peserta</label>
-                        <input type="text" id="qr_code" name="qr_code" x-model="manualCode" placeholder="3950 / NM0001" class="form-input font-mono text-xs" aria-label="Kode QR">
-                        <p class="form-hint">Gunakan jika kamera tidak tersedia atau QR sulit terbaca.</p>
+                        <label for="qr_code" class="form-label">Kode QR</label>
+                        <input type="text" id="qr_code" name="qr_code" x-model="manualCode" placeholder="3950 / NM0001 / GS-1-2-0001" class="form-input font-mono text-xs" aria-label="Kode QR">
+                        <p class="form-hint">Kode peserta (3950 / NM0001) atau guest sponsor (GS-...). Gunakan jika kamera tidak tersedia atau QR sulit terbaca.</p>
                     </div>
                     <button type="submit" class="btn btn-outline w-full" :disabled="!manualCode || processing">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -138,10 +138,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <p class="text-lg font-semibold text-slate-900 dark:text-slate-100" x-text="result.data.participant_name"></p>
+                    <p class="text-lg font-semibold text-slate-900 dark:text-slate-100" x-text="result.data.participant_name || result.data.sponsor_name"></p>
                     <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400" x-text="result.data.event_title"></p>
                     <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-                        <span class="badge badge-success">Check-in berhasil</span>
+                        <span class="badge badge-success" x-text="result.data.guest_sponsor ? 'Check-in guest sponsor berhasil' : 'Check-in berhasil'"></span>
                         <span class="badge badge-info" x-text="'Waktu: ' + result.data.check_in_time"></span>
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm mt-5" @click="resetResult()">
@@ -172,7 +172,7 @@
             </svg>
             <div>
                 <p class="alert-title">Tips</p>
-                <p class="alert-desc">Akses kamera membutuhkan koneksi HTTPS atau localhost. Pastikan izin kamera diizinkan oleh browser. Setiap QR hanya berlaku untuk 1 peserta pada 1 event.</p>
+                <p class="alert-desc">Akses kamera membutuhkan koneksi HTTPS atau localhost. Pastikan izin kamera diizinkan oleh browser. QR peserta hanya berlaku untuk 1 peserta pada 1 event; QR guest sponsor (GS-...) dicocokkan dengan event yang dipilih.</p>
             </div>
         </div>
     </div>
@@ -285,7 +285,7 @@
                     this.result = data;
 
                     if (data.success) {
-                        showToast('success', 'Check-in berhasil', data.data.participant_name + ' hadir di ' + data.data.event_title);
+                        showToast('success', 'Check-in berhasil', (data.data.participant_name || data.data.sponsor_name) + ' hadir di ' + data.data.event_title);
                         navigator.vibrate?.(200);
                     } else {
                         showToast('error', 'Check-in gagal', data.message);
