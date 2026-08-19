@@ -18,6 +18,7 @@ class GalleryAlbumRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'cover_image' => ['nullable', 'image', 'max:4096'],
+            'gdrive_folder_url' => ['nullable', 'string', 'max:2048', 'url', 'regex:/drive\.google\.com/'],
         ];
     }
 }
