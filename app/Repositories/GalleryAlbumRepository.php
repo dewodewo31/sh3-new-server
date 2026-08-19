@@ -21,4 +21,12 @@ class GalleryAlbumRepository extends BaseRepository
 
         return $query->paginate($perPage)->withQueryString();
     }
+
+    public function allPublic()
+    {
+        return $this->model->with('event')
+            ->withCount('galleries')
+            ->orderBy('title')
+            ->get();
+    }
 }

@@ -4,6 +4,7 @@ use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\CategoryController;
 use App\Http\Controllers\API\EventController;
+use App\Http\Controllers\API\GalleryAlbumController;
 use App\Http\Controllers\API\GalleryController;
 use App\Http\Controllers\API\GuestSponsorAttendanceController;
 use App\Http\Controllers\API\GuestSponsorAuthController;
@@ -38,6 +39,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/events/{id}', [EventController::class, 'show']);
     Route::get('/events/{id}/participants', [EventController::class, 'participants']);
     Route::get('/galleries', [GalleryController::class, 'index']);
+    Route::get('/gallery-albums', [GalleryAlbumController::class, 'index']);
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/merchandise', [MerchandiseController::class, 'index']);
     Route::get('/merchandise/{id}', [MerchandiseController::class, 'show'])->whereNumber('id');

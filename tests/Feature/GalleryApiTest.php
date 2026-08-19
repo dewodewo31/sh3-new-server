@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Gallery;
+use App\Models\GalleryAlbum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -147,5 +148,33 @@ class GalleryApiTest extends TestCase
         $this->getJson("/api/v1/events/{$event->id}")
             ->assertOk()
             ->assertJsonPath('data.galleries.0', 'https://drive.google.com/thumbnail?id=thumb456&sz=w800');
+    }
+
+    public function test_public_gallery_albums_endpoint_returns_folder_url_and_count(): void
+    {
+        $album = GalleryAlbum::create([
+            'title' => 'SH3 Anniversary',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv',
+        ]);
+
+        $this->createGallery(['title' => 'Photo 1', 'gallery_album_id' => $album->id]);
+        $this->createGallery(['title' => 'Photo 2', 'gallery_album_id' => $album->id]);
+
+        $this->getJson('/api/v1/gallery-albums')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'SH3 Anniversary')
+            ->assertJsonPath('data.0.gdrive_folder_url', 'https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv')
+            ->assertJsonPath('data.0.galleries_count', 2);
+    }
+
+    public function test_public_gallery_albums_returns_null_folder_url_without_folder(): void
+    {
+        GalleryAlbum::create(['title' => 'No Drive Album']);
+
+        $this->getJson('/api/v1/gallery-albums')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.gdrive_folder_url', null);
     }
 }
