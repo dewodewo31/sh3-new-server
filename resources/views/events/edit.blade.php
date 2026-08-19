@@ -199,7 +199,7 @@
 
                     {{-- Address --}}
                     <div class="form-group md:col-span-2">
-                        <label for="address" class="form-label">Alamat Lengkap</label>
+                        <label for="address" class="form-label">Link Iframe Google Maps</label>
                         <textarea id="address" name="address" rows="2" class="form-textarea @error('address') error @enderror" placeholder="Alamat detail lokasi event">{{ old('address', $event->address) }}</textarea>
                         @error('address')
                             <p class="form-error" role="alert">
