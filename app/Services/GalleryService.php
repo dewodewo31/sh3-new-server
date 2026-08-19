@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Gallery;
-use App\Models\GalleryAlbum;
 use App\Repositories\GalleryRepository;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -19,6 +18,7 @@ class GalleryService
         return $this->galleryRepository->query()
             ->with(['event.category', 'album'])
             ->where('type', 'image')
+            ->where('is_featured', true)
             ->orderBy('is_featured', 'desc')
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -30,6 +30,7 @@ class GalleryService
         return $this->galleryRepository->query()
             ->where('event_id', $eventId)
             ->where('type', 'image')
+            ->where('is_featured', true)
             ->orderBy('is_featured', 'desc')
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -55,7 +56,7 @@ class GalleryService
         $googleDriveUrl = $data['google_drive_url'];
         $fileId = $this->extractDriveFileId($googleDriveUrl);
 
-        if (!$fileId) {
+        if (! $fileId) {
             throw new \InvalidArgumentException('Google Drive link is invalid or inaccessible.');
         }
 
@@ -126,7 +127,7 @@ class GalleryService
                 default => $sourceImage = null,
             };
 
-            if (!$sourceImage) {
+            if (! $sourceImage) {
                 return $this->uploadFile($file, $path);
             }
 
@@ -142,9 +143,9 @@ class GalleryService
                 $origWidth, $origHeight
             );
 
-            $filename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '_thumb.' . $extension;
-            $storagePath = $path . '/' . $filename;
-            $tempPath = sys_get_temp_dir() . '/' . $filename;
+            $filename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'_thumb.'.$extension;
+            $storagePath = $path.'/'.$filename;
+            $tempPath = sys_get_temp_dir().'/'.$filename;
 
             match ($extension) {
                 'jpg', 'jpeg' => imagejpeg($thumbImage, $tempPath, 80),

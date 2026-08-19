@@ -46,6 +46,7 @@ class EventResource extends JsonResource
             'galleries' => $this->whenLoaded('galleries', function () {
                 return $this->galleries
                     ->where('type', 'image')
+                    ->where('is_featured', true)
                     ->sortBy([
                         ['is_featured', 'desc'],
                         ['sort_order', 'asc'],
