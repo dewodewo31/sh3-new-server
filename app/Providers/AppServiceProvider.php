@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\CacheService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -24,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+
+        app(CacheService::class)->warm();
 
         Gate::define('admin_full_access', fn ($user) => $user->role === 'admin_full_access');
 
