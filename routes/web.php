@@ -72,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman,gallery'])->group(function () {
             Route::resource('galleries', GalleryController::class);
+            Route::post('/gallery-albums/sync', [GalleryAlbumController::class, 'syncNow'])->name('gallery-albums.sync');
             Route::resource('gallery-albums', GalleryAlbumController::class);
         });
 

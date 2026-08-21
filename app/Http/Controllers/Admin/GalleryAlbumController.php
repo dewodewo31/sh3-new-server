@@ -7,6 +7,7 @@ use App\Http\Requests\GalleryAlbumRequest;
 use App\Repositories\EventRepository;
 use App\Repositories\GalleryAlbumRepository;
 use App\Services\FileService;
+use App\Services\GalleryService;
 use App\Services\UserService;
 
 class GalleryAlbumController extends Controller
@@ -16,6 +17,7 @@ class GalleryAlbumController extends Controller
         private EventRepository $eventRepository,
         private UserService $userService,
         private FileService $fileService,
+        private GalleryService $galleryService,
     ) {}
 
     public function index()
@@ -23,6 +25,30 @@ class GalleryAlbumController extends Controller
         $albums = $this->galleryAlbumRepository->paginateWithRelations(15);
 
         return view('gallery-albums.index', compact('albums'));
+    }
+
+    public function syncNow()
+    {
+        $results = $this->galleryService->syncAllDriveAlbums();
+
+        $synced = count(array_filter($results, fn ($r) => $r['status'] === 'synced'));
+        $failed = count(array_filter($results, fn ($r) => $r['status'] === 'error'));
+        $skipped = count(array_filter($results, fn ($r) => $r['status'] === 'skipped'));
+
+        if ($failed > 0) {
+            $messages = collect($results)
+                ->filter(fn ($r) => $r['status'] === 'error')
+                ->pluck('message')
+                ->implode('; ');
+
+            return redirect()->route('admin.gallery-albums.index')
+                ->with('error', "Sync Google Drive gagal di {$failed} album: {$messages}");
+        }
+
+        $suffix = $skipped > 0 ? ", {$skipped} dilewati karena sync sedang berjalan" : '';
+
+        return redirect()->route('admin.gallery-albums.index')
+            ->with('success', "Sync Google Drive selesai ({$synced} album tersinkron{$suffix}).");
     }
 
     public function create()
