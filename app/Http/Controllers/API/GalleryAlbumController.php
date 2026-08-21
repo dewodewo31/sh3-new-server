@@ -21,4 +21,13 @@ class GalleryAlbumController extends Controller
             'data' => GalleryAlbumResource::collection($albums),
         ]);
     }
+
+    public function show(int $id): JsonResponse
+    {
+        $album = $this->galleryAlbumRepository->findPublicDetail($id);
+
+        return response()->json([
+            'data' => new GalleryAlbumResource($album),
+        ]);
+    }
 }

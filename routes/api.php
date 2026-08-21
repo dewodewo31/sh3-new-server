@@ -40,6 +40,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/events/{id}/participants', [EventController::class, 'participants']);
     Route::get('/galleries', [GalleryController::class, 'index']);
     Route::get('/gallery-albums', [GalleryAlbumController::class, 'index']);
+    Route::get('/gallery-albums/{id}', [GalleryAlbumController::class, 'show'])->whereNumber('id');
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/merchandise', [MerchandiseController::class, 'index']);
     Route::get('/merchandise/{id}', [MerchandiseController::class, 'show'])->whereNumber('id');

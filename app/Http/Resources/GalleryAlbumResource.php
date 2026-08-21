@@ -18,6 +18,9 @@ class GalleryAlbumResource extends JsonResource
             'cover_image' => ImageHelper::getUrl($this->cover_image),
             'gdrive_folder_url' => $this->gdrive_folder_url,
             'galleries_count' => $this->whenCounted('galleries'),
+            'galleries' => $this->whenLoaded('galleries', function () {
+                return GalleryResource::collection($this->galleries);
+            }),
             'event' => $this->whenLoaded('event', function () {
                 return $this->event ? [
                     'id' => $this->event->id,

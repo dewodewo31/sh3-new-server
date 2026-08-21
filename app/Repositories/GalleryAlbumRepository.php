@@ -34,4 +34,11 @@ class GalleryAlbumRepository extends BaseRepository
     {
         return $this->model->whereNotNull('gdrive_folder_url')->get();
     }
+
+    public function findPublicDetail(int $id)
+    {
+        return $this->model->with([
+            'galleries' => fn ($q) => $q->orderBy('sort_order')->orderBy('id'),
+        ])->findOrFail($id);
+    }
 }

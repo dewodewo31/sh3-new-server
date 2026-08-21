@@ -37,4 +37,11 @@ class ImageHelper
 
         return $url;
     }
+
+    public static function gdriveContentUrl(?string $fileId): ?string
+    {
+        return $fileId
+            ? 'https://drive.google.com/uc?export=download&id='.$fileId.'&confirm=t'
+            : null;
+    }
 }

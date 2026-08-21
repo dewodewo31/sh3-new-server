@@ -18,13 +18,16 @@ class GalleryResource extends JsonResource
             'description' => $this->description,
             'source' => $this->source,
             'url' => $this->source === 'gdrive'
-                ? ImageHelper::gdriveThumbUrl($this->google_drive_url, $this->google_drive_file_id)
+                ? ($this->type === 'video'
+                    ? ImageHelper::gdriveContentUrl($this->google_drive_file_id)
+                    : ImageHelper::gdriveThumbUrl($this->google_drive_url, $this->google_drive_file_id))
                 : ImageHelper::getUrl($this->file_path),
             'thumb' => $this->source === 'gdrive'
                 ? ImageHelper::gdriveThumbUrl($this->google_drive_url, $this->google_drive_file_id)
                 : ($this->thumbnail_path
                     ? ImageHelper::getUrl($this->thumbnail_path)
                     : ImageHelper::getUrl($this->file_path)),
+            'external_url' => $this->source === 'gdrive' ? $this->google_drive_url : null,
             'type' => $this->type,
             'is_featured' => $this->is_featured,
             'event' => $this->whenLoaded('event', function () {

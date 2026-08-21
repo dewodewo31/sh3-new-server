@@ -177,4 +177,119 @@ class GalleryApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.gdrive_folder_url', null);
     }
+
+    public function test_public_album_detail_shows_all_media_with_type_aware_urls(): void
+    {
+        $album = GalleryAlbum::create([
+            'title' => 'Detail Album',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FOLDER',
+        ]);
+
+        $image = $this->createGallery([
+            'title' => 'Drive Photo',
+            'gallery_album_id' => $album->id,
+            'source' => 'gdrive',
+            'google_drive_url' => 'https://drive.google.com/file/d/img1/view',
+            'google_drive_file_id' => 'img1',
+        ]);
+        $video = $this->createGallery([
+            'title' => 'Drive Clip',
+            'gallery_album_id' => $album->id,
+            'type' => 'video',
+            'source' => 'gdrive',
+            'google_drive_url' => 'https://drive.google.com/file/d/vid1/view',
+            'google_drive_file_id' => 'vid1',
+        ]);
+
+        $this->getJson("/api/v1/gallery-albums/{$album->id}")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.galleries')
+            ->assertJsonPath('data.galleries.0.url', 'https://drive.google.com/thumbnail?id=img1&sz=w800')
+            ->assertJsonPath('data.galleries.1.url', 'https://drive.google.com/uc?export=download&id=vid1&confirm=t')
+            ->assertJsonPath('data.galleries.0.external_url', 'https://drive.google.com/file/d/img1/view')
+            ->assertJsonPath('data.galleries.1.external_url', 'https://drive.google.com/file/d/vid1/view');
+    }
+
+    public function test_public_album_detail_includes_non_featured_media(): void
+    {
+        $album = GalleryAlbum::create(['title' => 'Detail Album']);
+
+        $this->createGallery([
+            'title' => 'Hidden Photo',
+            'gallery_album_id' => $album->id,
+            'is_featured' => false,
+        ]);
+
+        $this->getJson("/api/v1/gallery-albums/{$album->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.galleries')
+            ->assertJsonPath('data.galleries.0.title', 'Hidden Photo');
+    }
+
+    public function test_public_album_detail_returns_404_for_missing_album(): void
+    {
+        $this->getJson('/api/v1/gallery-albums/99999')->assertStatus(404);
+    }
+
+    public function test_public_album_index_does_not_include_galleries_array(): void
+    {
+        $album = GalleryAlbum::create(['title' => 'Index Album']);
+
+        $this->createGallery(['title' => 'Photo', 'gallery_album_id' => $album->id]);
+
+        $this->getJson('/api/v1/gallery-albums')
+            ->assertOk()
+            ->assertJsonMissingPath('data.0.galleries');
+    }
+
+    public function test_public_album_detail_does_not_leak_api_key(): void
+    {
+        config(['services.google_drive.api_key' => 'super-secret-key']);
+
+        $album = GalleryAlbum::create(['title' => 'Secret Album']);
+
+        $this->createGallery([
+            'title' => 'Photo',
+            'gallery_album_id' => $album->id,
+            'source' => 'gdrive',
+            'google_drive_url' => 'https://drive.google.com/file/d/img9/view',
+            'google_drive_file_id' => 'img9',
+        ]);
+
+        $response = $this->getJson("/api/v1/gallery-albums/{$album->id}");
+
+        $response->assertOk();
+        $this->assertStringNotContainsString('super-secret-key', $response->getContent());
+        $this->assertStringNotContainsString('key=', $response->getContent());
+    }
+
+    public function test_public_album_detail_does_not_leak_sync_columns(): void
+    {
+        $album = GalleryAlbum::create([
+            'title' => 'Broken Sync Album',
+            'last_synced_at' => now(),
+            'gdrive_sync_error' => 'Folder tidak dapat diakses.',
+        ]);
+
+        $this->getJson("/api/v1/gallery-albums/{$album->id}")
+            ->assertOk()
+            ->assertJsonMissingPath('data.gdrive_sync_error')
+            ->assertJsonMissingPath('data.last_synced_at');
+    }
+
+    public function test_public_album_detail_is_scoped_to_requested_album(): void
+    {
+        $albumA = GalleryAlbum::create(['title' => 'Album A']);
+        $albumB = GalleryAlbum::create(['title' => 'Album B']);
+
+        $this->createGallery(['title' => 'Photo A', 'gallery_album_id' => $albumA->id]);
+        $this->createGallery(['title' => 'Photo B', 'gallery_album_id' => $albumB->id]);
+
+        $response = $this->getJson("/api/v1/gallery-albums/{$albumA->id}");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data.galleries')
+            ->assertJsonPath('data.galleries.0.title', 'Photo A')
+            ->assertJsonMissing(['title' => 'Photo B']);
+    }
 }
