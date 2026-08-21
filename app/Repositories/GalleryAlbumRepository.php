@@ -29,4 +29,9 @@ class GalleryAlbumRepository extends BaseRepository
             ->orderBy('title')
             ->get();
     }
+
+    public function allWithDriveFolder(): object
+    {
+        return $this->model->whereNotNull('gdrive_folder_url')->get();
+    }
 }

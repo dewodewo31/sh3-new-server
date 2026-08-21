@@ -2,15 +2,23 @@
 
 namespace App\Services;
 
+use App\Exceptions\GoogleDriveApiException;
 use App\Models\Gallery;
+use App\Models\GalleryAlbum;
+use App\Repositories\GalleryAlbumRepository;
 use App\Repositories\GalleryRepository;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class GalleryService
 {
     public function __construct(
         private GalleryRepository $galleryRepository,
+        private GoogleDriveService $googleDriveService,
+        private GalleryAlbumRepository $galleryAlbumRepository,
     ) {}
 
     public function getAllPublic(): object
@@ -106,6 +114,109 @@ class GalleryService
             ->orderBy('sort_order')
             ->get()
             ->groupBy('gallery_album_id');
+    }
+
+    public function syncAllDriveAlbums(): array
+    {
+        $albums = $this->galleryAlbumRepository->allWithDriveFolder();
+        $results = [];
+
+        foreach ($albums as $album) {
+            $results[] = $this->syncAlbumFromDrive($album);
+        }
+
+        return $results;
+    }
+
+    public function syncAlbumFromDrive(GalleryAlbum $album): array
+    {
+        $lock = Cache::lock('gallery:sync:'.$album->id, 300);
+
+        if (! $lock->get()) {
+            return [
+                'album_id' => $album->id,
+                'status' => 'skipped',
+                'message' => 'Sync sudah berjalan.',
+            ];
+        }
+
+        try {
+            $folderId = $this->googleDriveService->extractFolderId($album->gdrive_folder_url);
+
+            if (! $folderId) {
+                $this->galleryAlbumRepository->update($album, ['gdrive_sync_error' => 'URL folder Google Drive tidak valid.']);
+                Log::warning('Gallery Google Drive sync gagal', ['album_id' => $album->id, 'error' => 'URL folder Google Drive tidak valid.']);
+
+                return [
+                    'album_id' => $album->id,
+                    'status' => 'error',
+                    'message' => 'URL folder Google Drive tidak valid.',
+                ];
+            }
+
+            try {
+                $files = $this->googleDriveService->listFiles($folderId);
+            } catch (GoogleDriveApiException $e) {
+                $this->galleryAlbumRepository->update($album, ['gdrive_sync_error' => $e->getMessage()]);
+                Log::warning('Gallery Google Drive sync gagal', ['album_id' => $album->id, 'error' => $e->getMessage()]);
+
+                return [
+                    'album_id' => $album->id,
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                ];
+            }
+
+            $keepIds = [];
+
+            try {
+                DB::transaction(function () use ($album, $files, &$keepIds) {
+                    foreach ($files as $file) {
+                        if ($file->type === 'folder' || $file->type === 'other') {
+                            continue;
+                        }
+
+                        $this->galleryRepository->updateOrCreateByDriveFile(
+                            $album->id,
+                            $file->id,
+                            [
+                                'title' => $file->name,
+                                'source' => 'gdrive',
+                                'type' => $file->type,
+                                'google_drive_url' => 'https://drive.google.com/file/d/'.$file->id.'/view',
+                            ]
+                        );
+
+                        $keepIds[] = $file->id;
+                    }
+
+                    $this->galleryRepository->deleteStaleDriveFiles($album->id, $keepIds);
+                    $this->galleryAlbumRepository->update($album, [
+                        'last_synced_at' => now(),
+                        'gdrive_sync_error' => null,
+                    ]);
+                });
+            } catch (\Throwable $e) {
+                $this->galleryAlbumRepository->update($album, ['gdrive_sync_error' => 'Sync gagal: terjadi kesalahan internal.']);
+                Log::error('Gallery Google Drive sync error', ['album_id' => $album->id, 'error' => $e->getMessage()]);
+
+                return [
+                    'album_id' => $album->id,
+                    'status' => 'error',
+                    'message' => 'Sync gagal: terjadi kesalahan internal.',
+                ];
+            }
+
+            Log::info('Gallery Google Drive sync sukses', ['album_id' => $album->id, 'count' => count($keepIds)]);
+
+            return [
+                'album_id' => $album->id,
+                'status' => 'synced',
+                'count' => count($keepIds),
+            ];
+        } finally {
+            $lock->release();
+        }
     }
 
     private function uploadFile(UploadedFile $file, string $path): string

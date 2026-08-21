@@ -30,4 +30,21 @@ class GalleryRepository extends BaseRepository
             ->get()
             ->groupBy('gallery_album_id');
     }
+
+    public function updateOrCreateByDriveFile(int $albumId, string $fileId, array $attributes)
+    {
+        return $this->model->updateOrCreate(
+            ['gallery_album_id' => $albumId, 'google_drive_file_id' => $fileId],
+            $attributes
+        );
+    }
+
+    public function deleteStaleDriveFiles(int $albumId, array $keepFileIds): int
+    {
+        return $this->model
+            ->where('gallery_album_id', $albumId)
+            ->where('source', 'gdrive')
+            ->whereNotIn('google_drive_file_id', $keepFileIds)
+            ->delete();
+    }
 }
