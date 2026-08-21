@@ -225,3 +225,37 @@ Perubahan perilaku & penambahan sejak sinkronisasi sebelumnya:
 - **Tests baru**: `tests/Feature/GalleryApiTest.php` (9 test) dan
   `tests/Feature/Admin/GalleryAlbumAdminTest.php` (7 test) — total 16 test tambahan terkait
   perubahan ini, semuanya PASS di dalam container.
+
+## Sinkronisasi 2026-08-20 — Gallery GDrive Folder Sync
+
+Perubahan perilaku & penambahan sejak sinkronisasi sebelumnya (fitur *gallery gdrive folder sync*):
+
+- **Sync isi folder Google Drive per album**: `GoogleDriveService` baru (integration layer,
+  `files.list` via API key `GOOGLE_DRIVE_API_KEY`, pagination merged, timeout 15s + retry,
+  error 403/429/5xx/network/malformed dipetakan ke `GoogleDriveApiException` sanitized,
+  base URL hardcoded anti-SSRF) + `App\DTOs\DriveFileDTO` (type dari mimeType, guard entry
+  tanpa id). Hanya dipanggil dari `GalleryService::syncAlbumFromDrive()` /
+  `syncAllDriveAlbums()`.
+- **Snapshot idempotent**: upsert by `(gallery_album_id, google_drive_file_id)`
+  (`GalleryRepository::updateOrCreateByDriveFile`); stale delete (`deleteStaleDriveFiles`)
+  hanya setelah fetch sukses penuh; write phase dibungkus `DB::transaction`; kurasi admin
+  (`is_featured`) tidak pernah ditimpa.
+- **Race guard**: `Cache::lock('gallery:sync:{albumId}', 300)` per album dengan try/finally
+  release — sync manual + scheduler bersamaan → status `skipped`.
+- **Kolom sync**: migration `2026_08_20_000001_add_gdrive_sync_columns_to_gallery_albums.php`
+  menambah `gallery_albums.last_synced_at` + `gdrive_sync_error` dan composite index
+  `(gallery_album_id, google_drive_file_id)` di `galleries`. Error disimpan sanitized
+  (tanpa API key/URL), tidak pernah tampil di API publik.
+- **Command + scheduler**: `gallery:sync-gdrive` (auto-discover) + schedule hourly
+  `withoutOverlapping()` di `bootstrap/app.php`; tombol **Sync Drive** admin
+  (`POST /admin/gallery-albums/sync`, roles `admin_full_access,admin_laman,gallery` via
+  RoleMiddleware existing).
+- **Validasi diperketat (backward-compatible)**: `GalleryAlbumRequest::gdrive_folder_url`
+  kini wajib format folder `drive.google.com/drive/folders/...` KECUALI nilai sama dengan
+  record existing (album legacy tetap bisa diedit tanpa gagal validasi).
+- **Endpoint API publik baru**: `GET /api/v1/gallery-albums/{id}` — detail album berisi SEMUA
+  media: image → `thumbnail?id=...&sz=w800`, video → `uc?export=download&id=...&confirm=t`
+  (`ImageHelper::gdriveContentUrl()`; `confirm=t` menghindari halaman virus-scan >25MB),
+  plus `external_url`. `GET /galleries` & index album tetap featured-only / tanpa array galleries.
+- **Tests baru**: `GallerySyncTest` (18), `GoogleDriveServiceTest` (9),
+  `GalleryAlbumAdminTest` (+8 = 15), `GalleryApiTest` (+7 = 16) — semuanya PASS di container.

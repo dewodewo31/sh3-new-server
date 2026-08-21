@@ -281,6 +281,8 @@ MAIL_USERNAME=<user>
 MAIL_PASSWORD=<pass>
 MAIL_FROM_ADDRESS="no-reply@sh3.example.com"
 MAIL_FROM_NAME="${APP_NAME}"
+
+GOOGLE_DRIVE_API_KEY=                  # API key Google Drive (backend-only) untuk sync folder album galeri
 ```
 
 > **PENTING**: `APP_URL` menentukan basis URL file storage (`APP_URL/storage/...`). Jika salah, gambar akan 403/404 (lihat bug upload gambar di Changelog). HTTPS diperlukan agar browser bisa memuat konten.
@@ -555,6 +557,7 @@ Semua endpoint API berada di prefix `/api/v1`.
 | GET | `/categories` | Daftar kategori event + jumlah event |
 | GET | `/galleries` | Semua foto galeri event (URL penuh + thumb, hanya `is_featured=true`) |
 | GET | `/gallery-albums` | Daftar album galeri publik (termasuk link folder Google Drive) |
+| GET | `/gallery-albums/{id}` | Detail album galeri publik — semua media (image + video, `external_url`) |
 | GET | `/sponsors` | Daftar sponsor |
 | GET | `/organization` | Struktur organisasi |
 | GET | `/organization/stats` | Statistik organisasi |
@@ -698,6 +701,11 @@ Upload foto/video per event. Featured image, sort_order, thumbnail. Album galeri
 API publik mengembalikan **hanya gambar featured (terpilih)** dengan URL penuh + thumb + info event
 (sumber Google Drive dirender via `thumbnail?id=...&sz=w800`). Album mendukung **link folder
 Google Drive** (`gdrive_folder_url`) yang ditampilkan sebagai link eksternal.
+Album dapat **mensinkron isi folder Google Drive** (gambar+video) via tombol *Sync Drive* admin
+atau command `gallery:sync-gdrive` (scheduler hourly) — butuh `GOOGLE_DRIVE_API_KEY` di `.env`,
+folder wajib publik (*Anyone with the link can view*); snapshot idempotent, error sanitized.
+Detail album publik `GET /api/v1/gallery-albums/{id}` menampilkan semua media
+(video: `uc?export=download&id=...&confirm=t`).
 Masonry gallery + lightbox di frontend.
 
 ### 7. Sponsor & Merchandise

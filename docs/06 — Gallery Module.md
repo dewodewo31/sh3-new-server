@@ -210,6 +210,41 @@ File harus disetel menjadi:
 
 ---
 
+## 3. Sync Google Drive Folder (per Album)
+
+Album galeri dapat menarik **seluruh isi folder Google Drive** (gambar + video) secara otomatis
+via `gallery:sync-gdrive` (command/scheduler) atau tombol **Sync Drive** di panel admin
+(`POST /admin/gallery-albums/sync`, roles `admin_full_access,admin_laman,gallery`).
+
+Cara kerja (`GalleryService::syncAlbumFromDrive()`):
+
+1. API key dibaca dari `GOOGLE_DRIVE_API_KEY` (`.env`, backend-only) — memakai Google Drive API
+   `files.list` **tanpa OAuth**; folder wajib dishare *Anyone with the link can view*.
+2. Ekstraksi folder ID dari `gdrive_folder_url` (regex `drive.google.com/drive/folders/...`);
+   URL lain ditolak (anti-SSRF, base URL hardcoded `www.googleapis.com`).
+3. Snapshot idempotent: upsert per `(gallery_album_id, google_drive_file_id)` — re-sync tidak
+   membuat duplikat; kurasi admin (`is_featured`, `sort_order`) dipertahankan.
+4. File yang hilang dari folder dihapus **hanya saat fetch sukses penuh** (abort-before-write:
+   gagal 403/429/5xx/timeout/halaman tengah → snapshot DB utuh).
+5. MIME tak dikenal (bukan `image/*` / `video/*`) dan subfolder di-skip (tidak rekursif).
+6. Error disimpan sanitized di `gallery_albums.gdrive_sync_error` (tanpa API key/URL) +
+   `last_synced_at` terisi saat sukses. Race guard: `Cache::lock('gallery:sync:{albumId}')`
+   mencegah sinkron ganda (manual + scheduler bersamaan → status `skipped`).
+
+URL tampilan media hasil sync:
+
+| Tipe | URL |
+|------|-----|
+| Gambar | `https://drive.google.com/thumbnail?id=FILE_ID&sz=w800` |
+| Video | `https://drive.google.com/uc?export=download&id=FILE_ID&confirm=t` |
+
+> **Catatan video**: `uc?export=download&id=` **wajib** dengan `&confirm=t` — tanpa itu file
+> >25MB menampilkan halaman virus-scan interstitial sehingga `<video>` gagal dimuat.
+> Catatan `uc?id=` HTTP 403 (di atas) tetap berlaku untuk gambar. Fallback publik:
+> `external_url` (URL mentah Drive) ikut dikirim oleh `GalleryResource`.
+
+---
+
 # Validation
 
 ## Local Upload

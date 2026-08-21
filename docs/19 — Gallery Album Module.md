@@ -22,6 +22,14 @@ Fitur yang diimplementasikan:
 6. **Link folder Google Drive** (`gdrive_folder_url`) pada album — ditampilkan sebagai
    tombol/badge "Drive" di index, disimpan & divalidasi (hanya domain `drive.google.com`).
 7. **Endpoint API publik** `GET /api/v1/gallery-albums` (2026-08-19).
+8. **Sync isi folder Google Drive** (2026-08-20): command `gallery:sync-gdrive` (scheduler
+   hourly + `withoutOverlapping`) dan tombol **Sync Drive** (`POST /admin/gallery-albums/sync`)
+   menarik seluruh gambar+video folder publik menjadi record `galleries` — idempotent by
+   `google_drive_file_id`, stale delete hanya saat sukses penuh, error sanitized di
+   `gdrive_sync_error`, race guard `Cache::lock` per album.
+9. **Endpoint API publik** `GET /api/v1/gallery-albums/{id}` (2026-08-20) — detail album
+   berisi SEMUA media (image → thumbnail URL, video → `uc?export=download&id=...&confirm=t`,
+   plus `external_url`).
 
 ---
 
@@ -37,6 +45,8 @@ CREATE TABLE gallery_albums (
     description TEXT NULL,
     cover_image VARCHAR(255) NULL,
     gdrive_folder_url TEXT NULL,
+    last_synced_at TIMESTAMP NULL,
+    gdrive_sync_error TEXT NULL,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     FOREIGN KEY (event_id)
@@ -47,6 +57,9 @@ CREATE TABLE gallery_albums (
 
 > Kolom `gdrive_folder_url` ditambahkan oleh migration `2026_08_19_000001_add_gdrive_folder_url_to_gallery_albums.php`
 > — link folder Google Drive opsional per album (dibuka sebagai link eksternal, tanpa API key / OAuth).
+> Kolom `last_synced_at` + `gdrive_sync_error` ditambahkan oleh migration
+> `2026_08_20_000001_add_gdrive_sync_columns_to_gallery_albums.php` (sekaligus composite index
+> `(gallery_album_id, google_drive_file_id)` pada tabel `galleries` untuk upsert/stale-delete).
 
 ### Relasi
 
@@ -215,3 +228,53 @@ Contoh response:
 
 Frontend menampilkan link `gdrive_folder_url` sebagai tombol/link eksternal menuju folder
 Google Drive (tanpa iframe, tanpa Google Drive API/OAuth).
+
+### GET `/api/v1/gallery-albums/{id}`
+
+Endpoint publik (tanpa auth) — detail album berisi **SEMUA media** di dalamnya
+(`GalleryAlbumRepository::findPublicDetail()`, galleries diurutkan `sort_order, id`).
+Kolom sync internal (`last_synced_at`, `gdrive_sync_error`) **tidak pernah** diekspos.
+
+Contoh response:
+
+```json
+{
+    "data": {
+        "id": 1,
+        "event_id": null,
+        "title": "SH3 Anniversary",
+        "description": null,
+        "cover_image": null,
+        "gdrive_folder_url": "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv",
+        "galleries_count": 2,
+        "galleries": [
+            {
+                "id": 10,
+                "album_id": 1,
+                "title": "foto.jpg",
+                "source": "gdrive",
+                "url": "https://drive.google.com/thumbnail?id=img1&sz=w800",
+                "thumb": "https://drive.google.com/thumbnail?id=img1&sz=w800",
+                "external_url": "https://drive.google.com/file/d/img1/view",
+                "type": "image",
+                "is_featured": false
+            },
+            {
+                "id": 11,
+                "album_id": 1,
+                "title": "klip.mp4",
+                "source": "gdrive",
+                "url": "https://drive.google.com/uc?export=download&id=vid1&confirm=t",
+                "thumb": "https://drive.google.com/thumbnail?id=vid1&sz=w800",
+                "external_url": "https://drive.google.com/file/d/vid1/view",
+                "type": "video",
+                "is_featured": false
+            }
+        ],
+        "event": null
+    }
+}
+```
+
+> `GET /api/v1/galleries` dan index `/api/v1/gallery-albums` **tidak berubah** — index tetap
+> tanpa array `galleries` (hanya `galleries_count`), galeri publik tetap featured-only.
