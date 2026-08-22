@@ -22,6 +22,13 @@ class BookkeepingRequest extends FormRequest
             'sponsor_id' => ['nullable', 'required_if:category,sponsor', 'exists:sponsors,id'],
             'event_id' => ['nullable', 'exists:events,id'],
             'receipt' => ['nullable', 'image', 'max:5120'],
+            'financial_account_id' => ['nullable', 'exists:financial_accounts,id'],
+            'activity_id' => ['nullable', 'exists:activities,id'],
+            'payee' => ['nullable', 'string'],
+            'due_date' => ['nullable', 'date'],
+            'reference_type' => ['nullable', 'string'],
+            'reference_id' => ['nullable', 'integer'],
+            'status' => ['nullable', 'in:draft,submitted,approved,paid,cancelled'],
         ];
     }
 
@@ -43,6 +50,13 @@ class BookkeepingRequest extends FormRequest
             'event_id.exists' => 'Event tidak ditemukan.',
             'receipt.image' => 'Bukti nota harus berupa gambar.',
             'receipt.max' => 'Ukuran bukti nota maksimal 5MB.',
+            'financial_account_id.exists' => 'Rekening keuangan tidak ditemukan.',
+            'activity_id.exists' => 'Aktivitas tidak ditemukan.',
+            'payee.string' => 'Penerima harus berupa teks.',
+            'due_date.date' => 'Tanggal jatuh tempo tidak valid.',
+            'reference_type.string' => 'Tipe referensi harus berupa teks.',
+            'reference_id.integer' => 'ID referensi harus berupa angka.',
+            'status.in' => 'Status tidak valid.',
         ];
     }
 }

@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityController;
 use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\BookkeepingController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\EventBudgetController;
 use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\FinancialAccountController;
 use App\Http\Controllers\Admin\GalleryAlbumController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\GuestSponsorController;
@@ -106,7 +109,29 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/payments/{id}/confirm', [PaymentController::class, 'confirm'])->name('payments.confirm');
             Route::put('/payments/{id}/reject', [PaymentController::class, 'reject'])->name('payments.reject');
 
+            Route::get('/bookkeepings/reports', [BookkeepingController::class, 'reports'])->name('bookkeepings.reports');
+            Route::get('/bookkeepings/receivables', [BookkeepingController::class, 'receivables'])->name('bookkeepings.receivables');
+            Route::get('/bookkeepings/payables', [BookkeepingController::class, 'payables'])->name('bookkeepings.payables');
+            Route::get('/bookkeepings/cash-flow', [BookkeepingController::class, 'cashFlow'])->name('bookkeepings.cash-flow');
+
+            Route::get('/bookkeepings/export', [BookkeepingController::class, 'export'])->name('bookkeepings.export');
+            Route::get('/bookkeepings/export-budget-vs-actual', [BookkeepingController::class, 'exportBudgetVsActual'])->name('bookkeepings.export-budget-vs-actual');
+            Route::get('/bookkeepings/export-cash-flow', [BookkeepingController::class, 'exportCashFlow'])->name('bookkeepings.export-cash-flow');
+            Route::get('/bookkeepings/export-receivables', [BookkeepingController::class, 'exportReceivables'])->name('bookkeepings.export-receivables');
+            Route::get('/bookkeepings/export-payable', [BookkeepingController::class, 'exportPayable'])->name('bookkeepings.export-payable');
+
+            Route::put('bookkeepings/{id}/submit', [BookkeepingController::class, 'submit'])->name('bookkeepings.submit');
+
             Route::resource('bookkeepings', BookkeepingController::class);
+            Route::resource('financial-accounts', FinancialAccountController::class);
+            Route::resource('activities', ActivityController::class);
+            Route::resource('event-budgets', EventBudgetController::class);
+
+            Route::middleware([RoleMiddleware::class.':'.implode(',', config('sh3.financial_approver_roles'))])->group(function () {
+                Route::put('bookkeepings/{id}/approve', [BookkeepingController::class, 'approve'])->name('bookkeepings.approve');
+                Route::put('bookkeepings/{id}/mark-paid', [BookkeepingController::class, 'markPaid'])->name('bookkeepings.mark-paid');
+                Route::put('bookkeepings/{id}/cancel', [BookkeepingController::class, 'cancel'])->name('bookkeepings.cancel');
+            });
         });
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {

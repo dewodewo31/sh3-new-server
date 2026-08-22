@@ -52,6 +52,24 @@
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
             Tambah Pembukuan
         </a>
+
+        @php
+            $filterKeys = ['type', 'category', 'sponsor_id', 'event_id', 'status', 'financial_account_id', 'activity_id', 'date_from', 'date_to'];
+            $csvUrl = route('admin.bookkeepings.export', array_merge(request()->only($filterKeys), ['format' => 'csv']));
+            $xlsxUrl = route('admin.bookkeepings.export', array_merge(request()->only($filterKeys), ['format' => 'xlsx']));
+            $pdfUrl = route('admin.bookkeepings.export', array_merge(request()->only($filterKeys), ['format' => 'pdf']));
+        @endphp
+        <details class="relative inline-block">
+            <summary class="btn btn-secondary btn-sm" style="list-style:none;cursor:pointer;">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                Ekspor
+            </summary>
+            <div class="absolute right-0 z-10 mt-1 w-40 rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                <a href="{{ $csvUrl }}" class="block px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700">CSV</a>
+                <a href="{{ $xlsxUrl }}" class="block px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700">XLSX</a>
+                <a href="{{ $pdfUrl }}" class="block px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700">PDF</a>
+            </div>
+        </details>
     </div>
 
     <form action="{{ route('admin.bookkeepings.index') }}" method="GET" class="border-b border-slate-100 px-4 py-4 dark:border-slate-700/60">

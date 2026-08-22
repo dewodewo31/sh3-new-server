@@ -1,10 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load .env so DB/Redis connection values are available to this script
+# Load .env so DB/Redis connection values are available to this script.
+# Snapshot pre-existing env first: .env baked into the image may hold empty
+# placeholders (e.g. GOOGLE_DRIVE_API_KEY=) that must not override
+# runtime-injected values from docker-compose.
+declare -A PRESET_ENV=()
+while IFS='=' read -r k v; do
+  PRESET_ENV["$k"]="$v"
+done < <(env)
+
 set -a
 . /var/www/html/.env
 set +a
+
+for k in "${!PRESET_ENV[@]}"; do
+  export "$k=${PRESET_ENV[$k]}"
+done
+
+# `php artisan serve` strips worker env down to a passthrough whitelist,
+# so runtime-injected vars must be persisted into .env for web requests.
+if [ -n "${GOOGLE_DRIVE_API_KEY:-}" ]; then
+  sed -i "s|^GOOGLE_DRIVE_API_KEY=.*|GOOGLE_DRIVE_API_KEY=${GOOGLE_DRIVE_API_KEY}|" /var/www/html/.env
+fi
 
 export DB_HOST="${DB_HOST:-mysql}"
 export DB_PORT="${DB_PORT:-3306}"

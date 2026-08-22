@@ -2,6 +2,20 @@
 
 namespace App\Providers;
 
+use App\Repositories\ActivityRepository;
+use App\Repositories\AttendanceRepository;
+use App\Repositories\CategoryRepository;
+use App\Repositories\EventBudgetRepository;
+use App\Repositories\EventParticipantRepository;
+use App\Repositories\EventRepository;
+use App\Repositories\FinancialAccountRepository;
+use App\Repositories\GalleryRepository;
+use App\Repositories\MerchandiseRepository;
+use App\Repositories\OrganizationMemberRepository;
+use App\Repositories\ParticipantRepository;
+use App\Repositories\PaymentRepository;
+use App\Repositories\SponsorRepository;
+use App\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -9,48 +23,60 @@ class RepositoryServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(
-            \App\Repositories\UserRepository::class,
-            \App\Repositories\UserRepository::class
+            UserRepository::class,
+            UserRepository::class
         );
         $this->app->bind(
-            \App\Repositories\ParticipantRepository::class,
-            \App\Repositories\ParticipantRepository::class
+            ParticipantRepository::class,
+            ParticipantRepository::class
         );
         $this->app->bind(
-            \App\Repositories\CategoryRepository::class,
-            \App\Repositories\CategoryRepository::class
+            CategoryRepository::class,
+            CategoryRepository::class
         );
         $this->app->bind(
-            \App\Repositories\EventRepository::class,
-            \App\Repositories\EventRepository::class
+            EventRepository::class,
+            EventRepository::class
         );
         $this->app->bind(
-            \App\Repositories\EventParticipantRepository::class,
-            \App\Repositories\EventParticipantRepository::class
+            EventParticipantRepository::class,
+            EventParticipantRepository::class
         );
         $this->app->bind(
-            \App\Repositories\MerchandiseRepository::class,
-            \App\Repositories\MerchandiseRepository::class
+            MerchandiseRepository::class,
+            MerchandiseRepository::class
         );
         $this->app->bind(
-            \App\Repositories\PaymentRepository::class,
-            \App\Repositories\PaymentRepository::class
+            PaymentRepository::class,
+            PaymentRepository::class
         );
         $this->app->bind(
-            \App\Repositories\SponsorRepository::class,
-            \App\Repositories\SponsorRepository::class
+            SponsorRepository::class,
+            SponsorRepository::class
         );
         $this->app->bind(
-            \App\Repositories\GalleryRepository::class,
-            \App\Repositories\GalleryRepository::class
+            GalleryRepository::class,
+            GalleryRepository::class
         );
         $this->app->bind(
-            \App\Repositories\OrganizationMemberRepository::class,
-            \App\Repositories\OrganizationMemberRepository::class
+            OrganizationMemberRepository::class,
+            OrganizationMemberRepository::class
         );
         $this->app->bind(
-            \App\Repositories\AttendanceRepository::class,
-            \App\Repositories\AttendanceRepository::class
+            AttendanceRepository::class,
+            AttendanceRepository::class
+        );
+        $this->app->bind(
+            FinancialAccountRepository::class,
+            FinancialAccountRepository::class
+        );
+        $this->app->bind(
+            ActivityRepository::class,
+            ActivityRepository::class
+        );
+        $this->app->bind(
+            EventBudgetRepository::class,
+            EventBudgetRepository::class
         );
     }
 }

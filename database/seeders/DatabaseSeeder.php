@@ -15,11 +15,14 @@ class DatabaseSeeder extends Seeder
             ParticipantSeeder::class,
             EventSeeder::class,
             SponsorSeeder::class,
-            BookkeepingSeeder::class,
             EventParticipantSeeder::class,
             MerchandiseSeeder::class,
             OrganizationMemberSeeder::class,
             GallerySeeder::class,
+            FinancialAccountSeeder::class,
+            ActivitySeeder::class,
+            BookkeepingSeeder::class,
+            EventBudgetSeeder::class,
         ]);
     }
 }
