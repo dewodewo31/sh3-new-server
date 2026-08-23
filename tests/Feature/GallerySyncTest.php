@@ -467,6 +467,127 @@ class GallerySyncTest extends TestCase
         $this->assertStringNotContainsString('drive.google.com', $album->gdrive_sync_error);
     }
 
+    public function test_sync_request_targets_shared_drives(): void
+    {
+        GalleryAlbum::create([
+            'title' => 'Shared Drive',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FOLDER',
+        ]);
+
+        Http::fake(['www.googleapis.com/*' => $this->fakeFolderFiles([])]);
+
+        app(GalleryService::class)->syncAllDriveAlbums();
+
+        Http::assertSent(fn ($request) => $request['supportsAllDrives'] === 'true'
+            && $request['includeItemsFromAllDrives'] === 'true');
+    }
+
+    public function test_folder_url_with_query_params_extracts_id_and_sends_resource_key_header(): void
+    {
+        $album = GalleryAlbum::create([
+            'title' => 'With Resource Key',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FOLDER123?usp=sharing&resourcekey=RK-abc_123',
+        ]);
+
+        Http::fake(['www.googleapis.com/*' => $this->fakeFolderFiles([
+            ['id' => 'img1', 'name' => 'a.jpg', 'mimeType' => 'image/jpeg'],
+        ])]);
+
+        $results = app(GalleryService::class)->syncAllDriveAlbums();
+
+        $this->assertSame('synced', $results[0]['status']);
+        Http::assertSent(function ($request) {
+            return str_contains($request['q'], "'FOLDER123' in parents")
+                && $request->header('X-Goog-Drive-Resource-Keys') === ['FOLDER123/RK-abc_123'];
+        });
+        $this->assertDatabaseHas('galleries', [
+            'gallery_album_id' => $album->id,
+            'google_drive_file_id' => 'img1',
+        ]);
+    }
+
+    public function test_resource_key_header_is_omitted_when_url_has_no_resource_key(): void
+    {
+        GalleryAlbum::create([
+            'title' => 'Plain',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FOLDER?usp=sharing',
+        ]);
+
+        Http::fake(['www.googleapis.com/*' => $this->fakeFolderFiles([])]);
+
+        app(GalleryService::class)->syncAllDriveAlbums();
+
+        Http::assertSent(fn ($request) => $request->header('X-Goog-Drive-Resource-Keys') === []);
+    }
+
+    public function test_sync_failure_404_reports_not_found_diagnostic(): void
+    {
+        $album = GalleryAlbum::create([
+            'title' => 'Missing',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/GONE',
+        ]);
+
+        Http::fake(['www.googleapis.com/*' => Http::response([
+            'error' => [
+                'code' => 404,
+                'message' => 'File not found: GONE.',
+                'errors' => [['reason' => 'notFound']],
+            ],
+        ], 404)]);
+
+        app(GalleryService::class)->syncAllDriveAlbums();
+
+        $album->refresh();
+        $this->assertStringContainsString('tidak ditemukan', $album->gdrive_sync_error);
+        $this->assertStringContainsString('[notFound]', $album->gdrive_sync_error);
+    }
+
+    public function test_api_key_service_blocked_reason_is_surfaced(): void
+    {
+        config(['services.google_drive.api_key' => 'blocked-key']);
+
+        $album = GalleryAlbum::create([
+            'title' => 'Blocked',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FA',
+        ]);
+
+        Http::fake(['www.googleapis.com/*' => Http::response([
+            'error' => [
+                'code' => 403,
+                'message' => 'Requests to this API drive method google.apps.drive.v3.DriveFiles.List are blocked.',
+                'errors' => [['reason' => 'forbidden']],
+                'details' => [[
+                    '@type' => 'type.googleapis.com/google.rpc.ErrorInfo',
+                    'reason' => 'API_KEY_SERVICE_BLOCKED',
+                ]],
+            ],
+        ], 403)]);
+
+        app(GalleryService::class)->syncAllDriveAlbums();
+
+        $album->refresh();
+        $this->assertNotNull($album->gdrive_sync_error);
+        $this->assertStringContainsString('API key', $album->gdrive_sync_error);
+        $this->assertStringContainsString('[API_KEY_SERVICE_BLOCKED]', $album->gdrive_sync_error);
+        $this->assertStringNotContainsString('blocked-key', $album->gdrive_sync_error);
+    }
+
+    public function test_sync_fails_with_clear_message_when_api_key_is_missing(): void
+    {
+        config(['services.google_drive.api_key' => null]);
+
+        $album = GalleryAlbum::create([
+            'title' => 'No Key',
+            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FA',
+        ]);
+
+        app(GalleryService::class)->syncAllDriveAlbums();
+
+        Http::assertNothingSent();
+        $album->refresh();
+        $this->assertStringContainsString('GOOGLE_DRIVE_API_KEY', $album->gdrive_sync_error);
+    }
+
     private function fakeFolderFiles(array $files)
     {
         return Http::response(['files' => $files, 'nextPageToken' => null], 200);

@@ -155,7 +155,8 @@ class GalleryService
             }
 
             try {
-                $files = $this->googleDriveService->listFiles($folderId);
+                $resourceKey = $this->googleDriveService->extractResourceKey($album->gdrive_folder_url);
+                $files = $this->googleDriveService->listFiles($folderId, $resourceKey);
             } catch (GoogleDriveApiException $e) {
                 $this->galleryAlbumRepository->update($album, ['gdrive_sync_error' => $e->getMessage()]);
                 Log::warning('Gallery Google Drive sync gagal', ['album_id' => $album->id, 'error' => $e->getMessage()]);
