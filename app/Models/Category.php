@@ -11,6 +11,7 @@ class Category extends Model
     use HasFactory;
 
     protected $guarded = [];
+
     protected static function booted()
     {
         static::creating(function ($category) {
@@ -31,5 +32,10 @@ class Category extends Model
     public function events()
     {
         return $this->hasMany(Event::class);
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(Activity::class);
     }
 }

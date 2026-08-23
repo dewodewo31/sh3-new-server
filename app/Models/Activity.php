@@ -24,6 +24,11 @@ class Activity extends Model
         return $this->hasMany(Bookkeeping::class, 'activity_id');
     }
 
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
     public function eventBudgets()
     {
         return $this->hasMany(EventBudget::class);
