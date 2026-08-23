@@ -171,6 +171,24 @@ Halaman Frontend:
 
 ## Instalasi Produksi (End-to-End)
 
+> **Cara cepat — Pull & Run** (image siap-pakai dari GitHub Container Registry):
+>
+> ```bash
+> # 1) One-time: buat APP_KEY, simpan ke file .env sejajar docker-compose.prod.yml
+> echo "APP_KEY=$(docker run --rm ghcr.io/dewodewo31/sh3-new-server:latest php artisan key:generate --show)" > .env
+>
+> # 2) Deploy / update
+> docker compose -f docker-compose.prod.yml pull
+> docker compose -f docker-compose.prod.yml up -d
+> ```
+>
+> Image di-build & di-push otomatis oleh GitHub Actions setiap push ke `main`
+> (`ghcr.io/dewodewo31/sh3-new-server:latest` + tag `sha-*`, atau `x.y.z` untuk tag `v*`).
+> Migrasi, seed awal (DB kosong), storage:link, queue worker & scheduler jalan otomatis
+> saat container start. Jika package GHCR masih private: `docker login ghcr.io` dulu
+> (PAT scope `read:packages`) atau set package menjadi public di GitHub.
+> Detail env produksi: lihat panduan lengkap di bawah.
+
 Panduan lengkap men-deploy sistem ke **server produksi** agar seluruh fitur berjalan: backend (Laravel + API), panel admin (Blade), frontend publik (Next.js), **queue worker**, **scheduler**, **notifikasi real-time (Reverb)**, **storage gambar**, dan perubahan status event otomatis.
 
 > **Catatan**: seluruh command dijalankan sebagai user deploy (`www-data` atau user non-root dengan permission baca-tulis pada direktori project). Sesuaikan nama domain (`sh3.example.com`) pada semua contoh di bawah.

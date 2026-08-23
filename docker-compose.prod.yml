@@ -1,0 +1,67 @@
+# Deploy produksi — tanpa build di server.
+#
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Image di-build & di-push otomatis oleh GitHub Actions (.github/workflows/docker-publish.yml)
+# setiap push ke main (tag :latest, :sha-xxxxxxx) atau tag v* (:x.y.z).
+#
+# Simpan APP_KEY di file .env sejajar dengan file ini:
+#   docker run --rm ghcr.io/dewodewo31/sh3-new-server:latest php artisan key:generate --show
+# Jika package GHCR masih private, login dulu: docker login ghcr.io (PAT dengan scope read:packages)
+
+services:
+  app:
+    image: ghcr.io/dewodewo31/sh3-new-server:latest
+    container_name: sh3-app
+    environment:
+      - APP_NAME=Samarinda Hash House Harriers
+      - APP_ENV=production
+      - APP_DEBUG=false
+      # WAJIB: kunci enkripsi stabil antar-deploy (sesi & token rusak jika berubah tiap deploy)
+      - APP_KEY=${APP_KEY:?Isi APP_KEY di .env host}
+      # Opsional override (default mengikuti nilai yang di-bake saat build):
+      # - APP_URL=https://sh3.example.com
+      # - GOOGLE_DRIVE_API_KEY=${GOOGLE_DRIVE_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: sh3-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: database_pass
+      MYSQL_DATABASE: db_server_new
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pdatabase_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: sh3-redis
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
