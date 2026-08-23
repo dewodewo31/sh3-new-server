@@ -36,6 +36,9 @@ class EventRepository extends BaseRepository
     public function findUpcoming(array $relations = ['category'])
     {
         return $this->model->with($relations)
+            ->withCount(['eventParticipants as registered_count' => function ($query) {
+                $query->whereIn('payment_status', ['pending', 'confirmed']);
+            }])
             ->whereIn('status', ['publish', 'ongoing'])
             ->where('start_date', '>=', now())
             ->orderBy('start_date')

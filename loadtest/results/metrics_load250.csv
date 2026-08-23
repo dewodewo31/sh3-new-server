@@ -1,2 +1,2 @@
 ts,app_cpu_pct,app_mem_mb,mysql_cpu_pct,mysql_mem_mb,redis_cpu_pct,redis_mem_mb,load1,host_mem_used_mb,db_threads_connected,db_threads_running,db_slow_queries,db_questions,redis_clients,redis_usedmem_mb
-1787488781,0,0,0,0,0,0,1.57,3412,1,2,0,155053,12,1.6
+1787487752,0,0,0,0,0,0,5.64,3460,2,2,0,121112,16,1.7

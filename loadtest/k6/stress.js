@@ -14,8 +14,8 @@ const PROFILES = {
   baseline: {
     executor: 'ramping-vus',
     stages: [
-      { duration: '20s', target: 1 },
-      { duration: '40s', target: 3 },
+      { duration: '20s', target: 5 },
+      { duration: '40s', target: 5 },
       { duration: '10s', target: 0 },
     ],
   },
@@ -23,6 +23,17 @@ const PROFILES = {
   load25:   { executor: 'constant-vus', vus: 25,  duration: '60s' },
   load50:   { executor: 'constant-vus', vus: 50,  duration: '90s' },
   load100:  { executor: 'constant-vus', vus: 100, duration: '90s' },
+  // --- Extended production-capacity profiles (gradual ramp, then hold) ---
+  load250:  { executor: 'ramping-vus', stages: [
+      { duration: '30s', target: 250 }, { duration: '60s', target: 250 }, { duration: '10s', target: 0 } ] },
+  load500:  { executor: 'ramping-vus', stages: [
+      { duration: '30s', target: 500 }, { duration: '60s', target: 500 }, { duration: '10s', target: 0 } ] },
+  load1000: { executor: 'ramping-vus', stages: [
+      { duration: '30s', target: 1000 }, { duration: '60s', target: 1000 }, { duration: '10s', target: 0 } ] },
+  load2000: { executor: 'ramping-vus', stages: [
+      { duration: '45s', target: 2000 }, { duration: '60s', target: 2000 }, { duration: '10s', target: 0 } ] },
+  load3000: { executor: 'ramping-vus', stages: [
+      { duration: '60s', target: 3000 }, { duration: '60s', target: 3000 }, { duration: '15s', target: 0 } ] },
   // Stress: gradual ramp to 200 VUs; aborts early if thresholds trip
   stress: {
     executor: 'ramping-vus',

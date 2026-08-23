@@ -11,6 +11,8 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -695,8 +697,160 @@ class EventApiTest extends TestCase
         $this->assertNotNull($registration->payment_id);
     }
 
-    private function validEventPayload(array $overrides = []): array
+    public function test_upcoming_remaining_quota_matches_confirmed_participants(): void
     {
+        $event = $this->createEvent(['quota' => 10, 'status' => 'publish', 'start_date' => now()->addDays(3)]);
+
+        for ($i = 0; $i < 3; $i++) {
+            EventParticipant::create([
+                'event_id' => $event->id,
+                'participant_id' => Participant::factory()->create()->id,
+                'registration_type' => 'free',
+                'amount' => 0,
+                'payment_status' => 'confirmed',
+                'qr_code' => 'q' . $event->id . '_' . $i,
+            ]);
+        }
+
+        $this->getJson('/api/v1/events/upcoming')
+            ->assertOk()
+            ->assertJsonPath('data.0.remaining_quota', 7);
+    }
+
+    public function test_upcoming_does_not_run_n_plus_one_count_queries(): void
+    {
+        for ($i = 0; $i < 3; $i++) {
+            $event = $this->createEvent(['quota' => 5, 'status' => 'publish', 'start_date' => now()->addDays($i + 1)]);
+            for ($j = 0; $j < 2; $j++) {
+                EventParticipant::create([
+                    'event_id' => $event->id,
+                    'participant_id' => Participant::factory()->create()->id,
+                    'registration_type' => 'free',
+                    'amount' => 0,
+                    'payment_status' => 'confirmed',
+                    'qr_code' => 'q' . $event->id . '_' . $j,
+                ]);
+            }
+        }
+
+        DB::enableQueryLog();
+        $response = $this->getJson('/api/v1/events/upcoming')->assertOk();
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $standaloneCounts = collect($queries)->filter(
+            fn($q) => preg_match('#^select count\(\*\) from `?event_participants`?#i', $q['query'])
+        );
+        $this->assertCount(0, $standaloneCounts, 'N+1 COUNT per event must be eliminated');
+
+        $data = $response->json('data');
+        $this->assertCount(3, $data);
+        foreach ($data as $item) {
+            $this->assertEquals(3, $item['remaining_quota']);
+        }
+    }
+
+    public function test_upcoming_is_cached_and_second_request_runs_fewer_queries(): void
+    {
+        $this->createEvent(['status' => 'publish', 'start_date' => now()->addDays(3)]);
+
+        $log = [];
+        DB::listen(function ($query) use (&$log) {
+            $log[] = $query->sql;
+        });
+
+        $this->getJson('/api/v1/events/upcoming');
+        $missLog = $log;
+        $log = [];
+
+        $this->getJson('/api/v1/events/upcoming');
+        $hitLog = $log;
+
+        $this->assertLessThan(count($missLog), count($hitLog), 'cache hit should run fewer queries');
+        $this->assertSame(0, count($hitLog), 'cache hit must run zero DB queries');
+
+        $touchesEvents = collect($hitLog)->filter(
+            fn($sql) => str_contains($sql, '`events`')
+                || preg_match('#from `?event_participants`?#i', $sql)
+        );
+        $this->assertCount(0, $touchesEvents, 'cache hit must not query events or participants');
+    }
+
+    public function test_upcoming_cache_is_populated_on_miss(): void
+    {
+        $this->createEvent(['status' => 'publish', 'start_date' => now()->addDays(3)]);
+
+        $this->assertFalse(Cache::has('api:events:upcoming'));
+        $this->getJson('/api/v1/events/upcoming')->assertOk();
+        $this->assertTrue(Cache::has('api:events:upcoming'));
+    }
+
+    public function test_event_delete_invalidates_upcoming_cache(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin_full_access']);
+        $event = $this->createEvent(['status' => 'publish', 'start_date' => now()->addDays(3)]);
+
+        $this->getJson('/api/v1/events/upcoming')->assertJsonCount(1, 'data');
+
+        Sanctum::actingAs($admin);
+        $this->deleteJson('/api/v1/events/' . $event->id)->assertOk();
+
+        $this->getJson('/api/v1/events/upcoming')->assertJsonCount(0, 'data');
+    }
+
+    public function test_event_update_invalidates_upcoming_cache(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin_full_access']);
+        $event = $this->createEvent(['status' => 'publish', 'start_date' => now()->addDays(3)]);
+
+        $this->getJson('/api/v1/events/upcoming')->assertJsonCount(1, 'data');
+
+        Sanctum::actingAs($admin);
+        $this->putJson('/api/v1/events/' . $event->id, $this->validEventPayload(['status' => 'draft']))
+            ->assertOk();
+
+        $this->getJson('/api/v1/events/upcoming')->assertJsonCount(0, 'data');
+    }
+
+    public function test_event_cancel_invalidates_upcoming_cache(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin_full_access']);
+        $event = $this->createEvent(['status' => 'publish', 'start_date' => now()->addDays(3)]);
+
+        $this->getJson('/api/v1/events/upcoming')->assertJsonCount(1, 'data');
+
+        Sanctum::actingAs($admin);
+        $this->postJson('/api/v1/events/' . $event->id . '/cancel')->assertOk();
+
+        $this->getJson('/api/v1/events/upcoming')->assertJsonCount(0, 'data');
+    }
+
+    public function test_participant_registration_invalidates_upcoming_cache(): void
+    {
+        $user = User::factory()->create(['role' => 'participant']);
+        $participant = Participant::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $event = $this->createEvent(['price' => 0, 'quota' => 5, 'status' => 'publish', 'start_date' => now()->addDays(3)]);
+
+        $this->getJson('/api/v1/events/upcoming')->assertJsonPath('data.0.remaining_quota', 5);
+
+        $this->postJson('/api/v1/events/' . $event->id . '/register')->assertOk();
+
+        $this->getJson('/api/v1/events/upcoming')->assertJsonPath('data.0.remaining_quota', 4);
+    }
+
+    public function test_upcoming_returns_empty_when_no_future_published_events(): void
+    {
+        $this->createEvent(['status' => 'publish', 'start_date' => now()->subDays(3)]);
+        $this->createEvent(['status' => 'draft', 'start_date' => now()->addDays(3)]);
+
+        $this->getJson('/api/v1/events/upcoming')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    private function validEventPayload(array $overrides = []): array    {
         return array_merge([
             'category_id' => $this->category->id,
             'title' => 'New Event',

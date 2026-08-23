@@ -54,6 +54,7 @@ class EventController extends Controller
     {
         $event = $this->eventRepository->create($request->validated());
         Cache::forget('api:events:list');
+        Cache::forget('api:events:upcoming');
 
         return response()->json(['data' => new EventResource($event), 'message' => 'Event berhasil dibuat'], 201);
     }
@@ -63,6 +64,7 @@ class EventController extends Controller
         $event = $this->eventRepository->findById($id);
         $this->eventRepository->update($event, $request->validated());
         Cache::forget('api:events:list');
+        Cache::forget('api:events:upcoming');
 
         return response()->json(['data' => new EventResource($event->fresh()), 'message' => 'Event berhasil diupdate']);
     }
@@ -72,6 +74,7 @@ class EventController extends Controller
         $event = $this->eventRepository->findById($id);
         $this->eventRepository->delete($event);
         Cache::forget('api:events:list');
+        Cache::forget('api:events:upcoming');
 
         return response()->json(['message' => 'Event berhasil dihapus']);
     }
@@ -81,6 +84,7 @@ class EventController extends Controller
         $event = $this->eventRepository->findById($id);
         $this->eventService->cancelEvent($event);
         Cache::forget('api:events:list');
+        Cache::forget('api:events:upcoming');
 
         return response()->json(['message' => 'Event berhasil dibatalkan']);
     }
@@ -124,6 +128,9 @@ class EventController extends Controller
 
             $registration->update(['payment_id' => $payment->id]);
         }
+
+        Cache::forget('api:events:list');
+        Cache::forget('api:events:upcoming');
 
         return response()->json([
             'data' => $this->registrationPayload($registration->fresh('payment')),
@@ -204,9 +211,19 @@ class EventController extends Controller
 
     public function upcoming(): JsonResponse
     {
+        $cached = Cache::get('api:events:upcoming');
+
+        if ($cached) {
+            return response()->json($cached);
+        }
+
         $events = $this->eventRepository->findUpcoming(['category']);
 
-        return response()->json(['data' => EventResource::collection($events)]);
+        $payload = ['data' => EventResource::collection($events)];
+
+        Cache::put('api:events:upcoming', $payload, 60);
+
+        return response()->json($payload);
     }
 
     public function qrCodes(int $eventId): JsonResponse

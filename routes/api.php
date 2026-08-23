@@ -73,6 +73,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/events', [EventController::class, 'store']);
             Route::put('/events/{id}', [EventController::class, 'update']);
             Route::delete('/events/{id}', [EventController::class, 'destroy']);
+            Route::post('/events/{id}/cancel', [EventController::class, 'cancel']);
             Route::get('/events/{id}/qr', [EventController::class, 'qrCodes']);
         });
 

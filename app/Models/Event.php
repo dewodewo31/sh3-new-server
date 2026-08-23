@@ -107,9 +107,13 @@ class Event extends Model
             return -1;
         }
 
-        $registered = $this->eventParticipants()
-            ->whereIn('payment_status', ['pending', 'confirmed'])
-            ->count();
+        if (isset($this->registered_count)) {
+            $registered = (int) $this->registered_count;
+        } else {
+            $registered = $this->eventParticipants()
+                ->whereIn('payment_status', ['pending', 'confirmed'])
+                ->count();
+        }
 
         return max(0, $this->quota - $registered);
     }

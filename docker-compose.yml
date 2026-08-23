@@ -1,29 +1,20 @@
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: sh3-app
-    environment:
-      - APP_NAME=Samarinda Hash House Harriers
-      - GOOGLE_DRIVE_API_KEY=${GOOGLE_DRIVE_API_KEY:-}
-    ports:
-      - "8000:8000"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    restart: unless-stopped
+# Arsitektur kombinasi:
+#   - Web/app : nginx (host) -> php-fpm 8.3 (host)
+#   - Infra   : MySQL + Redis via Docker Compose (bind loopback saja)
+#
+# Queue worker, Reverb, dan scheduler tetap dikelola supervisor di host
+# dan terhubung ke service Docker ini lewat 127.0.0.1.
 
+services:
   mysql:
     image: mysql:8.0
     container_name: sh3-mysql
     environment:
       MYSQL_ROOT_PASSWORD: database_pass
-      MYSQL_DATABASE: db_server_new
-      MYSQL_CHARSET: utf8mb4
-      MYSQL_COLLATION: utf8mb4_unicode_ci
+      MYSQL_DATABASE: db_sh3server
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -36,8 +27,15 @@ services:
   redis:
     image: redis:7-alpine
     container_name: sh3-redis
+    ports:
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 volumes:
