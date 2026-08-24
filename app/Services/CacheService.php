@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Category;
-use App\Models\MembershipPlan;
 use App\Models\OrganizationMember;
+use App\Services\MembershipService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -39,14 +39,17 @@ class CacheService
     private function warmCategories(): void
     {
         Cache::tags(['api:categories'])->remember('api:categories:list', 3600, function () {
-            return Category::orderBy('name')->get();
+            return Category::orderBy('name')->get()->toArray();
         });
     }
 
     private function warmMembershipPlans(): void
     {
-        Cache::remember('api:membership:plans', 3600, function () {
-            return MembershipPlan::orderBy('sort_order')->get();
-        });
+        // Cache the resolved plan ARRAY, not an Eloquent Collection.
+        // With config/cache.php `serializable_classes => false`, a cached Collection
+        // unserializes to __PHP_Incomplete_Class on read (the GET /membership/plans bug).
+        // Use put() (not remember()) so a stale object from a previous deploy is
+        // always overwritten when warming.
+        Cache::put('api:membership:plans', app(MembershipService::class)->plans(), 3600);
     }
 }

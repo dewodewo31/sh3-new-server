@@ -31,7 +31,7 @@ class EventParticipantSeederTest extends TestCase
         $this->seed(EventParticipantSeeder::class);
     }
 
-    public function test_seeder_writes_hash_id_as_qr_code(): void
+    public function test_seeder_writes_unique_sh3_ticket_qr_code(): void
     {
         $this->runSeeder();
 
@@ -39,15 +39,19 @@ class EventParticipantSeederTest extends TestCase
 
         $this->assertTrue($registrations->isNotEmpty());
 
+        $codes = [];
         foreach ($registrations as $registration) {
-            $this->assertSame($registration->participant->hash_id, $registration->qr_code);
-            $this->assertStringStartsNotWith('SH3-', (string) $registration->qr_code);
+            $this->assertMatchesRegularExpression('/^SH3-\d+-\d{2}-[A-Z0-9]{6}$/', (string) $registration->qr_code);
+            $this->assertNotSame($registration->participant->hash_id, $registration->qr_code);
+            $codes[] = $registration->qr_code;
         }
 
-        $this->assertSame(0, EventParticipant::where('qr_code', 'like', 'SH3-%')->count());
+        // every ticket code is unique
+        $this->assertSame(count($codes), count(array_unique($codes)));
+        $this->assertSame($registrations->count(), EventParticipant::where('qr_code', 'like', 'SH3-%')->count());
     }
 
-    public function test_generate_qr_route_is_idempotent(): void
+    public function test_generate_qr_route_produces_unique_sh3_code(): void
     {
         $this->runSeeder();
 
@@ -60,11 +64,16 @@ class EventParticipantSeederTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertSame($registration->participant->hash_id, $registration->fresh()->qr_code);
+        $fresh = $registration->fresh();
+        $this->assertMatchesRegularExpression('/^SH3-\d+-\d{2}-[A-Z0-9]{6}$/', (string) $fresh->qr_code);
+        $this->assertNotSame($fresh->participant->hash_id, $fresh->qr_code);
 
+        // a second regeneration still yields a valid, unique (different) code
+        $before = $fresh->qr_code;
         $this->post("/admin/attendance/event-participant/{$registration->id}/generate-qr")
             ->assertRedirect();
-
-        $this->assertSame($registration->participant->hash_id, $registration->fresh()->qr_code);
+        $after = $registration->fresh()->qr_code;
+        $this->assertMatchesRegularExpression('/^SH3-\d+-\d{2}-[A-Z0-9]{6}$/', (string) $after);
+        $this->assertNotSame($before, $after);
     }
 }

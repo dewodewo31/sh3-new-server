@@ -36,7 +36,13 @@ class EventController extends Controller
         }
 
         $events = $this->eventRepository->findPublic(['category']);
-        $payload = ['data' => EventResource::collection($events)];
+        $resource = EventResource::collection($events);
+        // Fully resolve the resource tree (nested resources + Carbon/Carbon dates) into a
+        // plain array before caching. Caching the JsonResource/Collection object, or its
+        // toArray() (which leaves nested CategoryResource/Carbon as objects), serializes them
+        // and produces __PHP_Incomplete_Class on cache HIT. json_encode() triggers full
+        // recursive JsonSerializable resolution, so the cached value is a plain array.
+        $payload = ['data' => json_decode(json_encode($resource), true)];
 
         Cache::put('api:events:list', $payload, 60);
 
@@ -219,7 +225,8 @@ class EventController extends Controller
 
         $events = $this->eventRepository->findUpcoming(['category']);
 
-        $payload = ['data' => EventResource::collection($events)];
+        $resource = EventResource::collection($events);
+        $payload = ['data' => json_decode(json_encode($resource), true)];
 
         Cache::put('api:events:upcoming', $payload, 60);
 

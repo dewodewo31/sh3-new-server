@@ -546,7 +546,8 @@ class EventApiTest extends TestCase
 
         $this->assertSame('pending', $registration->payment_status);
         $this->assertNotNull($registration->qr_code);
-        $this->assertSame($participant->hash_id, $registration->qr_code);
+        $this->assertMatchesRegularExpression('/^SH3-\d+-\d{2}-[A-Z0-9]{6}$/', (string) $registration->qr_code);
+        $this->assertNotSame($participant->hash_id, $registration->qr_code);
         $this->assertSame(1, EventParticipant::where('event_id', $event->id)
             ->where('participant_id', $participant->id)
             ->count());
@@ -848,6 +849,55 @@ class EventApiTest extends TestCase
         $this->getJson('/api/v1/events/upcoming')
             ->assertOk()
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_events_list_cache_stores_plain_array_not_resource_object(): void
+    {
+        $this->createEvent(['status' => 'publish']);
+
+        $this->assertFalse(Cache::has('api:events:list'));
+        $this->getJson('/api/v1/events')->assertOk();
+        $this->assertTrue(Cache::has('api:events:list'));
+
+        $cached = Cache::get('api:events:list');
+        $this->assertIsArray($cached);
+        $this->assertArrayHasKey('data', $cached);
+        $this->assertIsArray($cached['data']);
+        $this->assertNotInstanceOf(\Illuminate\Http\Resources\Json\JsonResource::class, $cached['data']);
+
+        foreach ($cached['data'] as $item) {
+            $this->assertIsArray($item, 'Cached event must be a plain array, not a Resource object');
+            $this->assertIsArray($item['category'], 'Nested category must be a plain array, not a CategoryResource');
+        }
+    }
+
+    public function test_events_upcoming_cache_stores_plain_array_not_resource_object(): void
+    {
+        $this->createEvent(['status' => 'publish', 'start_date' => now()->addDays(3)]);
+
+        $this->getJson('/api/v1/events/upcoming')->assertOk();
+        $this->assertTrue(Cache::has('api:events:upcoming'));
+
+        $cached = Cache::get('api:events:upcoming');
+        $this->assertIsArray($cached);
+        $this->assertIsArray($cached['data']);
+
+        foreach ($cached['data'] as $item) {
+            $this->assertIsArray($item);
+        }
+    }
+
+    public function test_events_list_miss_then_hit_both_return_array_contract(): void
+    {
+        $this->createEvent(['status' => 'publish']);
+
+        $this->getJson('/api/v1/events')
+            ->assertOk()
+            ->assertJsonStructure(['data' => [['id', 'title', 'category']], 'meta']);
+
+        $this->getJson('/api/v1/events')
+            ->assertOk()
+            ->assertJsonStructure(['data' => [['id', 'title', 'category']], 'meta']);
     }
 
     private function validEventPayload(array $overrides = []): array    {

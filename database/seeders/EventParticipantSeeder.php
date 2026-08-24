@@ -9,6 +9,7 @@ use App\Models\EventParticipant;
 use App\Models\Participant;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\QRCodeService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -56,11 +57,18 @@ class EventParticipantSeeder extends Seeder
                     [
                         'registration_type' => $registrationType,
                         'amount' => $amount,
-                        'payment_status' => $amount > 0 ? 'confirmed' : 'confirmed',
+                        'payment_status' => 'confirmed',
                         'is_membership_free' => $isMembershipFree,
-                        'qr_code' => $participant->hash_id,
+                        'qr_code' => null,
                     ]
                 );
+
+                // A registration owns a UNIQUE ticket QR, not the participant hash.
+                if ($registration->wasRecentlyCreated
+                    || empty($registration->qr_code)
+                    || $registration->qr_code === $participant->hash_id) {
+                    app(QRCodeService::class)->generate($registration);
+                }
 
                 if ($registration->wasRecentlyCreated && $amount > 0) {
                     $payment = Payment::create([

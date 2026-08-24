@@ -19,6 +19,13 @@ class EventParticipantRepository extends BaseRepository
             ->first();
     }
 
+    public function findByQrCode(string $qrCode): ?EventParticipant
+    {
+        return $this->model
+            ->where('qr_code', $qrCode)
+            ->first();
+    }
+
     public function findParticipantsByEvent(int $eventId)
     {
         return $this->model

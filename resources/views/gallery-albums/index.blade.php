@@ -60,7 +60,7 @@
                         @if($album->gdrive_sync_error)
                             <span class="badge badge-danger" title="{{ $album->gdrive_sync_error }}">Error</span>
                         @elseif($album->last_synced_at)
-                            <span class="badge badge-success">{{ $album->last_synced_at->diffForHumans() }}</span>
+                            <span class="badge badge-success">{{ \Carbon\Carbon::parse($album->last_synced_at)->diffForHumans() }}</span>
                         @else
                             <span class="badge badge-secondary">-</span>
                         @endif

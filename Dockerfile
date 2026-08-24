@@ -26,6 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-enable redis \
     && echo "opcache.jit_buffer_size=64M" > /usr/local/etc/php/conf.d/opcache-jit.ini
 
+ARG GOOGLE_DRIVE_API_KEY=""
+
 WORKDIR /var/www/html
 
 # Vendor + compiled frontend from build stages
@@ -38,19 +40,20 @@ COPY . .
 # Configure .env for Docker (MySQL + Redis) per how-to-run.md
 RUN cp .env.example .env \
  && sed -i \
-      -e 's|^DB_CONNECTION=.*|DB_CONNECTION=mysql|' \
-      -e 's|^# DB_HOST=127.0.0.1|DB_HOST=mysql|' \
-      -e 's|^# DB_PORT=3306|DB_PORT=3306|' \
-      -e 's|^# DB_DATABASE=laravel|DB_DATABASE=db_server_new|' \
-      -e 's|^# DB_USERNAME=root|DB_USERNAME=root|' \
-      -e 's|^# DB_PASSWORD=|DB_PASSWORD=database_pass|' \
-      -e 's|^REDIS_HOST=.*|REDIS_HOST=redis|' \
-      -e 's|^SESSION_DRIVER=.*|SESSION_DRIVER=redis|' \
-      -e 's|^CACHE_STORE=.*|CACHE_STORE=redis|' \
-      -e 's|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=redis|' \
-      -e 's|^APP_NAME=.*|APP_NAME="Samarinda Hash House Harriers"|' \
-      -e 's|^APP_URL=.*|APP_URL=http://localhost:8000|' \
-      .env \
+       -e 's|^DB_CONNECTION=.*|DB_CONNECTION=mysql|' \
+       -e 's|^# DB_HOST=127.0.0.1|DB_HOST=mysql|' \
+       -e 's|^# DB_PORT=3306|DB_PORT=3306|' \
+       -e 's|^# DB_DATABASE=laravel|DB_DATABASE=db_server_new|' \
+       -e 's|^# DB_USERNAME=root|DB_USERNAME=root|' \
+       -e 's|^# DB_PASSWORD=|DB_PASSWORD=database_pass|' \
+       -e 's|^REDIS_HOST=.*|REDIS_HOST=redis|' \
+       -e 's|^SESSION_DRIVER=.*|SESSION_DRIVER=redis|' \
+       -e 's|^CACHE_STORE=.*|CACHE_STORE=redis|' \
+       -e 's|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=redis|' \
+       -e 's|^APP_NAME=.*|APP_NAME="Samarinda Hash House Harriers"|' \
+       -e 's|^APP_URL=.*|APP_URL=http://localhost:8000|' \
+       -e "s|^GOOGLE_DRIVE_API_KEY=.*|GOOGLE_DRIVE_API_KEY=${GOOGLE_DRIVE_API_KEY}|" \
+       .env \
  && php artisan key:generate
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

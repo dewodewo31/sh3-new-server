@@ -88,53 +88,80 @@ class AttendanceService
      * Admin QR scan: decode, validate registration, and auto-check-in.
      * Returns the result array with participant/event info for the controller response.
      */
+    /**
+     * Admin QR scan: locate the registration by its unique ticket QR,
+     * validate it belongs to the scanned event, then auto-check-in.
+     */
     public function scanAndCheckInAdmin(int $eventId, string $qrCode): array
     {
-        $decoded = $this->qrCodeService->decode(trim($qrCode));
+        $qrData = trim($qrCode);
 
-        if (! $decoded) {
-            throw ValidationException::withMessages([
-                'qr_code' => ['QR Code tidak valid. Pastikan format kode benar (contoh: 3950 atau NM0001).'],
-            ]);
+        // Primary path: the QR payload is a unique event-participant ticket code.
+        $registration = $this->eventParticipantRepository->findByQrCode($qrData);
+
+        if ($registration) {
+            if ($registration->event_id !== $eventId) {
+                throw ValidationException::withMessages([
+                    'qr_code' => ['QR Code ini tidak untuk event tersebut.'],
+                ]);
+            }
+
+            $this->checkIn(
+                $registration->event,
+                $registration->participant,
+                ['method' => 'qr_code'],
+            );
+
+            return [
+                'participant_name' => $registration->participant->name,
+                'event_title' => $registration->event->title,
+                'check_in_time' => now()->format('d/m/Y H:i:s'),
+                'already_checked_in' => false,
+            ];
         }
 
-        $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
+        // Backward compatibility: legacy printed QR carrying the participant hash_id.
+        $decoded = $this->qrCodeService->decode($qrData);
 
-        if (! $participant) {
-            throw ValidationException::withMessages([
-                'qr_code' => ['Kode peserta tidak dikenal.'],
-            ]);
+        if ($decoded && array_key_exists('hash_id', $decoded)) {
+            $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
+
+            if ($participant) {
+                $legacyRegistration = $this->eventParticipantRepository->findByEventAndParticipant(
+                    $eventId,
+                    $participant->id,
+                );
+
+                if ($legacyRegistration) {
+                    if ($legacyRegistration->event_id !== $eventId) {
+                        throw ValidationException::withMessages([
+                            'qr_code' => ['QR Code ini tidak untuk event tersebut.'],
+                        ]);
+                    }
+
+                    $this->checkIn(
+                        $legacyRegistration->event,
+                        $legacyRegistration->participant,
+                        ['method' => 'qr_code'],
+                    );
+
+                    return [
+                        'participant_name' => $legacyRegistration->participant->name,
+                        'event_title' => $legacyRegistration->event->title,
+                        'check_in_time' => now()->format('d/m/Y H:i:s'),
+                        'already_checked_in' => false,
+                    ];
+                }
+
+                throw ValidationException::withMessages([
+                    'qr_code' => ['Peserta tidak terdaftar di event ini.'],
+                ]);
+            }
         }
 
-        $registration = $this->eventParticipantRepository->findByEventAndParticipant(
-            $eventId,
-            $participant->id,
-        );
-
-        if (! $registration) {
-            throw ValidationException::withMessages([
-                'qr_code' => ['Peserta tidak terdaftar di event ini.'],
-            ]);
-        }
-
-        if (! $registration->qr_code || $registration->qr_code !== $decoded['hash_id']) {
-            throw ValidationException::withMessages([
-                'qr_code' => ['QR Code tidak dikenali. Silakan gunakan QR terbaru milik peserta.'],
-            ]);
-        }
-
-        $this->checkIn(
-            $registration->event,
-            $registration->participant,
-            ['method' => 'qr_code'],
-        );
-
-        return [
-            'participant_name' => $registration->participant->name,
-            'event_title' => $registration->event->title,
-            'check_in_time' => now()->format('d/m/Y H:i:s'),
-            'already_checked_in' => false,
-        ];
+        throw ValidationException::withMessages([
+            'qr_code' => ['Kode peserta tidak dikenal.'],
+        ]);
     }
 
     public function checkOut(Event $event, Participant $participant, ?int $scannedBy = null, ?string $ipAddress = null): void
@@ -173,57 +200,101 @@ class AttendanceService
 
     public function scanQRCode(string $qrData, ?int $eventId = null): array
     {
-        $decoded = $this->qrCodeService->decode($qrData);
+        $qrData = trim($qrData);
 
-        if (! $decoded) {
-            throw ValidationException::withMessages([
-                'qr_code' => ['QR Code tidak valid.'],
-            ]);
+        // Primary path: the QR payload is a unique event-participant ticket code.
+        $registration = $this->eventParticipantRepository->findByQrCode($qrData);
+
+        if ($registration) {
+            if ($eventId !== null && $registration->event_id !== $eventId) {
+                throw ValidationException::withMessages([
+                    'qr_code' => ['QR Code ini tidak untuk event tersebut.'],
+                ]);
+            }
+
+            // No event context: return participant-level info + registered events.
+            if ($eventId === null) {
+                return $this->buildScanResult(null, null, $registration->participant);
+            }
+
+            return $this->buildScanResult($registration, $eventId);
         }
 
-        $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
+        // Backward compatibility: legacy printed QR carrying the participant hash_id.
+        $decoded = $this->qrCodeService->decode($qrData);
+
+        if ($decoded && array_key_exists('hash_id', $decoded)) {
+            $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
+
+            if (! $participant) {
+                throw ValidationException::withMessages([
+                    'participant' => ['Kode peserta tidak dikenal.'],
+                ]);
+            }
+
+            $registration = $eventId !== null
+                ? $this->eventParticipantRepository->findByEventAndParticipant($eventId, $participant->id)
+                : null;
+
+            if ($eventId !== null && ! $registration) {
+                throw ValidationException::withMessages([
+                    'participant' => ['Peserta tidak terdaftar di event ini.'],
+                ]);
+            }
+
+            if ($registration && $registration->event_id !== $eventId) {
+                throw ValidationException::withMessages([
+                    'qr_code' => ['QR Code ini tidak untuk event tersebut.'],
+                ]);
+            }
+
+            return $this->buildScanResult($registration, $eventId, $participant);
+        }
+
+        throw ValidationException::withMessages([
+            'qr_code' => ['QR Code tidak valid.'],
+        ]);
+    }
+
+    private function buildScanResult(?EventParticipant $registration, ?int $eventId, ?Participant $participant = null): array
+    {
+        $participant = $participant ?? $registration?->participant;
 
         if (! $participant) {
             throw ValidationException::withMessages([
-                'participant' => ['Kode peserta tidak dikenal.'],
+                'qr_code' => ['Kode peserta tidak dikenal.'],
             ]);
         }
 
-        if ($eventId === null) {
+        $status = $participant->membership_type === 'none' ? 'non_member' : 'member';
+
+        if ($registration) {
             return [
-                'hash_id' => $decoded['hash_id'],
+                'hash_id' => $participant->hash_id,
+                'participant_id' => $participant->id,
                 'name' => $participant->name,
-                'status' => $decoded['status'],
-                'registered_events' => $this->eventParticipantRepository
-                    ->findEventsByParticipant($participant->id)
-                    ->map(fn (EventParticipant $ep) => [
-                        'event_id' => $ep->event_id,
-                        'event_title' => $ep->event?->title,
-                        'payment_status' => $ep->payment_status,
-                        'is_attended' => (bool) $ep->is_attended,
-                    ])
-                    ->values()
-                    ->all(),
+                'status' => $status,
+                'event_id' => $eventId,
+                'registration_status' => $registration->payment_status,
+                'is_attended' => (bool) $registration->is_attended,
+                'check_in_time' => $registration->check_in_at?->toISOString(),
             ];
         }
 
-        $registration = $this->eventParticipantRepository->findByEventAndParticipant($eventId, $participant->id);
-
-        if (! $registration) {
-            throw ValidationException::withMessages([
-                'participant' => ['Peserta tidak terdaftar di event ini.'],
-            ]);
-        }
-
         return [
-            'hash_id' => $decoded['hash_id'],
+            'hash_id' => $participant->hash_id,
             'name' => $participant->name,
-            'status' => $decoded['status'],
-            'event_id' => $eventId,
-            'participant_id' => $participant->id,
-            'registration_status' => $registration->payment_status,
-            'is_attended' => (bool) $registration->is_attended,
-            'check_in_time' => $registration->check_in_at?->toISOString(),
+            'status' => $status,
+            'registered_events' => $this->eventParticipantRepository
+                ->findEventsByParticipant($participant->id)
+                ->map(fn (EventParticipant $ep) => [
+                    'event_id' => $ep->event_id,
+                    'event_title' => $ep->event?->title,
+                    'payment_status' => $ep->payment_status,
+                    'is_attended' => (bool) $ep->is_attended,
+                ])
+                ->values()
+                ->all(),
         ];
     }
 
