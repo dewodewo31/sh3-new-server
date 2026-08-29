@@ -11,6 +11,8 @@ use App\Models\Payment;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\EventParticipantRepository;
 use Carbon\Carbon;
+use App\Exceptions\PointReversalBlockedException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +24,7 @@ class AttendanceService
         private AttendanceRepository $attendanceRepository,
         private QRCodeService $qrCodeService,
         private NotificationService $notificationService,
+        private PointService $pointService,
     ) {}
 
     public function checkIn(Event $event, Participant $participant, array $data = [], ?int $scannedBy = null, ?string $ipAddress = null): void
@@ -52,14 +55,25 @@ class AttendanceService
             }
 
             if (! $attendance) {
-                $attendance = $this->attendanceRepository->create([
-                    'event_participant_id' => $registration->id,
-                    'status' => 'present',
-                    'check_in_method' => $data['method'] ?? 'qr_code',
-                    'latitude' => $data['latitude'] ?? null,
-                    'longitude' => $data['longitude'] ?? null,
-                    'notes' => $data['notes'] ?? null,
-                ]);
+                try {
+                    $attendance = $this->attendanceRepository->create([
+                        'event_participant_id' => $registration->id,
+                        'status' => 'present',
+                        'check_in_method' => $data['method'] ?? 'qr_code',
+                        'latitude' => $data['latitude'] ?? null,
+                        'longitude' => $data['longitude'] ?? null,
+                        'notes' => $data['notes'] ?? null,
+                    ]);
+                } catch (UniqueConstraintViolationException $e) {
+                    // Concurrent check-in race: the UNIQUE(event_participant_id)
+                    // guard already let another request create the row. Re-query
+                    // and treat this as an idempotent success instead of a 500.
+                    $attendance = $this->attendanceRepository->findByEventParticipant($registration->id);
+
+                    if (! $attendance) {
+                        throw $e;
+                    }
+                }
             }
 
             $attendance->update([
@@ -72,6 +86,11 @@ class AttendanceService
                 'check_in_at' => now(),
             ]);
 
+            // Grant flat points (idempotent per attendance, OTS/aggregator
+            // excluded) — inside the same transaction as the check-in guard,
+            // so a valid check-in atomically earns exactly one EARN.
+            $this->pointService->earnForAttendance($attendance, $event, $participant);
+
             $this->logAttendance($registration, 'check_in', $data, $scannedBy, $ipAddress);
 
             $this->notificationService->notifyRoles(
@@ -82,6 +101,68 @@ class AttendanceService
                 route('admin.attendance.by-event', $event->id),
             );
         });
+    }
+
+    /**
+     * Attendance-invalidation lifecycle (audit findings H2 / V11 / V12).
+     *
+     * Marks an attendance invalid (audited: who/why/when) and reverses its EARN
+     * by creating a SEPARATE REVERSAL ledger entry. The original EARN row is
+     * never mutated or deleted. Idempotent: re-calling on an already-invalid
+     * attendance is a clean no-op.
+     *
+     * If the reversal would push the participant's balance negative it is
+     * BLOCKED (never silently clamped) and surfaced so an admin can apply an
+     * explicit, audited ADJUSTMENT via PointService::adminAdjust().
+     *
+     * @return array{attendance_invalid: bool, reversal: 'created'|'blocked'|'none', message: string}
+     */
+    public function invalidateAttendance(int $attendanceId, ?int $invalidatedBy = null, ?string $reason = null): array
+    {
+        $attendance = Attendance::findOrFail($attendanceId);
+
+        if ($attendance->is_invalid) {
+            return [
+                'attendance_invalid' => true,
+                'reversal' => 'none',
+                'message' => 'Attendance sudah tidak berlaku (idempoten).',
+            ];
+        }
+
+        $participant = $attendance->eventParticipant?->participant;
+
+        $attendance->update([
+            'is_invalid' => true,
+            'invalidated_by' => $invalidatedBy,
+            'invalidated_at' => now(),
+            'invalidation_reason' => $reason,
+        ]);
+
+        if (! $participant) {
+            return [
+                'attendance_invalid' => true,
+                'reversal' => 'none',
+                'message' => 'Tidak ada peserta terkait; tidak ada poin untuk dibatalkan.',
+            ];
+        }
+
+        try {
+            $reversal = $this->pointService->reverseEarn($attendance, $participant, $reason);
+
+            return [
+                'attendance_invalid' => true,
+                'reversal' => $reversal ? 'created' : 'none',
+                'message' => $reversal
+                    ? 'Kehadiran dibatalkan dan poin dikembalikan (REVERSAL).'
+                    : 'Tidak ada poin EARN untuk dibatalkan.',
+            ];
+        } catch (PointReversalBlockedException $e) {
+            return [
+                'attendance_invalid' => true,
+                'reversal' => 'blocked',
+                'message' => $e->getMessage().' Gunakan penyesuaian admin (ADJUSTMENT) untuk koreksi.',
+            ];
+        }
     }
 
     /**
@@ -448,13 +529,33 @@ class AttendanceService
                         ]);
                     }
                 } else {
-                    Attendance::create([
-                        'event_participant_id' => $eventParticipant->id,
-                        'check_in_time' => $checkIn,
-                        'check_out_time' => $checkOut,
-                        'status' => 'present',
-                        'check_in_method' => 'qr_code',
-                    ]);
+                    try {
+                        Attendance::create([
+                            'event_participant_id' => $eventParticipant->id,
+                            'check_in_time' => $checkIn,
+                            'check_out_time' => $checkOut,
+                            'status' => 'present',
+                            'check_in_method' => 'qr_code',
+                        ]);
+                    } catch (UniqueConstraintViolationException $e) {
+                        // Concurrent sync race: another request already created
+                        // the attendance row. Fall through to re-query below.
+                    }
+                }
+
+                // Grant flat points for this regular (non-OTS) attendance.
+                // Idempotent per attendance; OTS/aggregator are excluded inside.
+                if ($attendanceRecord ?? null) {
+                    $attend = $attendanceRecord;
+                } else {
+                    $attend = Attendance::where('event_participant_id', $eventParticipant->id)->first();
+                }
+                if ($attend) {
+                    $this->pointService->earnForAttendance(
+                        $attend,
+                        $eventParticipant->event,
+                        $eventParticipant->participant
+                    );
                 }
 
                 $savedAttCount++;

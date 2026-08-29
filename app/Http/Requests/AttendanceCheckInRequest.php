@@ -16,7 +16,6 @@ class AttendanceCheckInRequest extends FormRequest
     {
         return [
             'event_id' => ['required', 'integer', 'exists:events,id'],
-            'participant_id' => ['required', 'integer', 'exists:participants,id'],
             'method' => ['nullable', Rule::in(['qr_code', 'manual', 'self_scan'])],
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],

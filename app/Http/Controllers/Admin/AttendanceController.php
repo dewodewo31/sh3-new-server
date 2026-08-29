@@ -41,6 +41,30 @@ class AttendanceController extends Controller
         return view('attendance.report', compact('events'));
     }
 
+    /**
+     * Manual attendance-invalidation lifecycle (audit finding H2 / V11).
+     * Authorized admin only. Reverses the EARN via a separate REVERSAL ledger
+     * entry; the original EARN is never mutated.
+     */
+    public function invalidate(Request $request, int $id)
+    {
+        $result = $this->attendanceService->invalidateAttendance(
+            $id,
+            auth()->id(),
+            $request->input('reason', 'Manual invalidasi oleh admin.')
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json($result);
+        }
+
+        $message = $result['reversal'] === 'blocked'
+            ? 'Kehadiran dibatalkan, namun reversal poin diblokir (perlu penyesuaian admin).'
+            : 'Kehadiran berhasil dibatalkan.';
+
+        return back()->with('success', $message);
+    }
+
     public function scan()
     {
         $events = $this->eventRepository->findScannable();

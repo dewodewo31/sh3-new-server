@@ -42,4 +42,17 @@ class PaymentController extends Controller
 
         return redirect()->back()->with('success', 'Pembayaran ditolak');
     }
+
+    /**
+     * Refund a payment (audit finding H5 / V12). For an event registration this
+     * invalidates the attendance and reverses the EARN; for merchandise it
+     * reverses the redemption. Idempotent.
+     */
+    public function refund(int $id)
+    {
+        $payment = $this->paymentRepository->findById($id);
+        $this->paymentService->refundPayment($payment, auth()->id());
+
+        return redirect()->back()->with('success', 'Pembayaran direfund');
+    }
 }

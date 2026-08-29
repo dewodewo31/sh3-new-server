@@ -24,7 +24,17 @@ class AttendanceController extends Controller
     public function checkIn(AttendanceCheckInRequest $request): JsonResponse
     {
         $event = $this->eventRepository->findById($request->event_id);
-        $participant = $this->participantRepository->findById($request->participant_id);
+
+        if (! $event) {
+            return response()->json(['message' => 'Event tidak ditemukan.'], 404);
+        }
+
+        // H4 (audit): participant identity MUST come from the authenticated
+        // Sanctum user — never from a client-supplied participant_id (IDOR).
+        // The admin/organizer scan flow uses a separate endpoint
+        // (Admin/AttendanceController::scanAndCheckInAdmin) which resolves the
+        // participant from the scanned QR, so it is unaffected.
+        $participant = $request->user()->participants()->firstOrFail();
 
         $this->attendanceService->checkIn(
             $event,
@@ -40,7 +50,13 @@ class AttendanceController extends Controller
     public function checkOut(AttendanceCheckOutRequest $request): JsonResponse
     {
         $event = $this->eventRepository->findById($request->event_id);
-        $participant = $this->participantRepository->findById($request->participant_id);
+
+        if (! $event) {
+            return response()->json(['message' => 'Event tidak ditemukan.'], 404);
+        }
+
+        // H4 (audit): same ownership rule as check-in — token-derived participant.
+        $participant = $request->user()->participants()->firstOrFail();
 
         $this->attendanceService->checkOut(
             $event,

@@ -15,6 +15,7 @@ use App\Http\Controllers\API\OrganizationController;
 use App\Http\Controllers\API\ParticipantAuthController;
 use App\Http\Controllers\API\ParticipantController;
 use App\Http\Controllers\API\PaymentController;
+use App\Http\Controllers\API\PointController;
 use App\Http\Controllers\API\ProfileController;
 use App\Http\Controllers\API\SponsorController;
 use Illuminate\Support\Facades\Route;
@@ -112,6 +113,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/merchandise/orders/{id}', [MerchandiseController::class, 'orderDetail'])->whereNumber('id');
         Route::post('/merchandise/orders/{id}/cancel', [MerchandiseController::class, 'cancelOrder'])->whereNumber('id');
         Route::post('/merchandise/orders/{id}/payment', [MerchandiseController::class, 'uploadPayment'])->whereNumber('id');
+
+        Route::get('/points/balance', [PointController::class, 'balance']);
+        Route::get('/points/history', [PointController::class, 'history']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);

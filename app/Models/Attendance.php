@@ -15,6 +15,8 @@ class Attendance extends Model
         return [
             'check_in_time' => 'datetime',
             'check_out_time' => 'datetime',
+            'invalidated_at' => 'datetime',
+            'is_invalid' => 'boolean',
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',
         ];
@@ -23,5 +25,10 @@ class Attendance extends Model
     public function eventParticipant()
     {
         return $this->belongsTo(EventParticipant::class);
+    }
+
+    public function pointTransactions()
+    {
+        return $this->hasMany(PointTransaction::class, 'attendance_id');
     }
 }

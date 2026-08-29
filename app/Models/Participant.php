@@ -24,12 +24,27 @@ class Participant extends Model
             'membership_end_date' => 'date',
             'is_active' => 'boolean',
             'total_events_participated' => 'integer',
+            'point_balance' => 'integer',
         ];
     }
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function pointTransactions()
+    {
+        return $this->hasMany(PointTransaction::class);
+    }
+
+    /**
+     * Hard invariant: the Manual-OTS aggregator pseudo-participant can represent
+     * many on-the-spot attendees and must NEVER earn points. See H1 in plan.
+     */
+    public function isOtsAggregator(): bool
+    {
+        return $this->hash_id === self::OTS_AGGREGATOR_CODE;
     }
 
     public function membershipHistories()
