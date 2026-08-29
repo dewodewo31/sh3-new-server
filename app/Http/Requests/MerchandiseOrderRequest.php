@@ -19,6 +19,7 @@ class MerchandiseOrderRequest extends FormRequest
             'customer_contact' => ['required', 'string', 'max:255'],
             'size' => ['required', 'string'],
             'quantity' => ['required', 'integer', 'min:1'],
+            'use_points' => ['sometimes', 'boolean'],
         ];
     }
 }

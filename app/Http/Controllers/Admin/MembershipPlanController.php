@@ -28,7 +28,7 @@ class MembershipPlanController extends Controller
 
     public function store(MembershipPlanRequest $request)
     {
-        $this->membershipPlanRepository->create($this->validatedData($request));
+        $this->membershipPlanRepository->create($this->validatedData($request, true));
         $this->membershipService->invalidatePlansCache();
 
         return redirect()->route('admin.membership-plans.index')->with('success', 'Plan membership berhasil dibuat');
@@ -58,11 +58,17 @@ class MembershipPlanController extends Controller
         return redirect()->route('admin.membership-plans.index')->with('success', 'Plan membership berhasil dihapus');
     }
 
-    private function validatedData(MembershipPlanRequest $request): array
+    private function validatedData(MembershipPlanRequest $request, bool $creating = false): array
     {
         $data = $request->validated();
         $data['is_active'] = $request->boolean('is_active');
         $data['sort_order'] = $data['sort_order'] ?? 0;
+        // Flat points per check-in is optional in the request. New plans default
+        // to 0 (no earning) unless explicitly configured; on update the key is
+        // only present when the admin actually set it (keeps existing value).
+        if ($creating) {
+            $data['point_per_event_checkin'] = $data['point_per_event_checkin'] ?? 0;
+        }
 
         return $data;
     }

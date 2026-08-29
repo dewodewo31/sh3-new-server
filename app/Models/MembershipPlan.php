@@ -21,6 +21,7 @@ class MembershipPlan extends Model
             'reference_event_count' => 'integer',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'point_per_event_checkin' => 'integer',
         ];
     }
 

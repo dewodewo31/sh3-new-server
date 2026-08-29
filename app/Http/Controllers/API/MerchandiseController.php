@@ -52,6 +52,7 @@ class MerchandiseController extends Controller
             'customer_contact' => $request->string('customer_contact')->toString(),
             'size' => $request->string('size')->toString(),
             'quantity' => $request->integer('quantity'),
+            'use_points' => $request->boolean('use_points'),
         ]);
 
         return response()->json([

@@ -21,6 +21,13 @@ class MerchandiseOrder extends Model
         return [
             'total_price' => 'decimal:2',
             'quantity' => 'integer',
+            'points_used' => 'integer',
+            'discount_amount' => 'decimal:2',
+            'unit_price_snapshot' => 'decimal:2',
+            'quantity_snapshot' => 'integer',
+            'points_per_unit_snapshot' => 'integer',
+            'discount_per_unit_snapshot' => 'decimal:2',
+            'cash_amount_snapshot' => 'decimal:2',
         ];
     }
 
@@ -37,6 +44,11 @@ class MerchandiseOrder extends Model
     public function payment()
     {
         return $this->belongsTo(Payment::class);
+    }
+
+    public function pointTransactions()
+    {
+        return $this->hasMany(PointTransaction::class, 'merchandise_order_id');
     }
 
     public function markAsPaid(): void

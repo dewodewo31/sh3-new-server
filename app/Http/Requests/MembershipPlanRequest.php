@@ -31,6 +31,9 @@ class MembershipPlanRequest extends FormRequest
             'duration_unit' => ['required', Rule::in(['days', 'months', 'years'])],
             'is_active' => ['sometimes', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            // flat points earned per valid event check-in while this plan is active.
+            // Optional so legacy admin forms / clients that don't send it still work.
+            'point_per_event_checkin' => ['sometimes', 'integer', 'min:0'],
         ];
     }
 }
