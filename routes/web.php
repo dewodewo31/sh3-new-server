@@ -58,6 +58,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_member'])->group(function () {
             Route::resource('participants', ParticipantController::class);
+            Route::post('participants/{id}/reconcile-points', [ParticipantController::class, 'reconcilePoints'])->name('participants.reconcile-points');
         });
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_member,bendahara'])->group(function () {
@@ -108,6 +109,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
             Route::put('/payments/{id}/confirm', [PaymentController::class, 'confirm'])->name('payments.confirm');
             Route::put('/payments/{id}/reject', [PaymentController::class, 'reject'])->name('payments.reject');
+            Route::put('/payments/{id}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
 
             Route::get('/bookkeepings/reports', [BookkeepingController::class, 'reports'])->name('bookkeepings.reports');
             Route::get('/bookkeepings/receivables', [BookkeepingController::class, 'receivables'])->name('bookkeepings.receivables');
@@ -140,6 +142,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/attendance/scan', [AttendanceController::class, 'scan'])->name('attendance.scan');
             Route::post('/attendance/scan', [AttendanceController::class, 'processScan'])->name('attendance.scan.process');
             Route::post('/attendance/event-participant/{id}/generate-qr', [AttendanceController::class, 'generateQr'])->name('attendance.generate-qr');
+            Route::post('/attendance/{id}/invalidate', [AttendanceController::class, 'invalidate'])->name('attendance.invalidate');
         });
     });
 });

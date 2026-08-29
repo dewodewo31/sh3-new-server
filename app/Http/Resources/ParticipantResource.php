@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Services\PointService;
 
 class ParticipantResource extends JsonResource
 {
@@ -31,6 +32,8 @@ class ParticipantResource extends JsonResource
             'is_active' => $this->is_active,
             'total_events_participated' => $this->total_events_participated,
             'is_membership_active' => $this->isMembershipActive(),
+            'point_balance' => $this->point_balance,
+            'ledger_balance' => app(PointService::class)->balanceFromLedger($this->id),
             'membership_histories' => MembershipHistoryResource::collection($this->whenLoaded('membershipHistories')),
             'created_at' => $this->created_at,
         ];

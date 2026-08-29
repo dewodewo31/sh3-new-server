@@ -92,6 +92,73 @@
         <div class="card">
             <div class="card-header">
                 <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 3 0 1 1-6 0M3.75 12A2.25 2.25 0 0 1 6 9.75h12A2.25 2.25 0 0 1 20.25 12M3.75 12a2.25 2.25 0 0 0 2.25 2.25h12A2.25 2.25 0 0 0 21 12m-9 3.75h.008v.008H12v-.008z"/></svg>
+                    <h3 class="card-header-title">Poin Reward</h3>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="flex items-end justify-between gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-slate-400">Saldo Poin</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-slate-100">{{ number_format($participant->point_balance, 0, ',', '.') }}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500 dark:text-slate-400">Saldo Ledger</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-slate-100">{{ number_format($ledgerBalance, 0, ',', '.') }}</p>
+                        @if($participant->point_balance !== $ledgerBalance)
+                            <span class="badge badge-warning mt-1">Tidak konsisten</span>
+                            <form action="{{ route('admin.participants.reconcile-points', $participant->id) }}" method="POST" class="mt-2">
+                                @csrf
+                                <button type="submit" class="btn btn-warning btn-sm">Sinkronkan dari ledger</button>
+                            </form>
+                        @else
+                            <span class="badge badge-success mt-1">Konsisten</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <div class="p-0">
+                @if($pointHistory->count())
+                    <div class="w-full overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="min-w-full whitespace-nowrap">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                                    <th class="px-6 py-3">Tipe</th>
+                                    <th class="px-6 py-3">Jumlah</th>
+                                    <th class="px-6 py-3">Keterangan</th>
+                                    <th class="px-6 py-3">Tanggal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-slate-700/60">
+                                @foreach($pointHistory as $tx)
+                                <tr>
+                                    <td class="px-6 py-3 text-sm">
+                                        <span class="badge {{ $tx->isCredit() ? 'badge-success' : 'badge-secondary' }}">{{ $tx->type }}</span>
+                                    </td>
+                                    <td class="px-6 py-3 text-sm font-semibold {{ $tx->isCredit() ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                                        {{ $tx->amount >= 0 ? '+' : '' }}{{ number_format($tx->amount, 0, ',', '.') }}
+                                    </td>
+                                    <td class="px-6 py-3 text-sm text-gray-700 dark:text-slate-300">{{ $tx->note ?? '-' }}</td>
+                                    <td class="px-6 py-3 text-sm text-gray-500 dark:text-slate-400">{{ $tx->created_at?->format('d/m/Y H:i') ?? '-' }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="px-6 py-3">
+                        {{ $pointHistory->links() }}
+                    </div>
+                @else
+                    <div class="empty-state py-8">
+                        <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 3 0 1 1-6 0M3.75 12A2.25 2.25 0 0 1 6 9.75h12A2.25 2.25 0 0 1 20.25 12M3.75 12a2.25 2.25 0 0 0 2.25 2.25h12A2.25 2.25 0 0 0 21 12m-9 3.75h.008v.008H12v-.008z"/></svg>
+                        <p class="empty-state-title">Belum ada riwayat poin</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="flex items-center gap-2">
                     <svg class="w-5 h-5 text-gray-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/></svg>
                     <h3 class="card-header-title">QR Attendance</h3>
                     <a href="{{ route('admin.attendance.scan') }}" class="btn btn-primary btn-xs ml-auto">
