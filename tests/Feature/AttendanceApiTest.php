@@ -255,13 +255,15 @@ class AttendanceApiTest extends TestCase
     public function test_report_returns_attendance_stats(): void
     {
         $event = $this->createEvent();
-        $presentParticipant = Participant::factory()->create();
         $absentParticipant = Participant::factory()->create();
 
-        $this->register($event, $presentParticipant);
+        // H4: self check-in is token-derived (no IDOR via client-supplied
+        // participant_id), so the authenticated participant is the "present" one
+        // and a separate participant is the "absent" one.
+        $this->register($event, $this->participant);
         $this->register($event, $absentParticipant);
 
-        $this->postJson('/api/v1/attendance/check-in', $this->checkInPayload($event, $presentParticipant))
+        $this->postJson('/api/v1/attendance/check-in', ['event_id' => $event->id])
             ->assertOk();
 
         $this->getJson('/api/v1/attendance/report')
@@ -308,11 +310,10 @@ class AttendanceApiTest extends TestCase
         $this->assertTrue($registration->fresh()->is_attended);
         $this->assertNotNull($registration->fresh()->check_in_at);
 
-        Attendance::create([
-            'event_participant_id' => $registration->id,
-            'check_in_time' => now(),
-            'status' => 'present',
-        ]);
+        // Since v2 of the flat-point plan, one registration maps to exactly ONE
+        // attendance row (UNIQUE attendances.event_participant_id). A duplicate
+        // attendance row is therefore never created here. Re-syncing the same
+        // batch updates the existing single row and stays idempotent.
 
         $this->postJson('/api/v1/attendance/sync-up', ['attendances' => $attendances])
             ->assertOk()
