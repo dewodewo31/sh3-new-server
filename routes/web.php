@@ -11,6 +11,9 @@ use App\Http\Controllers\Admin\FinancialAccountController;
 use App\Http\Controllers\Admin\GalleryAlbumController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\GuestSponsorController;
+use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\InventoryExternalLoanController;
+use App\Http\Controllers\Admin\InventoryLoanController;
 use App\Http\Controllers\Admin\MembershipController;
 use App\Http\Controllers\Admin\MembershipPlanController;
 use App\Http\Controllers\Admin\MerchandiseController;
@@ -87,6 +90,39 @@ Route::middleware(['auth'])->group(function () {
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
             Route::resource('sponsors', SponsorController::class);
+        });
+
+        Route::prefix('inventory')->name('inventory.')->group(function () {
+            Route::middleware([RoleMiddleware::class.':'.implode(',', config('sh3.inventory_view_roles'))])->group(function () {
+                Route::get('/', [InventoryController::class, 'index'])->name('index');
+                Route::get('/loans', [InventoryLoanController::class, 'index'])->name('loans.index');
+                Route::get('/loans/{id}', [InventoryLoanController::class, 'show'])->whereNumber('id')->name('loans.show');
+                Route::get('/external-loans', [InventoryExternalLoanController::class, 'index'])->name('external-loans.index');
+                Route::get('/external-loans/{id}', [InventoryExternalLoanController::class, 'show'])->whereNumber('id')->name('external-loans.show');
+                Route::get('/{id}', [InventoryController::class, 'show'])->whereNumber('id')->name('show');
+            });
+
+            Route::middleware([RoleMiddleware::class.':'.implode(',', config('sh3.inventory_manage_roles'))])->group(function () {
+                Route::get('/create', [InventoryController::class, 'create'])->name('create');
+                Route::post('/', [InventoryController::class, 'store'])->name('store');
+                Route::get('/{id}/edit', [InventoryController::class, 'edit'])->whereNumber('id')->name('edit');
+                Route::put('/{id}', [InventoryController::class, 'update'])->whereNumber('id')->name('update');
+                Route::delete('/{id}', [InventoryController::class, 'destroy'])->whereNumber('id')->name('destroy');
+                Route::post('/{id}/photos', [InventoryController::class, 'storePhoto'])->whereNumber('id')->name('photos.store');
+                Route::delete('/photos/{photoId}', [InventoryController::class, 'destroyPhoto'])->whereNumber('photoId')->name('photos.destroy');
+                Route::get('/loans/create', [InventoryLoanController::class, 'create'])->name('loans.create');
+                Route::post('/loans', [InventoryLoanController::class, 'store'])->name('loans.store');
+                Route::post('/loans/{id}/handover', [InventoryLoanController::class, 'handover'])->whereNumber('id')->name('loans.handover');
+                Route::post('/loans/{id}/return', [InventoryLoanController::class, 'returnItem'])->whereNumber('id')->name('loans.return');
+                Route::post('/loans/{id}/cancel', [InventoryLoanController::class, 'cancel'])->whereNumber('id')->name('loans.cancel');
+                Route::post('/loans/{id}/documents', [InventoryLoanController::class, 'storeDocument'])->whereNumber('id')->name('loans.documents');
+                Route::get('/documents/{id}/download', [InventoryLoanController::class, 'download'])->whereNumber('id')->name('documents.download');
+                Route::get('/external-loans/create', [InventoryExternalLoanController::class, 'create'])->name('external-loans.create');
+                Route::post('/external-loans', [InventoryExternalLoanController::class, 'store'])->name('external-loans.store');
+                Route::post('/external-loans/{id}/handover', [InventoryExternalLoanController::class, 'handover'])->whereNumber('id')->name('external-loans.handover');
+                Route::post('/external-loans/{id}/return', [InventoryExternalLoanController::class, 'returnItem'])->whereNumber('id')->name('external-loans.return');
+                Route::post('/external-loans/{id}/cancel', [InventoryExternalLoanController::class, 'cancel'])->whereNumber('id')->name('external-loans.cancel');
+            });
         });
 
         Route::middleware([RoleMiddleware::class.':admin_full_access'])->group(function () {

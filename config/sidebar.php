@@ -74,6 +74,37 @@ return [
         ],
 
         [
+            'section' => 'Inventaris',
+            'items' => [
+
+                [
+                    'label' => 'Inventory',
+                    'route' => 'admin.inventory.index',
+                    'icon' => '<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5V18a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18V7.5m18 0A2.25 2.25 0 0018.75 5.25H5.25A2.25 2.25 0 003 7.5m18 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 9.671A2.25 2.25 0 012.25 7.757V7.5"/></svg>',
+                    'roles' => config('sh3.inventory_view_roles'),
+                    'active' => ['admin.inventory.index', 'admin.inventory.create', 'admin.inventory.store', 'admin.inventory.edit', 'admin.inventory.update', 'admin.inventory.destroy', 'admin.inventory.show', 'admin.inventory.photos.*'],
+                ],
+
+                [
+                    'label' => 'Peminjaman',
+                    'route' => 'admin.inventory.loans.index',
+                    'icon' => '<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>',
+                    'roles' => config('sh3.inventory_view_roles'),
+                    'active' => ['admin.inventory.loans.*', 'admin.inventory.documents.*'],
+                ],
+
+                [
+                    'label' => 'Pinjaman barang',
+                    'route' => 'admin.inventory.external-loans.index',
+                    'icon' => '<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>',
+                    'roles' => config('sh3.inventory_view_roles'),
+                    'active' => ['admin.inventory.external-loans.*'],
+                ],
+
+            ],
+        ],
+
+        [
             'section' => 'Content',
             'items' => [
 
