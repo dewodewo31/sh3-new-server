@@ -33,12 +33,8 @@ return [
             'port' => env('REVERB_SERVER_PORT', 8080),
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
-            'options' => [
-                'tls' => [
-                    'local_cert' => env('REVERB_TLS_CERT', '/etc/reverb/fullchain.pem'),
-                    'local_pk' => env('REVERB_TLS_KEY', '/etc/reverb/privkey.pem'),
-                ],
-            ],
+            // TLS disabled: Nginx terminates TLS and proxies plain HTTP to 127.0.0.1:8080
+            'options' => [],
             'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 10_000),
             'scaling' => [
                 'enabled' => env('REVERB_SCALING_ENABLED', false),
@@ -85,7 +81,12 @@ return [
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
-                'allowed_origins' => ['*'],
+                'allowed_origins' => [
+                    'https://server-sh3.cloud',
+                    'https://www.server-sh3.cloud',
+                    'https://samarindahashhouseharriers.com',
+                    'https://www.samarindahashhouseharriers.com',
+                ],
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
                 'max_connections' => env('REVERB_APP_MAX_CONNECTIONS'),
