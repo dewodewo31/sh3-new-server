@@ -108,7 +108,7 @@
         </div>
         <div class="card-body space-y-6">
             @if (in_array(auth()->user()->role, config('sh3.inventory_manage_roles'), true))
-                <form action="{{ route('admin.inventory.photos.store', $item->id) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.inventory.photos.store', $item->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                     @csrf
                     <div class="form-group">
                         <label class="form-label">Upload Foto</label>
