@@ -118,7 +118,7 @@
                     <h3 class="card-header-title">Handover (Terima Barang)</h3>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('admin.inventory.external-loans.handover', $loan->id) }}" method="POST">
+                    <form action="{{ route('admin.inventory.external-loans.handover', $loan->id) }}" method="POST" class="space-y-4">
                         @csrf
                         <div class="form-group">
                             <label class="form-label">Dari Lokasi *</label>
@@ -156,7 +156,7 @@
                     <h3 class="card-header-title">Pengembalian</h3>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('admin.inventory.external-loans.return', $loan->id) }}" method="POST">
+                    <form action="{{ route('admin.inventory.external-loans.return', $loan->id) }}" method="POST" class="space-y-4">
                         @csrf
                         <div class="form-group">
                             <label class="form-label">Kondisi Saat Kembali *</label>

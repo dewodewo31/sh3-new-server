@@ -119,7 +119,7 @@
                     <h3 class="card-header-title">Handover</h3>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('admin.inventory.loans.handover', $loan->id) }}" method="POST">
+                    <form action="{{ route('admin.inventory.loans.handover', $loan->id) }}" method="POST" class="space-y-4">
                         @csrf
                         <div class="form-group">
                             <label class="form-label">Dari Lokasi *</label>
@@ -157,7 +157,7 @@
                     <h3 class="card-header-title">Pengembalian</h3>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('admin.inventory.loans.return', $loan->id) }}" method="POST">
+                    <form action="{{ route('admin.inventory.loans.return', $loan->id) }}" method="POST" class="space-y-4">
                         @csrf
                         <div class="form-group">
                             <label class="form-label">Kondisi Saat Kembali *</label>
@@ -180,7 +180,7 @@
                     <h3 class="card-header-title">Dokumen</h3>
                 </div>
                 <div class="card-body space-y-4">
-                    <form action="{{ route('admin.inventory.loans.documents', $loan->id) }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('admin.inventory.loans.documents', $loan->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                         @csrf
                         <div class="form-group">
                             <label class="form-label">File *</label>
