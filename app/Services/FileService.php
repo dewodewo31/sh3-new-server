@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Storage;
 
 class FileService
 {
-    public function upload(UploadedFile $file, string $dir = 'uploads'): string
+    public function upload(UploadedFile $file, string $dir = 'uploads', string $disk = 'public'): string
     {
-        return $file->store($dir, 'public');
+        return $file->store($dir, $disk);
     }
 
     public function uploadOrReplace(?string $existingPath, ?UploadedFile $file, string $dir): ?string
@@ -25,10 +25,10 @@ class FileService
         return $this->upload($file, $dir);
     }
 
-    public function delete(?string $path): void
+    public function delete(?string $path, string $disk = 'public'): void
     {
-        if ($path && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        if ($path && Storage::disk($disk)->exists($path)) {
+            Storage::disk($disk)->delete($path);
         }
     }
 
