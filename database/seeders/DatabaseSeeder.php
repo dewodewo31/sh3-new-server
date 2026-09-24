@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             ActivitySeeder::class,
             BookkeepingSeeder::class,
             EventBudgetSeeder::class,
+            InventoryCategorySeeder::class,
         ]);
     }
 }
