@@ -10,6 +10,9 @@ use App\Repositories\EventParticipantRepository;
 use App\Repositories\EventRepository;
 use App\Repositories\FinancialAccountRepository;
 use App\Repositories\GalleryRepository;
+use App\Repositories\InventoryExternalLoanRepository;
+use App\Repositories\InventoryItemRepository;
+use App\Repositories\InventoryLoanRepository;
 use App\Repositories\MerchandiseRepository;
 use App\Repositories\OrganizationMemberRepository;
 use App\Repositories\ParticipantRepository;
@@ -77,6 +80,18 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(
             EventBudgetRepository::class,
             EventBudgetRepository::class
+        );
+        $this->app->bind(
+            InventoryItemRepository::class,
+            InventoryItemRepository::class
+        );
+        $this->app->bind(
+            InventoryLoanRepository::class,
+            InventoryLoanRepository::class
+        );
+        $this->app->bind(
+            InventoryExternalLoanRepository::class,
+            InventoryExternalLoanRepository::class
         );
     }
 }
