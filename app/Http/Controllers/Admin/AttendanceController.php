@@ -90,19 +90,21 @@ class AttendanceController extends Controller
         $request->validate([
             'event_id' => ['required', 'integer', 'exists:events,id'],
             'qr_code' => ['required', 'string'],
+            'action' => ['nullable', 'in:check_in,check_out'],
         ]);
 
         $qrData = trim($request->qr_code);
+        $action = $request->input('action', 'check_in');
+        $isCheckOut = $action === 'check_out';
 
         if ($this->qrCodeService->isGuestSponsorCode($qrData)) {
-            return $this->processGuestSponsorScan($request, $qrData);
+            return $this->processGuestSponsorScan($request, $qrData, $action);
         }
 
         try {
-            $data = $this->attendanceService->scanAndCheckInAdmin(
-                (int) $request->event_id,
-                $qrData,
-            );
+            $data = $isCheckOut
+                ? $this->attendanceService->scanAndCheckOutAdmin((int) $request->event_id, $qrData)
+                : $this->attendanceService->scanAndCheckInAdmin((int) $request->event_id, $qrData);
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -112,12 +114,12 @@ class AttendanceController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Check-in berhasil!',
+            'message' => $isCheckOut ? 'Check-out berhasil!' : 'Check-in berhasil!',
             'data' => $data,
         ]);
     }
 
-    public function processGuestSponsorScan(Request $request, string $qrData): JsonResponse
+    public function processGuestSponsorScan(Request $request, string $qrData, string $action = 'check_in'): JsonResponse
     {
         $guestSponsor = $this->guestSponsorRepository->findByQr($qrData);
 
@@ -136,15 +138,25 @@ class AttendanceController extends Controller
         }
 
         $event = $this->eventRepository->findById($request->event_id);
+        $isCheckOut = $action === 'check_out';
 
         try {
-            $this->guestSponsorService->checkIn(
-                $guestSponsor,
-                $event,
-                ['method' => 'qr_code'],
-                auth()->id(),
-                $request->ip(),
-            );
+            if ($isCheckOut) {
+                $this->guestSponsorService->checkOut(
+                    $guestSponsor,
+                    $event,
+                    auth()->id(),
+                    $request->ip(),
+                );
+            } else {
+                $this->guestSponsorService->checkIn(
+                    $guestSponsor,
+                    $event,
+                    ['method' => 'qr_code'],
+                    auth()->id(),
+                    $request->ip(),
+                );
+            }
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -152,16 +164,18 @@ class AttendanceController extends Controller
             ], 422);
         }
 
+        $data = [
+            'guest_sponsor' => true,
+            'sponsor_name' => $guestSponsor->sponsor?->name,
+            'event_title' => $event->title,
+            'already_checked_in' => false,
+        ];
+        $data[$isCheckOut ? 'check_out_time' : 'check_in_time'] = now()->format('d/m/Y H:i:s');
+
         return response()->json([
             'success' => true,
-            'message' => 'Check-in guest sponsor berhasil!',
-            'data' => [
-                'guest_sponsor' => true,
-                'sponsor_name' => $guestSponsor->sponsor?->name,
-                'event_title' => $event->title,
-                'check_in_time' => now()->format('d/m/Y H:i:s'),
-                'already_checked_in' => false,
-            ],
+            'message' => $isCheckOut ? 'Check-out guest sponsor berhasil!' : 'Check-in guest sponsor berhasil!',
+            'data' => $data,
         ]);
     }
 }

@@ -79,6 +79,24 @@
             <div class="card-body">
                 <form @submit.prevent="submitManual()" class="space-y-3">
                     <div class="form-group">
+                        <label class="form-label">Aksi Scan</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" @click="mode = 'check_in'" class="btn" :class="mode === 'check_in' ? 'btn-primary' : 'btn-outline'">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Check-in
+                            </button>
+                            <button type="button" @click="mode = 'check_out'" class="btn" :class="mode === 'check_out' ? 'btn-warning' : 'btn-outline'">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H3m12 0l-3-3m3 3l-3 3M9 4.5V3m0 13.5V21m10.5-9H6M12 6.75h.008v.008H12V6.75z"/>
+                                </svg>
+                                Check-out
+                            </button>
+                        </div>
+                        <p class="form-hint" x-text="mode === 'check_out' ? 'Scan berikutnya akan mencatat waktu keluar peserta.' : 'Scan berikutnya akan mencatat waktu hadir peserta.'"></p>
+                    </div>
+                    <div class="form-group">
                         <label for="event_id" class="form-label">Event</label>
                         <select id="event_id" name="event_id" x-model="eventId" class="form-select" required>
                             <option value="">Pilih event</option>
@@ -97,7 +115,7 @@
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        Proses Check-in
+                        <span x-text="mode === 'check_out' ? 'Proses Check-out' : 'Proses Check-in'"></span>
                     </button>
                 </form>
             </div>
@@ -116,7 +134,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
-                    <p class="mt-4 text-sm font-medium text-slate-900 dark:text-slate-100">Memproses check-in...</p>
+                    <p class="mt-4 text-sm font-medium text-slate-900 dark:text-slate-100" x-text="mode === 'check_out' ? 'Memproses check-out...' : 'Memproses check-in...'"></p>
                 </div>
 
                 {{-- Empty --}}
@@ -128,7 +146,7 @@
                         </svg>
                     </div>
                     <p class="empty-state-title">Belum ada hasil scan</p>
-                    <p class="empty-state-text">Hasil check-in peserta akan tampil di sini.</p>
+                    <p class="empty-state-text">Hasil check-in / check-out peserta akan tampil di sini.</p>
                 </div>
 
                 {{-- Success --}}
@@ -141,8 +159,8 @@
                     <p class="text-lg font-semibold text-slate-900 dark:text-slate-100" x-text="result.data.participant_name || result.data.sponsor_name"></p>
                     <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400" x-text="result.data.event_title"></p>
                     <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-                        <span class="badge badge-success" x-text="result.data.guest_sponsor ? 'Check-in guest sponsor berhasil' : 'Check-in berhasil'"></span>
-                        <span class="badge badge-info" x-text="'Waktu: ' + result.data.check_in_time"></span>
+                        <span class="badge badge-success" x-text="result.data.guest_sponsor ? (mode === 'check_out' ? 'Check-out guest sponsor berhasil' : 'Check-in guest sponsor berhasil') : (mode === 'check_out' ? 'Check-out berhasil' : 'Check-in berhasil')"></span>
+                        <span class="badge badge-info" x-text="'Waktu: ' + (result.data.check_in_time || result.data.check_out_time)"></span>
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm mt-5" @click="resetResult()">
                         Scan Berikutnya
@@ -156,7 +174,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
                         </svg>
                     </div>
-                    <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Check-in gagal</p>
+                    <p class="text-sm font-semibold text-slate-900 dark:text-slate-100" x-text="mode === 'check_out' ? 'Check-out gagal' : 'Check-in gagal'"></p>
                     <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400" x-text="result.message"></p>
                     <button type="button" class="btn btn-secondary btn-sm mt-5" @click="resetResult()">
                         Coba Lagi
@@ -172,7 +190,7 @@
             </svg>
             <div>
                 <p class="alert-title">Tips</p>
-                <p class="alert-desc">Akses kamera membutuhkan koneksi HTTPS atau localhost. Pastikan izin kamera diizinkan oleh browser. QR peserta hanya berlaku untuk 1 peserta pada 1 event; QR guest sponsor (GS-...) dicocokkan dengan event yang dipilih.</p>
+                <p class="alert-desc">Akses kamera membutuhkan koneksi HTTPS atau localhost. Pastikan izin kamera diizinkan oleh browser. QR peserta hanya berlaku untuk 1 peserta pada 1 event; QR guest sponsor (GS-...) dicocokkan dengan event yang dipilih. Pastikan mode aksi (Check-in / Check-out) sudah sesuai sebelum melakukan scan.</p>
             </div>
         </div>
     </div>
@@ -189,6 +207,7 @@
             processing: false,
             manualCode: '',
             eventId: '',
+            mode: 'check_in',
             result: null,
             lastScanAt: 0,
 
@@ -277,7 +296,7 @@
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': csrf,
                         },
-                        body: JSON.stringify({ event_id: this.eventId, qr_code: qrText }),
+                        body: JSON.stringify({ event_id: this.eventId, qr_code: qrText, action: this.mode }),
                     });
 
                     const data = await response.json();
@@ -285,10 +304,11 @@
                     this.result = data;
 
                     if (data.success) {
-                        showToast('success', 'Check-in berhasil', (data.data.participant_name || data.data.sponsor_name) + ' hadir di ' + data.data.event_title);
+                        const isCheckOut = this.mode === 'check_out';
+                        showToast('success', isCheckOut ? 'Check-out berhasil' : 'Check-in berhasil', (data.data.participant_name || data.data.sponsor_name) + (isCheckOut ? ' keluar dari ' : ' hadir di ') + data.data.event_title);
                         navigator.vibrate?.(200);
                     } else {
-                        showToast('error', 'Check-in gagal', data.message);
+                        showToast('error', this.mode === 'check_out' ? 'Check-out gagal' : 'Check-in gagal', data.message);
                     }
                 } catch (e) {
                     this.result = { success: false, message: 'Terjadi kesalahan koneksi. Coba lagi.' };

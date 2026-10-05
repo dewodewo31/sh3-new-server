@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PointReversalBlockedException;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
 use App\Models\Event;
@@ -11,7 +12,6 @@ use App\Models\Payment;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\EventParticipantRepository;
 use Carbon\Carbon;
-use App\Exceptions\PointReversalBlockedException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -166,16 +166,55 @@ class AttendanceService
     }
 
     /**
-     * Admin QR scan: decode, validate registration, and auto-check-in.
-     * Returns the result array with participant/event info for the controller response.
-     */
-    /**
-     * Admin QR scan: locate the registration by its unique ticket QR,
-     * validate it belongs to the scanned event, then auto-check-in.
+     * Admin QR scan: locate the registration by its unique ticket QR or legacy
+     * participant QR, validate it belongs to the scanned event, then auto-check-in.
      */
     public function scanAndCheckInAdmin(int $eventId, string $qrCode): array
     {
-        $qrData = trim($qrCode);
+        $registration = $this->resolveScannable($eventId, $qrCode);
+
+        $this->checkIn(
+            $registration->event,
+            $registration->participant,
+            ['method' => 'qr_code'],
+        );
+
+        return [
+            'participant_name' => $registration->participant->name,
+            'event_title' => $registration->event->title,
+            'check_in_time' => now()->format('d/m/Y H:i:s'),
+            'already_checked_in' => false,
+        ];
+    }
+
+    /**
+     * Admin QR scan: locate the registration by its unique ticket QR or legacy
+     * participant QR, validate it belongs to the scanned event, then check-out.
+     * Returns the result array with participant/event info for the controller response.
+     */
+    public function scanAndCheckOutAdmin(int $eventId, string $qrCode): array
+    {
+        $registration = $this->resolveScannable($eventId, $qrCode);
+
+        $this->checkOut(
+            $registration->event,
+            $registration->participant,
+        );
+
+        return [
+            'participant_name' => $registration->participant->name,
+            'event_title' => $registration->event->title,
+            'check_out_time' => now()->format('d/m/Y H:i:s'),
+        ];
+    }
+
+    /**
+     * Decode QR, resolve the event participant registration, and validate it
+     * belongs to the scanned event (shared by check-in/check-out admin scans).
+     */
+    private function resolveScannable(int $eventId, string $qrData): EventParticipant
+    {
+        $qrData = trim($qrData);
 
         // Primary path: the QR payload is a unique event-participant ticket code.
         $registration = $this->eventParticipantRepository->findByQrCode($qrData);
@@ -187,18 +226,7 @@ class AttendanceService
                 ]);
             }
 
-            $this->checkIn(
-                $registration->event,
-                $registration->participant,
-                ['method' => 'qr_code'],
-            );
-
-            return [
-                'participant_name' => $registration->participant->name,
-                'event_title' => $registration->event->title,
-                'check_in_time' => now()->format('d/m/Y H:i:s'),
-                'already_checked_in' => false,
-            ];
+            return $registration;
         }
 
         // Backward compatibility: legacy printed QR carrying the participant hash_id.
@@ -220,18 +248,7 @@ class AttendanceService
                         ]);
                     }
 
-                    $this->checkIn(
-                        $legacyRegistration->event,
-                        $legacyRegistration->participant,
-                        ['method' => 'qr_code'],
-                    );
-
-                    return [
-                        'participant_name' => $legacyRegistration->participant->name,
-                        'event_title' => $legacyRegistration->event->title,
-                        'check_in_time' => now()->format('d/m/Y H:i:s'),
-                        'already_checked_in' => false,
-                    ];
+                    return $legacyRegistration;
                 }
 
                 throw ValidationException::withMessages([

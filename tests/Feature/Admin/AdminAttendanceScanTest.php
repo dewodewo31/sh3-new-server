@@ -10,6 +10,7 @@ use App\Models\Participant;
 use App\Models\Sponsor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AdminAttendanceScanTest extends TestCase
@@ -70,12 +71,18 @@ class AdminAttendanceScanTest extends TestCase
         ]);
     }
 
-    private function scanPayload(Event $event, string $qrCode): array
+    private function scanPayload(Event $event, string $qrCode, ?string $action = null): array
     {
-        return [
+        $payload = [
             'event_id' => $event->id,
             'qr_code' => $qrCode,
         ];
+
+        if ($action) {
+            $payload['action'] = $action;
+        }
+
+        return $payload;
     }
 
     public function test_scan_page_lists_publish_and_ongoing_events(): void
@@ -138,6 +145,47 @@ class AdminAttendanceScanTest extends TestCase
         $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->hash_id))
             ->assertUnprocessable()
             ->assertJsonPath('message', 'Peserta sudah melakukan check-in.');
+    }
+
+    public function test_process_scan_check_out_success(): void
+    {
+        $event = $this->createEvent();
+        $registration = $this->register($event, $this->participant);
+
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->hash_id))
+            ->assertOk();
+
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->hash_id, 'check_out'))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.participant_name', $this->participant->name)
+            ->assertJsonStructure(['data' => ['check_out_time']]);
+
+        $this->assertNotNull($registration->fresh()->check_out_at);
+        $this->assertNotNull(DB::table('attendances')
+            ->where('event_participant_id', $registration->id)
+            ->value('check_out_time'));
+    }
+
+    public function test_process_scan_check_out_without_check_in_returns_422(): void
+    {
+        $event = $this->createEvent();
+        $this->register($event, $this->participant);
+
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $this->participant->hash_id, 'check_out'))
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Peserta belum melakukan check-in.');
+    }
+
+    public function test_process_scan_invalid_action_returns_422(): void
+    {
+        $event = $this->createEvent();
+
+        $this->post('/admin/attendance/scan', [
+            'event_id' => $event->id,
+            'qr_code' => $this->participant->hash_id,
+            'action' => 'bogus',
+        ])->assertSessionHasErrors('action');
     }
 
     public function test_process_scan_requires_event_id(): void
@@ -215,5 +263,28 @@ class AdminAttendanceScanTest extends TestCase
         $this->postJson('/admin/attendance/scan', $payload)
             ->assertUnprocessable()
             ->assertJsonPath('message', 'Guest sponsor sudah melakukan check-in.');
+    }
+
+    public function test_process_scan_guest_sponsor_check_out_success(): void
+    {
+        $event = $this->createEvent();
+        $guestSponsor = GuestSponsor::factory()->create([
+            'sponsor_id' => Sponsor::factory()->create()->id,
+            'event_id' => $event->id,
+            'qr_code' => sprintf('GS-%d-%d-0001', 1, $event->id),
+        ]);
+
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $guestSponsor->qr_code))
+            ->assertOk();
+
+        $this->postJson('/admin/attendance/scan', $this->scanPayload($event, $guestSponsor->qr_code, 'check_out'))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.guest_sponsor', true)
+            ->assertJsonStructure(['data' => ['check_out_time']]);
+
+        $this->assertNotNull(DB::table('guest_sponsor_attendances')
+            ->where('guest_sponsor_id', $guestSponsor->id)
+            ->value('check_out_time'));
     }
 }
