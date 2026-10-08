@@ -22,12 +22,7 @@ Fitur yang diimplementasikan:
 6. **Link folder Google Drive** (`gdrive_folder_url`) pada album — ditampilkan sebagai
    tombol/badge "Drive" di index, disimpan & divalidasi (hanya domain `drive.google.com`).
 7. **Endpoint API publik** `GET /api/v1/gallery-albums` (2026-08-19).
-8. **Sync isi folder Google Drive** (2026-08-20): command `gallery:sync-gdrive` (scheduler
-   hourly + `withoutOverlapping`) dan tombol **Sync Drive** (`POST /admin/gallery-albums/sync`)
-   menarik seluruh gambar+video folder publik menjadi record `galleries` — idempotent by
-   `google_drive_file_id`, stale delete hanya saat sukses penuh, error sanitized di
-   `gdrive_sync_error`, race guard `Cache::lock` per album.
-9. **Endpoint API publik** `GET /api/v1/gallery-albums/{id}` (2026-08-20) — detail album
+8. **Endpoint API publik** `GET /api/v1/gallery-albums/{id}` (2026-08-20) — detail album
    berisi SEMUA media (image → thumbnail URL, video → `uc?export=download&id=...&confirm=t`,
    plus `external_url`).
 

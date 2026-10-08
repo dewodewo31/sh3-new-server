@@ -6,9 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\EventParticipantRepository;
 use App\Repositories\EventRepository;
-use App\Repositories\GuestSponsorRepository;
 use App\Services\AttendanceService;
-use App\Services\GuestSponsorService;
 use App\Services\QRCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,8 +19,6 @@ class AttendanceController extends Controller
         private AttendanceRepository $attendanceRepository,
         private EventParticipantRepository $eventParticipantRepository,
         private AttendanceService $attendanceService,
-        private GuestSponsorService $guestSponsorService,
-        private GuestSponsorRepository $guestSponsorRepository,
         private QRCodeService $qrCodeService,
     ) {}
 
@@ -43,8 +39,7 @@ class AttendanceController extends Controller
 
     /**
      * Manual attendance-invalidation lifecycle (audit finding H2 / V11).
-     * Authorized admin only. Reverses the EARN via a separate REVERSAL ledger
-     * entry; the original EARN is never mutated.
+     * Authorized admin only.
      */
     public function invalidate(Request $request, int $id)
     {
@@ -58,11 +53,7 @@ class AttendanceController extends Controller
             return response()->json($result);
         }
 
-        $message = $result['reversal'] === 'blocked'
-            ? 'Kehadiran dibatalkan, namun reversal poin diblokir (perlu penyesuaian admin).'
-            : 'Kehadiran berhasil dibatalkan.';
-
-        return back()->with('success', $message);
+        return back()->with('success', $result['message']);
     }
 
     public function scan()
@@ -97,10 +88,6 @@ class AttendanceController extends Controller
         $action = $request->input('action', 'check_in');
         $isCheckOut = $action === 'check_out';
 
-        if ($this->qrCodeService->isGuestSponsorCode($qrData)) {
-            return $this->processGuestSponsorScan($request, $qrData, $action);
-        }
-
         try {
             $data = $isCheckOut
                 ? $this->attendanceService->scanAndCheckOutAdmin((int) $request->event_id, $qrData)
@@ -115,66 +102,6 @@ class AttendanceController extends Controller
         return response()->json([
             'success' => true,
             'message' => $isCheckOut ? 'Check-out berhasil!' : 'Check-in berhasil!',
-            'data' => $data,
-        ]);
-    }
-
-    public function processGuestSponsorScan(Request $request, string $qrData, string $action = 'check_in'): JsonResponse
-    {
-        $guestSponsor = $this->guestSponsorRepository->findByQr($qrData);
-
-        if (! $guestSponsor) {
-            return response()->json([
-                'success' => false,
-                'message' => 'QR Code guest sponsor tidak dikenal.',
-            ], 422);
-        }
-
-        if ($guestSponsor->event_id !== (int) $request->event_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'QR Code ini tidak untuk event tersebut.',
-            ], 422);
-        }
-
-        $event = $this->eventRepository->findById($request->event_id);
-        $isCheckOut = $action === 'check_out';
-
-        try {
-            if ($isCheckOut) {
-                $this->guestSponsorService->checkOut(
-                    $guestSponsor,
-                    $event,
-                    auth()->id(),
-                    $request->ip(),
-                );
-            } else {
-                $this->guestSponsorService->checkIn(
-                    $guestSponsor,
-                    $event,
-                    ['method' => 'qr_code'],
-                    auth()->id(),
-                    $request->ip(),
-                );
-            }
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => collect($e->errors())->flatten()->first() ?? 'Terjadi kesalahan.',
-            ], 422);
-        }
-
-        $data = [
-            'guest_sponsor' => true,
-            'sponsor_name' => $guestSponsor->sponsor?->name,
-            'event_title' => $event->title,
-            'already_checked_in' => false,
-        ];
-        $data[$isCheckOut ? 'check_out_time' : 'check_in_time'] = now()->format('d/m/Y H:i:s');
-
-        return response()->json([
-            'success' => true,
-            'message' => $isCheckOut ? 'Check-out guest sponsor berhasil!' : 'Check-in guest sponsor berhasil!',
             'data' => $data,
         ]);
     }

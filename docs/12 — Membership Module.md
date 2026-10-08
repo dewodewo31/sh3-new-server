@@ -77,6 +77,36 @@ Field membership pada `participants` (kolom denormalisasi untuk status aktif saa
 - `membership_start_date` — tanggal mulai aktif
 - `membership_end_date` — tanggal berakhir aktif
 
+## Permanent Member ID
+
+Setiap participant memiliki **Permanent Member ID** (`participants.hash_id`, numeric —
+contoh `4580`) yang **dibuat satu kali dan tidak pernah berubah** selama participant
+tersebut ada di database.
+
+- Membership status (`pending` / `active` / `expired` / `cancelled`) bersifat dinamis dan
+  **tidak pernah** memicu generate ulang Permanent Member ID.
+- Participant yang tidak punya membership aktif ditampilkan dengan **Non-Member Code**
+  (`participants.non_member_code`, format `NM0012`).
+- `NMxxxx` hanyalah display identifier — tidak pernah menggantikan `hash_id`.
+
+```text
+Permanent Member ID: 4580
+
+No Membership      → Display ID: NM0012
+Buy Membership     → Display ID: 4580
+Membership Expired → Display ID: NM0012   (hash tetap 4580)
+Renew Membership   → Display ID: 4580
+Membership Cancel  → Display ID: NM0012
+Buy Membership     → Display ID: 4580
+```
+
+> Membership status dapat berubah berkali-kali, tetapi Permanent Member ID participant tidak berubah.
+
+Single source of truth display: `Participant::displayMemberId()` —
+aktif → `hash_id`, tidak aktif → `non_member_code`. API `ParticipantResource` mengembalikan
+`hash_id` (permanent) dan `display_member_id` (nilai display). Relasi internal
+(membership history, poin, payment/bookkeeping) tetap memakai `participants.id`.
+
 ## Alur Pemberian Membership
 
 ### 1. Admin memberi membership langsung (Manual Grant)

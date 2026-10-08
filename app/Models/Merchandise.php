@@ -29,24 +29,6 @@ class Merchandise extends Model
         return $this->hasMany(MerchandiseOrder::class);
     }
 
-    /**
-     * Whether this merchandise is point-redeemable (a points_required is set).
-     */
-    public function isPointRedeemable(): bool
-    {
-        return $this->points_required !== null && $this->points_required > 0;
-    }
-
-    /**
-     * Discount per unit (in Rupiah) that points cover.
-     */
-    public function discountPerUnit(): int
-    {
-        $discount = round(($this->price ?? 0) - ($this->price_after_points ?? 0));
-
-        return max(0, (int) $discount);
-    }
-
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');

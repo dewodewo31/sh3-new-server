@@ -30,11 +30,6 @@ class GalleryAlbumRepository extends BaseRepository
             ->get();
     }
 
-    public function allWithDriveFolder(): object
-    {
-        return $this->model->whereNotNull('gdrive_folder_url')->get();
-    }
-
     public function findPublicDetail(int $id)
     {
         return $this->model->with([

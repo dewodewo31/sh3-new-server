@@ -10,6 +10,7 @@ class Attendance extends Model
     use HasFactory;
 
     protected $guarded = [];
+
     protected function casts(): array
     {
         return [
@@ -25,10 +26,5 @@ class Attendance extends Model
     public function eventParticipant()
     {
         return $this->belongsTo(EventParticipant::class);
-    }
-
-    public function pointTransactions()
-    {
-        return $this->hasMany(PointTransaction::class, 'attendance_id');
     }
 }

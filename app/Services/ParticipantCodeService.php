@@ -23,18 +23,37 @@ class ParticipantCodeService
                     ->first();
             }
 
-            $next = (int) $row->last_value + 1;
+            $next = (int) $row->last_value;
+            $code = '';
 
-            if ($next > 9999) {
-                // ponytail: cap 9999/prefix from user's 4-digit format; raising the cap requires a format change.
-                throw new OverflowException("Participant code sequence exhausted for prefix '{$prefix}': max 9999.");
-            }
+            do {
+                $next++;
+
+                if ($next > 9999) {
+                    // ponytail: cap 9999/prefix from user's 4-digit format; raising the cap requires a format change.
+                    throw new OverflowException("Participant code sequence exhausted for prefix '{$prefix}': max 9999.");
+                }
+
+                $code = $prefix.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+            } while ($this->codeInUse($code));
 
             DB::table('participant_code_sequences')
                 ->where('prefix', $prefix)
                 ->update(['last_value' => $next]);
 
-            return $prefix.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+            return $code;
         });
+    }
+
+    /**
+     * Codes imported from legacy systems bypass the sequence, so every fresh
+     * allocation skips values already present in either identity column.
+     */
+    private function codeInUse(string $code): bool
+    {
+        return DB::table('participants')
+            ->where('hash_id', $code)
+            ->orWhere('non_member_code', $code)
+            ->exists();
     }
 }

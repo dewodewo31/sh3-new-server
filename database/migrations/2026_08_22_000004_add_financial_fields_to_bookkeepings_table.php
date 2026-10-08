@@ -44,7 +44,8 @@ return new class extends Migration
 
             $table->dropIndex(['transaction_date']);
             $table->dropIndex(['type', 'status']);
-            $table->dropIndex(['event_id']);
+            // ponytail: skip event_id index — MySQL may back the (pre-existing)
+            // event_id FK with it, so dropping it fails with error 1553.
             $table->dropIndex(['activity_id']);
             $table->dropIndex(['financial_account_id']);
             $table->dropIndex(['status']);

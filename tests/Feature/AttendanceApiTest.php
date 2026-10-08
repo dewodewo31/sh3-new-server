@@ -310,10 +310,10 @@ class AttendanceApiTest extends TestCase
         $this->assertTrue($registration->fresh()->is_attended);
         $this->assertNotNull($registration->fresh()->check_in_at);
 
-        // Since v2 of the flat-point plan, one registration maps to exactly ONE
-        // attendance row (UNIQUE attendances.event_participant_id). A duplicate
-        // attendance row is therefore never created here. Re-syncing the same
-        // batch updates the existing single row and stays idempotent.
+        // One registration maps to exactly ONE attendance row (UNIQUE
+        // attendances.event_participant_id). A duplicate attendance row is
+        // therefore never created here. Re-syncing the same batch updates the
+        // existing single row and stays idempotent.
 
         $this->postJson('/api/v1/attendance/sync-up', ['attendances' => $attendances])
             ->assertOk()

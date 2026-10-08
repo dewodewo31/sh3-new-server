@@ -15,7 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('membership:expire')->dailyAt('00:00');
         $schedule->command('membership:auto-renew')->dailyAt('01:00');
         $schedule->command('notifications:cleanup --days=30')->dailyAt('02:00');
-        $schedule->command('gallery:sync-gdrive')->hourly()->withoutOverlapping();
     })
     ->withRouting(
         web: __DIR__.'/../routes/web.php',

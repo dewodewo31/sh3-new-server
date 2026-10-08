@@ -22,7 +22,6 @@ services:
       - APP_KEY=${APP_KEY:?Isi APP_KEY di .env host}
       # Opsional override (default mengikuti nilai yang di-bake saat build):
       # - APP_URL=https://sh3.example.com
-      # - GOOGLE_DRIVE_API_KEY=${GOOGLE_DRIVE_API_KEY:-}
     ports:
       - "8000:8000"
     depends_on:

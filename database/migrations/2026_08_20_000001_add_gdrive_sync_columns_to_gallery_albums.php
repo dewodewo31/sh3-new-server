@@ -25,7 +25,8 @@ return new class extends Migration
         });
 
         Schema::table('galleries', function (Blueprint $table) {
-            $table->dropIndex(['gallery_album_id', 'google_drive_file_id']);
+            // ponytail: skip drop — MySQL may back the gallery_album_id FK with
+            // this index, so dropping it fails with error 1553.
         });
     }
 };

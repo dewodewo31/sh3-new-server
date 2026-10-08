@@ -19,11 +19,8 @@ class DatabaseSeeder extends Seeder
             MerchandiseSeeder::class,
             OrganizationMemberSeeder::class,
             GallerySeeder::class,
-            FinancialAccountSeeder::class,
             ActivitySeeder::class,
-            BookkeepingSeeder::class,
             EventBudgetSeeder::class,
-            InventoryCategorySeeder::class,
         ]);
     }
 }

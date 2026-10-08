@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Merchandise;
 use App\Models\MerchandiseOrder;
-use App\Models\Participant;
 use App\Repositories\MerchandiseRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -15,14 +14,13 @@ class MerchandiseService
         private MerchandiseRepository $merchandiseRepository,
         private PaymentService $paymentService,
         private NotificationService $notificationService,
-        private PointService $pointService,
     ) {}
 
     public function createOrder(Merchandise $merchandise, array $data): MerchandiseOrder
     {
         return DB::transaction(function () use ($merchandise, $data) {
-            // Lock the merchandise + participant rows FOR UPDATE so stock and
-            // point balance are serialized across concurrent requests.
+            // Lock the merchandise row FOR UPDATE so stock is serialized
+            // across concurrent requests.
             $merchandise = Merchandise::query()->whereKey($merchandise->id)->lockForUpdate()->firstOrFail();
 
             $quantity = (int) $data['quantity'];
@@ -40,43 +38,7 @@ class MerchandiseService
                 ]);
             }
 
-            $participant = Participant::query()
-                ->whereKey($data['participant_id'])
-                ->lockForUpdate()
-                ->first();
-
-            $usePoints = ! empty($data['use_points']) && $participant !== null;
-
-            // --- Server-side point redemption math (per-unit, Model B) ---
-            $pointsUsed = 0;
-            $discountAmount = 0;
-            $pointsPerUnitSnapshot = null;
-            $discountPerUnitSnapshot = null;
-
-            if ($usePoints && $merchandise->isPointRedeemable()) {
-                $pointsPerUnit = (int) $merchandise->points_required;
-                $discountPerUnit = $merchandise->discountPerUnit();
-
-                $pointsUsed = $pointsPerUnit * $quantity;
-                $discountAmount = $discountPerUnit * $quantity;
-
-                // Safety cap: discount can never exceed the payable subtotal.
-                $subtotal = (float) $merchandise->price * $quantity;
-                if ($discountAmount > $subtotal) {
-                    $discountAmount = (int) $subtotal;
-                }
-
-                if ($participant->point_balance < $pointsUsed) {
-                    throw ValidationException::withMessages([
-                        'use_points' => ['Poin tidak mencukupi untuk penukaran merchandise.'],
-                    ]);
-                }
-
-                $pointsPerUnitSnapshot = $pointsPerUnit;
-                $discountPerUnitSnapshot = $discountPerUnit;
-            }
-
-            $cashAmount = max(0, (float) ($merchandise->price * $quantity) - $discountAmount);
+            $cashAmount = (float) $merchandise->price * $quantity;
 
             $order = $merchandise->orders()->create([
                 'participant_id' => $data['participant_id'],
@@ -85,22 +47,13 @@ class MerchandiseService
                 'size' => $data['size'],
                 'quantity' => $quantity,
                 'total_price' => $cashAmount,
-                'points_used' => $pointsUsed > 0 ? $pointsUsed : null,
-                'discount_amount' => $discountAmount,
                 'unit_price_snapshot' => $merchandise->price,
                 'quantity_snapshot' => $quantity,
-                'points_per_unit_snapshot' => $pointsPerUnitSnapshot,
-                'discount_per_unit_snapshot' => $discountPerUnitSnapshot,
                 'cash_amount_snapshot' => $cashAmount,
                 'payment_status' => MerchandiseOrder::STATUS_PENDING,
             ]);
 
             $merchandise->decrement('stock', $quantity);
-
-            // Deduct points atomically (REDEEM ledger row, balance decrement).
-            if ($pointsUsed > 0 && $participant) {
-                $this->pointService->redeemForOrder($participant, $order, $pointsUsed);
-            }
 
             $payment = $this->paymentService->createPayment([
                 'participant_id' => $data['participant_id'],
@@ -118,7 +71,7 @@ class MerchandiseService
             $this->notificationService->notifyRoles(
                 ['merchandise', 'admin_full_access'],
                 'Order merchandise baru',
-                $data['customer_name'].' memesan '.$merchandise->name.' ('.$quantity.' pcs)'.($pointsUsed > 0 ? ' dengan poin' : '').'.',
+                $data['customer_name'].' memesan '.$merchandise->name.' ('.$quantity.' pcs).',
                 'cart',
                 route('admin.merchandise.index'),
             );
@@ -138,12 +91,6 @@ class MerchandiseService
         DB::transaction(function () use ($order) {
             $order->merchandise()->increment('stock', $order->quantity);
             $order->update(['payment_status' => MerchandiseOrder::STATUS_CANCELLED]);
-
-            // Invariant: cancelling an order that used points must return them
-            // to the participant (idempotent reversal).
-            if (($order->points_used ?? 0) > 0 && $order->participant) {
-                $this->pointService->refundRedemption($order->participant, $order);
-            }
         });
     }
 

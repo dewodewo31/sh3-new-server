@@ -16,6 +16,7 @@ class MerchandiseOrder extends Model
     public const STATUS_CANCELLED = 'cancelled';
 
     protected $guarded = [];
+
     protected function casts(): array
     {
         return [
@@ -44,11 +45,6 @@ class MerchandiseOrder extends Model
     public function payment()
     {
         return $this->belongsTo(Payment::class);
-    }
-
-    public function pointTransactions()
-    {
-        return $this->hasMany(PointTransaction::class, 'merchandise_order_id');
     }
 
     public function markAsPaid(): void

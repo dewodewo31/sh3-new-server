@@ -242,27 +242,6 @@ class GalleryApiTest extends TestCase
             ->assertJsonMissingPath('data.0.galleries');
     }
 
-    public function test_public_album_detail_does_not_leak_api_key(): void
-    {
-        config(['services.google_drive.api_key' => 'super-secret-key']);
-
-        $album = GalleryAlbum::create(['title' => 'Secret Album']);
-
-        $this->createGallery([
-            'title' => 'Photo',
-            'gallery_album_id' => $album->id,
-            'source' => 'gdrive',
-            'google_drive_url' => 'https://drive.google.com/file/d/img9/view',
-            'google_drive_file_id' => 'img9',
-        ]);
-
-        $response = $this->getJson("/api/v1/gallery-albums/{$album->id}");
-
-        $response->assertOk();
-        $this->assertStringNotContainsString('super-secret-key', $response->getContent());
-        $this->assertStringNotContainsString('key=', $response->getContent());
-    }
-
     public function test_public_album_detail_does_not_leak_sync_columns(): void
     {
         $album = GalleryAlbum::create([

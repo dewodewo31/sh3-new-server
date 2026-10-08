@@ -8,13 +8,6 @@
     <div class="card-header">
         <h3 class="card-header-title">Daftar Album</h3>
         <div class="flex items-center gap-2">
-            <form action="{{ route('admin.gallery-albums.sync') }}" method="POST">
-                @csrf
-                <button type="submit" class="btn btn-secondary btn-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    Sync Drive
-                </button>
-            </form>
             <a href="{{ route('admin.gallery-albums.create') }}" class="btn btn-primary btn-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Tambah Album
@@ -31,7 +24,6 @@
                     <th>Event</th>
                     <th>Galleries</th>
                     <th>Drive</th>
-                    <th>Sync</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -52,15 +44,6 @@
                     <td>
                         @if($album->gdrive_folder_url)
                             <a href="{{ $album->gdrive_folder_url }}" target="_blank" rel="noopener" class="badge badge-info">Drive</a>
-                        @else
-                            <span class="badge badge-secondary">-</span>
-                        @endif
-                    </td>
-                    <td>
-                        @if($album->gdrive_sync_error)
-                            <span class="badge badge-danger" title="{{ $album->gdrive_sync_error }}">Error</span>
-                        @elseif($album->last_synced_at)
-                            <span class="badge badge-success">{{ \Carbon\Carbon::parse($album->last_synced_at)->diffForHumans() }}</span>
                         @else
                             <span class="badge badge-secondary">-</span>
                         @endif

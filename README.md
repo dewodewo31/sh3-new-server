@@ -2,7 +2,7 @@
 
 Sistem manajemen event untuk komunitas lari SH3. Dibangun dengan Laravel 13 dan AdminLTE 3.
 
-**Modul Lengkap**: Authentication, User Management, Participant, Membership, Category, Event, Attendance & QR Code, Gallery, Merchandise, Payment, Sponsor, Guest Sponsor, Organization, Notifications Real-time.
+**Modul Lengkap**: Authentication, User Management, Participant, Membership, Category, Event, Attendance & QR Code, Gallery, Merchandise, Payment, Sponsor, Organization, Notifications Real-time.
 
 ## Persyaratan
 
@@ -299,8 +299,6 @@ MAIL_USERNAME=<user>
 MAIL_PASSWORD=<pass>
 MAIL_FROM_ADDRESS="no-reply@sh3.example.com"
 MAIL_FROM_NAME="${APP_NAME}"
-
-GOOGLE_DRIVE_API_KEY=                  # API key Google Drive (backend-only) untuk sync folder album galeri
 ```
 
 > **PENTING**: `APP_URL` menentukan basis URL file storage (`APP_URL/storage/...`). Jika salah, gambar akan 403/404 (lihat bug upload gambar di Changelog). HTTPS diperlukan agar browser bisa memuat konten.
@@ -622,12 +620,6 @@ Semua endpoint API berada di prefix `/api/v1`.
 | GET | `/attendance/sync-down` | Sinkronisasi offline (download) |
 | GET | `/attendance/report` | Laporan absensi |
 | GET | `/attendance/{eventId}` | Absensi per event |
-| POST | `/guest-sponsor/auth/login` | Login guest sponsor (username/password) |
-| GET | `/guest-sponsor/auth/me` | Profil guest sponsor (auth) |
-| POST | `/guest-sponsor/attendance/check-in` | Check-in guest sponsor |
-| POST | `/guest-sponsor/attendance/check-out` | Check-out guest sponsor |
-| POST | `/guest-sponsor/attendance/scan` | Scan QR guest sponsor (auth) |
-| GET | `/guest-sponsor/attendance/my` | Riwayat attendance guest sponsor (auth) |
 | POST | `/merchandise/order` | Order merchandise |
 | GET | `/merchandise/orders` | Daftar order user |
 | GET | `/merchandise/orders/{id}` | Detail order |
@@ -661,9 +653,6 @@ Semua route admin berada di prefix `/admin` (wajib login session-based).
 | GET/POST/PUT/DELETE | `/admin/galleries` | admin_full_access, admin_laman |
 | GET/POST/PUT/DELETE | `/admin/organization` | admin_full_access, admin_laman |
 | GET/POST/PUT/DELETE | `/admin/sponsors` | admin_full_access, admin_laman |
-| GET/POST/PUT/DELETE | `/admin/guest-sponsors` | admin_full_access |
-| POST | `/admin/guest-sponsors/quota` | admin_full_access |
-| POST | `/admin/guest-sponsors/{id}/toggle-active` | admin_full_access |
 | GET/POST/PUT/DELETE | `/admin/merchandise` | admin_full_access, admin_laman, merchandise |
 | GET | `/admin/payments` | admin_full_access, bendahara |
 | GET | `/admin/payments/{id}` | admin_full_access, bendahara |
@@ -703,7 +692,7 @@ php artisan queue:work
 CRUD event, jadwal, kategori, quota, upload banner/image. Status flow: `draft → publish → ongoing → completed` (transisi otomatis via scheduler). Registrasi event: free, paid, atau free untuk member. QR code otomatis per registrasi. Peserta dapat melihat event mendatang, detail dengan galeri & sponsor.
 
 ### 2. Manajemen Peserta
-Registrasi via API (password opsional, fallback random). Data lengkap: nama, email, phone, gender, tanggal lahir, alamat, kontak darurat, golongan darah, ukuran jersey, kondisi medis. Kode Peserta (`participant_code`): member `0001`, non-member `NM0001`. Foto profil via user avatar.
+Registrasi via API (password opsional, fallback random). Data lengkap: nama, email, phone, gender, tanggal lahir, alamat, kontak darurat, golongan darah, ukuran jersey, kondisi medis. Permanent Member Hash ID (`hash_id`, numeric — dibuat sekali, tidak pernah berubah) + Non-Member Code (`non_member_code`, `NM0001`) sebagai display saat membership tidak aktif (`Participant::displayMemberId()`).
 
 ### 3. Membership
 Paket membership **dinamis** via tabel `membership_plans` (CRUD admin). Seed awal: Tahunan (12 bln, Rp400k), Setengah Tahun (6 bln, Rp250k), Mingguan (7 hari, Rp10k). Pemberian langsung oleh admin atau pembelian via API (menghasilkan payment pending, aktivasi setelah konfirmasi bendahara). Auto-renewal (7 hari sebelum expiry), cancel, statistik (total, aktif, pending, expired, revenue).
@@ -712,16 +701,13 @@ Paket membership **dinamis** via tabel `membership_plans` (CRUD admin). Seed awa
 Sistem pembayaran polymorphic — satu tabel `payments` melayani `EventParticipant` (registrasi event), `MerchandiseOrder` (order merchandise), dan `MembershipHistory` (membership). Method: transfer, cash, qris. Status: pending → confirmed/rejected/refunded. Upload bukti bayar. Konfirmasi/reject oleh bendahara.
 
 ### 5. Absensi & QR Code
-Check-in/check-out via QR scan. QR berisi kode peserta (`participant_code`) murni — member `3950`, non-member `NM0001`. Dukungan self-scan dan admin-scan. Scanner admin juga mendukung QR guest sponsor (`GS-{sponsor}-{event}-{seq}`, sejak 2026-08-19). Mode offline: `syncUp`/`syncDown` API. Tracking latitude/longitude. Scanner admin: 20fps, native BarcodeDetector, cooldown 1,5 detik. Generate QR per peserta event dari panel admin.
+Check-in/check-out via QR scan. QR berisi kode peserta (`participant_code`) murni — member `3950`, non-member `NM0001`. Dukungan self-scan dan admin-scan. Mode offline: `syncUp`/`syncDown` API. Tracking latitude/longitude. Scanner admin: 20fps, native BarcodeDetector, cooldown 1,5 detik. Generate QR per peserta event dari panel admin.
 
 ### 6. Galeri
 Upload foto/video per event. Featured image, sort_order, thumbnail. Album galeri (GalleryAlbum).
 API publik mengembalikan **hanya gambar featured (terpilih)** dengan URL penuh + thumb + info event
 (sumber Google Drive dirender via `thumbnail?id=...&sz=w800`). Album mendukung **link folder
 Google Drive** (`gdrive_folder_url`) yang ditampilkan sebagai link eksternal.
-Album dapat **mensinkron isi folder Google Drive** (gambar+video) via tombol *Sync Drive* admin
-atau command `gallery:sync-gdrive` (scheduler hourly) — butuh `GOOGLE_DRIVE_API_KEY` di `.env`,
-folder wajib publik (*Anyone with the link can view*); snapshot idempotent, error sanitized.
 Detail album publik `GET /api/v1/gallery-albums/{id}` menampilkan semua media
 (video: `uc?export=download&id=...&confirm=t`).
 Masonry gallery + lightbox di frontend.
@@ -733,7 +719,7 @@ Sponsor: tiers platinum/gold/silver/bronze, logo, website, tahun, many-to-many d
 Struktur kepengurusan hierarkis (parent-child). Active/inactive, periode jabatan (start/end), sort_order. API: index, show, stats, tree (pohon), years (filter tahun).
 
 ### 9. Manajemen User & Role
-9 level role: admin_full_access, admin_laman, admin_member, admin_bnh, organizer, bendahara, sponsor, merchandise, gallery, guest_sponsor, participant. CRUD user, toggle active/inactive, avatar upload. User activity logging (login, logout, CRUD). Role `sponsor` dan `guest_sponsor` tidak dapat login ke web admin (memakai API).
+10 level role: admin_full_access, admin_laman, admin_member, admin_bnh, organizer, bendahara, sponsor, merchandise, gallery, participant. CRUD user, toggle active/inactive, avatar upload. User activity logging (login, logout, CRUD). Role `sponsor` dan `guest_sponsor` tidak dapat login ke web admin.
 
 ### 10. Kategori Event
 Kategori: nama, deskripsi, icon, slug, distance_km, sort_order, is_active. Seed: Long Run, Short Run, Major Events, Super Long. API dengan `events_count`.
@@ -741,10 +727,7 @@ Kategori: nama, deskripsi, icon, slug, distance_km, sort_order, is_active. Seed:
 ### 11. Notifikasi Real-time
 Broadcast via Laravel Reverb (WebSocket). Tersimpan di database dengan status read/unread. Notifikasi untuk admin (registrasi baru, pembayaran, order, check-in, membership) dan peserta (registrasi sukses, konfirmasi/reject payment, aktivasi membership). Queueable (ShouldQueue). Badge unread di panel admin.
 
-### 12. Guest Sponsor
-Akun perwakilan sponsor per event dengan kuota (`event_sponsors.max_guest_accounts`). Admin membuat akun (username/password + QR unik) dalam kuota; akun punya masa berlaku dan status aktif. Login via API (`/api/v1/guest-sponsor/auth/login`) dan attendance via QR (check-in/check-out/scan API, plus scan QR langsung dari panel admin sejak 2026-08-19). Akun kedaluwarsa/event selesai tidak dapat login atau check-in, riwayat attendance tetap tersimpan.
-
-### 13. Responsive Layout
+### 12. Responsive Layout
 Seluruh halaman admin mengikuti aturan responsive: container max-w-7xl, table overflow-x-auto, form w-full, card w-full, tanpa horizontal scroll.
 
 ## Arsitektur
@@ -753,16 +736,16 @@ Seluruh halaman admin mengikuti aturan responsive: container max-w-7xl, table ov
 Layered Architecture:
 
 Presentation Layer     → Blade views, API Resources, Middleware, Form Requests
-Business Layer         → Controllers, Services (15), DTO (4)
-Data Layer             → Repositories (18), Models (22), Migrations (36), Seeders
+Business Layer         → Controllers, Services (18), DTO (4)
+Data Layer             → Repositories (18), Models (20), Migrations (56), Seeders
 ```
 
 - Business logic **hanya** di Services — Controller tidak mengandung logika bisnis.
 - Database query **hanya** di Repositories — Service tidak mengandung query langsung.
 - 18 Repositories mewarisi `BaseRepository` (all, find, create, update, delete, paginate).
-- 15 Services: Auth, User, Event, Membership, Payment, Merchandise, Attendance, QRCode, Notification, Sidebar, Gallery, MembershipPricing, ParticipantCode, ParticipantPasswordReset, GuestSponsor.
-- 22 Models dengan Eloquent Relationships lengkap.
-- 36 Migration files mencakup seluruh tabel.
+- 18 Services: Auth, User, Event, Membership, Payment, Merchandise, Attendance, QRCode, Notification, Sidebar, Gallery, MembershipPricing, ParticipantCode, ParticipantPasswordReset, Cache, Dashboard, File, Profile.
+- 20 Models dengan Eloquent Relationships lengkap.
+- 56 Migration files mencakup seluruh tabel.
 
 ## Pengembangan
 

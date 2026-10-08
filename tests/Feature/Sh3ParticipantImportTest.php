@@ -18,18 +18,19 @@ class Sh3ParticipantImportTest extends TestCase
         $this->seed(Sh3ParticipantImportSeeder::class);
     }
 
-    public function test_import_creates_19_participants_with_unique_nm_codes(): void
+    public function test_import_creates_19_participants_with_unique_permanent_codes(): void
     {
         $this->runImport();
 
-        $codes = Participant::where('hash_id', '!=', Participant::OTS_AGGREGATOR_CODE)
-            ->pluck('hash_id');
+        $participants = Participant::where('hash_id', '!=', Participant::OTS_AGGREGATOR_CODE)->get();
 
-        $this->assertSame(19, $codes->count());
-        $this->assertSame(19, $codes->unique()->count());
+        $this->assertSame(19, $participants->count());
+        $this->assertSame(19, $participants->pluck('hash_id')->unique()->count());
+        $this->assertSame(19, $participants->pluck('non_member_code')->unique()->count());
 
-        foreach ($codes as $code) {
-            $this->assertMatchesRegularExpression('/^NM\d{4}$/', $code);
+        foreach ($participants as $participant) {
+            $this->assertMatchesRegularExpression('/^\d{4}$/', $participant->hash_id);
+            $this->assertMatchesRegularExpression('/^NM\d{4}$/', $participant->non_member_code);
         }
 
         foreach (['Bengkiam', 'Riri', 'Moka', 'Yuliani', '888999', 'Ipau'] as $username) {

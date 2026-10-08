@@ -5,7 +5,6 @@ namespace Tests\Feature\Admin;
 use App\Models\GalleryAlbum;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class GalleryAlbumAdminTest extends TestCase
@@ -109,85 +108,6 @@ class GalleryAlbumAdminTest extends TestCase
             ->assertOk()
             ->assertSee('Album Without Drive')
             ->assertDontSee('href="https://drive.google.com', false);
-    }
-
-    public function test_sync_now_creates_galleries_and_redirects_with_success(): void
-    {
-        $album = GalleryAlbum::create([
-            'title' => 'Sync Album',
-            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FOLDER',
-        ]);
-        $this->actingAs($this->admin());
-
-        Http::fake(['www.googleapis.com/*' => Http::response([
-            'files' => [['id' => 'img1', 'name' => 'foto.jpg', 'mimeType' => 'image/jpeg']],
-            'nextPageToken' => null,
-        ], 200)]);
-
-        $this->post('/admin/gallery-albums/sync')
-            ->assertRedirect(route('admin.gallery-albums.index'))
-            ->assertSessionHas('success');
-
-        $this->assertDatabaseHas('galleries', [
-            'gallery_album_id' => $album->id,
-            'google_drive_file_id' => 'img1',
-            'source' => 'gdrive',
-        ]);
-    }
-
-    public function test_sync_now_forbidden_for_bendahara(): void
-    {
-        $this->actingAs(User::factory()->create(['role' => 'bendahara']));
-
-        $this->post('/admin/gallery-albums/sync')->assertStatus(403);
-    }
-
-    public function test_sync_now_allowed_for_gallery_role(): void
-    {
-        GalleryAlbum::create([
-            'title' => 'Sync Album',
-            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FOLDER',
-        ]);
-        $this->actingAs(User::factory()->create(['role' => 'gallery']));
-
-        Http::fake(['www.googleapis.com/*' => Http::response([
-            'files' => [],
-            'nextPageToken' => null,
-        ], 200)]);
-
-        $this->post('/admin/gallery-albums/sync')
-            ->assertRedirect(route('admin.gallery-albums.index'))
-            ->assertSessionHas('success');
-    }
-
-    public function test_sync_now_forbidden_for_sponsor(): void
-    {
-        $this->actingAs(User::factory()->create(['role' => 'sponsor']));
-
-        $this->post('/admin/gallery-albums/sync')->assertStatus(403);
-    }
-
-    public function test_index_renders_sync_button_and_status_column(): void
-    {
-        $this->actingAs($this->admin());
-
-        $this->get('/admin/gallery-albums')
-            ->assertOk()
-            ->assertSee('Sync Drive');
-    }
-
-    public function test_index_renders_sync_error_badge_for_failed_album(): void
-    {
-        GalleryAlbum::create([
-            'title' => 'Failed Album',
-            'gdrive_folder_url' => 'https://drive.google.com/drive/folders/FA',
-            'gdrive_sync_error' => 'Folder tidak dapat diakses.',
-        ]);
-        $this->actingAs($this->admin());
-
-        $this->get('/admin/gallery-albums')
-            ->assertOk()
-            ->assertSee('Folder tidak dapat diakses.');
     }
 
     public function test_store_rejects_non_folder_drive_url(): void

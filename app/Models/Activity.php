@@ -19,11 +19,6 @@ class Activity extends Model
         ];
     }
 
-    public function bookkeepings()
-    {
-        return $this->hasMany(Bookkeeping::class, 'activity_id');
-    }
-
     public function category()
     {
         return $this->belongsTo(Category::class);

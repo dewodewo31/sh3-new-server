@@ -11,17 +11,22 @@ class Event extends Model
     use HasFactory;
 
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_PUBLISH = 'publish';
+
     public const STATUS_ONGOING = 'ongoing';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     protected $guarded = [];
+
     protected static function booted()
     {
         static::creating(function ($event) {
             if (empty($event->slug)) {
-                $event->slug = Str::slug($event->title) . '-' . Str::random(5);
+                $event->slug = Str::slug($event->title).'-'.Str::random(5);
             }
         });
     }
@@ -64,11 +69,6 @@ class Event extends Model
             ->withTimestamps();
     }
 
-    public function guestSponsors()
-    {
-        return $this->hasMany(GuestSponsor::class);
-    }
-
     public function galleries()
     {
         return $this->hasMany(Gallery::class);
@@ -103,7 +103,7 @@ class Event extends Model
 
     public function remainingQuota(): int
     {
-        if (!$this->quota) {
+        if (! $this->quota) {
             return -1;
         }
 

@@ -13,7 +13,6 @@ class PaymentService
     public function __construct(
         private PaymentRepository $paymentRepository,
         private NotificationService $notificationService,
-        private PointService $pointService,
         private AttendanceService $attendanceService,
     ) {}
 
@@ -80,9 +79,8 @@ class PaymentService
             }
 
             // V12 (audit H1): an EVENT REGISTRATION payment rejection must
-            // invalidate the attendance (if any) and reverse the EARN. This is
-            // idempotent — invalidating the same attendance twice is a no-op and
-            // reverseEarn reverses only once.
+            // invalidate the attendance (if any). This is idempotent —
+            // invalidating the same attendance twice is a no-op.
             if ($paymentable instanceof EventParticipant) {
                 $attendance = $paymentable->attendance;
                 if ($attendance) {
@@ -92,14 +90,6 @@ class PaymentService
                         'Pembayaran event ditolak.'
                     );
                 }
-            }
-
-            // Invariant: if the paymentable is a merchandise order that used
-            // points, rejecting the payment reverses the redemption so the
-            // participant is never charged points for a rejected order.
-            $order = $this->resolveMerchandiseOrder($paymentable);
-            if ($order && ($order->points_used ?? 0) > 0 && $order->participant) {
-                $this->pointService->refundRedemption($order->participant, $order);
             }
         });
 
@@ -122,11 +112,10 @@ class PaymentService
      * Refund a confirmed payment (audit finding H5 / V12).
      *
      * Lifecycle:
-     *   EVENT REGISTRATION refund -> attendance invalid -> EARN reversal
-     *   MERCHANDISE refund        -> preserves the existing redemption reversal
+     *   EVENT REGISTRATION refund -> attendance invalid
      *
      * All transitions are idempotent: re-calling on an already-refunded payment
-     * is a clean no-op, and reverseEarn/refundRedemption reverse only once.
+     * is a clean no-op.
      */
     public function refundPayment(Payment $payment, int $refundedByUserId): void
     {
@@ -144,7 +133,7 @@ class PaymentService
             $paymentable = $payment->paymentable;
 
             // V12 (audit H1): event registration refund invalidates attendance
-            // (if any) and reverses the EARN.
+            // (if any).
             if ($paymentable instanceof EventParticipant) {
                 if (method_exists($paymentable, 'markAsRejected')) {
                     $paymentable->markAsRejected();
@@ -158,12 +147,6 @@ class PaymentService
                         'Pembayaran event direfund.'
                     );
                 }
-            }
-
-            // Preserve existing merchandise redemption reversal behaviour.
-            $order = $this->resolveMerchandiseOrder($paymentable);
-            if ($order && ($order->points_used ?? 0) > 0 && $order->participant) {
-                $this->pointService->refundRedemption($order->participant, $order);
             }
         });
 
@@ -180,18 +163,6 @@ class PaymentService
             'Pembayaran '.$payment->invoice_number.' telah direfund.',
             'x',
         );
-    }
-
-    /**
-     * Resolve a MerchandiseOrder from a polymorphic paymentable, when applicable.
-     */
-    private function resolveMerchandiseOrder($paymentable): ?\App\Models\MerchandiseOrder
-    {
-        if ($paymentable instanceof \App\Models\MerchandiseOrder) {
-            return $paymentable;
-        }
-
-        return null;
     }
 
     private function generateInvoiceNumber(): string

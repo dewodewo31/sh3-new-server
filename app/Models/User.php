@@ -13,7 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $guarded = [];
 
@@ -30,11 +30,6 @@ class User extends Authenticatable
     public function participants()
     {
         return $this->hasMany(Participant::class);
-    }
-
-    public function guestSponsor()
-    {
-        return $this->hasOne(GuestSponsor::class);
     }
 
     public function activityLogs()

@@ -19,7 +19,6 @@
 15. Modul Notification
 16. Changelog & Perbaikan (lihat `14 — Changelog & Fixes.md`)
 17. Gallery Album (lihat `19 — Gallery Album Module.md`)
-18. Guest Sponsor (lihat `20 — Guest Sponsor Module.md`)
 
 ---
 
@@ -675,13 +674,12 @@ CREATE TABLE attendance_logs (
 ### **QR Code Format**
 
 `QRCodeService::generate()` menulis `participant_code` peserta (member `3950` / non-member
-`NM0001`) ke `event_participants.qr_code`. QR guest sponsor memakai format `GS-{sponsor}-{event}-{seq}`
-(dideteksi `QRCodeService::isGuestSponsorCode()`, sejak 2026-08-19).
+`NM0001`) ke `event_participants.qr_code`.
 
 ### **Attendance Features**
 
 1. **Generate QR Code** — Generate QR untuk setiap peserta
-2. **Scan QR Code** — Scan dengan mobile atau webcam (admin juga mendukung QR guest sponsor `GS-...`)
+2. **Scan QR Code** — Scan dengan mobile atau webcam
 3. **Check-in/out** — Catat waktu masuk/keluar
 4. **Sync Up/Down** — Sinkronisasi offline (device tanpa koneksi)
 5. **Attendance Report** — Laporan kehadiran

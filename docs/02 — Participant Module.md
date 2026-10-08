@@ -45,17 +45,42 @@ CREATE TABLE participants (
 - `isMembershipActive()` — helper: true jika `membership_type != none` dan `membership_end_date >= hari ini`
 - `membershipTypeLabel()` — label dari plan name (fallback: title case)
 
-## participant_code (Kode Peserta)
+## Permanent Member Hash ID & Non-Member Code
 
-`ParticipantResource` menyertakan `participant_code` (auto-generate saat peserta dibuat,
-tetap untuk selamanya):
+Setiap peserta memiliki **dua identifier berbeda**:
 
-- Member (membership aktif): `\d{4}` (contoh `0001`, `3950`)
-- Non-member: `NM\d{4}` (contoh `NM0001`)
-- **Sentinel OTS**: `NM0000` — code khusus aggregator OTS (`Participant::OTS_AGGREGATOR_CODE`),
-  tidak memakai nomor urut sequence.
-- Dibuat via `ParticipantCodeService::next()` (urutan per-prefix, cap 9999/prefix)
-  pada hook `creating` model `Participant`.
+### `hash_id` — Permanent Member Hash ID
+
+- **Numeric `\d{4}`** (contoh `0001`, `3950`), **dibuat tepat satu kali** pada hook `creating`
+  via `ParticipantCodeService::next('')`.
+- **Tidak pernah berubah** — tidak oleh expire, cancel, renew, ganti plan, maupun
+  peserta kembali menjadi member. Unique constraint di kolom.
+- **Sentinel OTS**: `NM0000` — code khusus aggregator OTS (`Participant::OTS_AGGREGATOR_CODE`)
+  dipertahankan dalam `hash_id` (marker legacy untuk offline sync), tidak memakai sequence.
+- Dibuat via `ParticipantCodeService::next()` (urutan per-prefix, cap 9999/prefix,
+  collision-check terhadap kedua kolom identitas).
+
+### `non_member_code` — kode display saat membership tidak aktif
+
+- **`NM\d{4}`** (contoh `NM0001`), juga dibuat sekali saat peserta dibuat.
+- Hanyalah **display identifier**, tidak pernah menimpa `hash_id`.
+
+### Display ID — satu source of truth
+
+`Participant::displayMemberId()`:
+
+- Membership aktif → `hash_id` (Permanent Member Hash ID).
+- Membership tidak aktif → `non_member_code`.
+
+```text
+No Membership → display: NM0012
+Buy Membership → display: 4580
+Expired → display: NM0012   (hash tetap 4580)
+Renew → display: 4580
+```
+
+`ParticipantResource` mengembalikan `hash_id` (permanent) **dan** `display_member_id`
+(nilai yang ditampilkan ke user). Password reset menerima `hash_id` atau `non_member_code`.
 
 ## Tampilan Admin Panel
 

@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Exceptions\PointReversalBlockedException;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
 use App\Models\Event;
@@ -24,7 +23,6 @@ class AttendanceService
         private AttendanceRepository $attendanceRepository,
         private QRCodeService $qrCodeService,
         private NotificationService $notificationService,
-        private PointService $pointService,
     ) {}
 
     public function checkIn(Event $event, Participant $participant, array $data = [], ?int $scannedBy = null, ?string $ipAddress = null): void
@@ -86,11 +84,6 @@ class AttendanceService
                 'check_in_at' => now(),
             ]);
 
-            // Grant flat points (idempotent per attendance, OTS/aggregator
-            // excluded) — inside the same transaction as the check-in guard,
-            // so a valid check-in atomically earns exactly one EARN.
-            $this->pointService->earnForAttendance($attendance, $event, $participant);
-
             $this->logAttendance($registration, 'check_in', $data, $scannedBy, $ipAddress);
 
             $this->notificationService->notifyRoles(
@@ -106,16 +99,10 @@ class AttendanceService
     /**
      * Attendance-invalidation lifecycle (audit findings H2 / V11 / V12).
      *
-     * Marks an attendance invalid (audited: who/why/when) and reverses its EARN
-     * by creating a SEPARATE REVERSAL ledger entry. The original EARN row is
-     * never mutated or deleted. Idempotent: re-calling on an already-invalid
-     * attendance is a clean no-op.
+     * Marks an attendance invalid (audited: who/why/when). Idempotent:
+     * re-calling on an already-invalid attendance is a clean no-op.
      *
-     * If the reversal would push the participant's balance negative it is
-     * BLOCKED (never silently clamped) and surfaced so an admin can apply an
-     * explicit, audited ADJUSTMENT via PointService::adminAdjust().
-     *
-     * @return array{attendance_invalid: bool, reversal: 'created'|'blocked'|'none', message: string}
+     * @return array{attendance_invalid: bool, message: string}
      */
     public function invalidateAttendance(int $attendanceId, ?int $invalidatedBy = null, ?string $reason = null): array
     {
@@ -124,12 +111,9 @@ class AttendanceService
         if ($attendance->is_invalid) {
             return [
                 'attendance_invalid' => true,
-                'reversal' => 'none',
                 'message' => 'Attendance sudah tidak berlaku (idempoten).',
             ];
         }
-
-        $participant = $attendance->eventParticipant?->participant;
 
         $attendance->update([
             'is_invalid' => true,
@@ -138,31 +122,10 @@ class AttendanceService
             'invalidation_reason' => $reason,
         ]);
 
-        if (! $participant) {
-            return [
-                'attendance_invalid' => true,
-                'reversal' => 'none',
-                'message' => 'Tidak ada peserta terkait; tidak ada poin untuk dibatalkan.',
-            ];
-        }
-
-        try {
-            $reversal = $this->pointService->reverseEarn($attendance, $participant, $reason);
-
-            return [
-                'attendance_invalid' => true,
-                'reversal' => $reversal ? 'created' : 'none',
-                'message' => $reversal
-                    ? 'Kehadiran dibatalkan dan poin dikembalikan (REVERSAL).'
-                    : 'Tidak ada poin EARN untuk dibatalkan.',
-            ];
-        } catch (PointReversalBlockedException $e) {
-            return [
-                'attendance_invalid' => true,
-                'reversal' => 'blocked',
-                'message' => $e->getMessage().' Gunakan penyesuaian admin (ADJUSTMENT) untuk koreksi.',
-            ];
-        }
+        return [
+            'attendance_invalid' => true,
+            'message' => 'Kehadiran dibatalkan.',
+        ];
     }
 
     /**
@@ -233,7 +196,7 @@ class AttendanceService
         $decoded = $this->qrCodeService->decode($qrData);
 
         if ($decoded && array_key_exists('hash_id', $decoded)) {
-            $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
+            $participant = $this->findParticipantByAnyCode($decoded['hash_id']);
 
             if ($participant) {
                 $legacyRegistration = $this->eventParticipantRepository->findByEventAndParticipant(
@@ -322,7 +285,7 @@ class AttendanceService
         $decoded = $this->qrCodeService->decode($qrData);
 
         if ($decoded && array_key_exists('hash_id', $decoded)) {
-            $participant = Participant::where('hash_id', $decoded['hash_id'])->first();
+            $participant = $this->findParticipantByAnyCode($decoded['hash_id']);
 
             if (! $participant) {
                 throw ValidationException::withMessages([
@@ -505,7 +468,8 @@ class AttendanceService
 
                 $eventParticipant = EventParticipant::where('event_id', $att['event_id'])
                     ->whereHas('participant', function ($q) use ($att) {
-                        $q->where('hash_id', $att['hash_id']);
+                        $q->where('hash_id', $att['hash_id'])
+                            ->orWhere('non_member_code', $att['hash_id']);
                     })
                     ->first();
 
@@ -560,21 +524,6 @@ class AttendanceService
                     }
                 }
 
-                // Grant flat points for this regular (non-OTS) attendance.
-                // Idempotent per attendance; OTS/aggregator are excluded inside.
-                if ($attendanceRecord ?? null) {
-                    $attend = $attendanceRecord;
-                } else {
-                    $attend = Attendance::where('event_participant_id', $eventParticipant->id)->first();
-                }
-                if ($attend) {
-                    $this->pointService->earnForAttendance(
-                        $attend,
-                        $eventParticipant->event,
-                        $eventParticipant->participant
-                    );
-                }
-
                 $savedAttCount++;
             }
 
@@ -607,13 +556,14 @@ class AttendanceService
                 if ($isManual) {
                     $member = $manualOtsParticipant;
                 } else {
-                    $member = Participant::firstOrCreate(
-                        ['hash_id' => $ots['hash_id']],
-                        [
+                    // Offline OTS payloads carry legacy codes: resolve against
+                    // both identity columns before creating a new participant.
+                    $member = $this->findParticipantByAnyCode($ots['hash_id'])
+                        ?? Participant::create([
+                            'hash_id' => $ots['hash_id'],
                             'name' => $ots['member_name'] ?? 'Peserta OTS',
                             'email' => 'ots.'.strtolower($ots['hash_id']).'@sh3.com',
-                        ]
-                    );
+                        ]);
                 }
 
                 $participantId = $member->id;
@@ -704,6 +654,17 @@ class AttendanceService
                 'ots_count' => $savedOtsCount,
             ];
         });
+    }
+
+    /**
+     * Legacy codes may carry either the Permanent Member Hash ID or the NM
+     * non-member code (pre-migration identity), so match both columns.
+     */
+    private function findParticipantByAnyCode(string $code): ?Participant
+    {
+        return Participant::where('hash_id', $code)
+            ->orWhere('non_member_code', $code)
+            ->first();
     }
 
     private function logAttendance(EventParticipant $registration, string $type, array $data = [], ?int $scannedBy = null, ?string $ipAddress = null): void

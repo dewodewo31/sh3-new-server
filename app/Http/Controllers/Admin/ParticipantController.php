@@ -5,14 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ParticipantRequest;
 use App\Repositories\ParticipantRepository;
-use App\Services\PointService;
 use App\Services\UserService;
 
 class ParticipantController extends Controller
 {
     public function __construct(
         private ParticipantRepository $participantRepository,
-        private PointService $pointService,
         private UserService $userService,
     ) {}
 
@@ -40,19 +38,8 @@ class ParticipantController extends Controller
     public function show(int $id)
     {
         $participant = $this->participantRepository->findById($id, ['membershipHistories.plan', 'eventParticipants.event', 'membershipPlan']);
-        $ledgerBalance = $this->pointService->balanceFromLedger($participant->id);
-        $pointHistory = $this->pointService->historyForParticipant($participant->id);
 
-        return view('participants.show', compact('participant', 'ledgerBalance', 'pointHistory'));
-    }
-
-    public function reconcilePoints(int $id)
-    {
-        $participant = $this->participantRepository->findById($id);
-        $this->pointService->reconcileBalance($participant->id);
-
-        return redirect()->route('admin.participants.show', $participant->id)
-            ->with('success', 'Saldo poin disinkronkan dari ledger.');
+        return view('participants.show', compact('participant'));
     }
 
     public function edit(int $id)
