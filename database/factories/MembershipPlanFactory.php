@@ -18,7 +18,7 @@ class MembershipPlanFactory extends Factory
         $name = fake()->unique()->words(2, true);
 
         return [
-            'key' => Str::slug($name),
+            'key' => str_replace('-', '_', Str::slug($name)), // key must match /^[a-z0-9_]+$/ (MembershipPlanRequest)
             'name' => $name,
             'description' => fake()->sentence(),
             'base_event_price' => 25000,

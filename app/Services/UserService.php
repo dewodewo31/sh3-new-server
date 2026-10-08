@@ -26,8 +26,11 @@ class UserService
 
     public function updateUser(User $user, array $data): bool
     {
-        if (isset($data['password'])) {
+        if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
+        } else {
+            // blank/absent (empty string is converted to null by middleware) — keep existing hash
+            unset($data['password']);
         }
 
         if (! empty($data['avatar']) && is_object($data['avatar'])) {

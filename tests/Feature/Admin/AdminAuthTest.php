@@ -14,7 +14,7 @@ class AdminAuthTest extends TestCase
     {
         $this->get('/login')
             ->assertOk()
-            ->assertSee('Login');
+            ->assertSee('Masuk');
     }
 
     public function test_guest_is_redirected_from_admin_dashboard_to_login(): void

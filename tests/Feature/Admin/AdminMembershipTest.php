@@ -112,7 +112,12 @@ class AdminMembershipTest extends TestCase
 
     public function test_grant_membership_to_active_member_is_rejected(): void
     {
-        $participant = $this->makeParticipant('Hendra');
+        // Active member: membership_type and active history must be consistent
+        // (grant flow sets both; factory history alone would leave 'none').
+        $participant = Participant::factory()->create([
+            'name' => 'Hendra',
+            'membership_type' => 'tahunan',
+        ]);
         MembershipHistory::factory()->create([
             'participant_id' => $participant->id,
             'membership_type' => 'tahunan',

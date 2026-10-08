@@ -14,7 +14,8 @@ class UserRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('user')?->id;
+        // Route::resource passes {user} as a plain id string (no model binding).
+        $userId = $this->route('user');
 
         return [
             'name' => ['required', 'string', 'max:255'],

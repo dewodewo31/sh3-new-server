@@ -44,7 +44,7 @@ class AdminUserManagementTest extends TestCase
     {
         $this->get('/admin/users/create')
             ->assertOk()
-            ->assertSee('Buat User');
+            ->assertSee('Tambah User');
     }
 
     public function test_admin_can_create_user(): void

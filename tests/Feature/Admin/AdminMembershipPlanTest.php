@@ -122,9 +122,10 @@ class AdminMembershipPlanTest extends TestCase
     {
         $plan = MembershipPlan::factory()->create(['is_active' => true]);
 
-        $this->put('/admin/membership-plans/'.$plan->id, $this->validPayload([
-            'key' => $plan->key,
-        ]));
+        $payload = $this->validPayload(['key' => $plan->key]);
+        unset($payload['is_active']);
+
+        $this->put('/admin/membership-plans/'.$plan->id, $payload);
 
         $this->assertFalse($plan->fresh()->is_active);
     }
