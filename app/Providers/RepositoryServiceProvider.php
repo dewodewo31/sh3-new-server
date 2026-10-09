@@ -2,10 +2,8 @@
 
 namespace App\Providers;
 
-use App\Repositories\ActivityRepository;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\CategoryRepository;
-use App\Repositories\EventBudgetRepository;
 use App\Repositories\EventParticipantRepository;
 use App\Repositories\EventRepository;
 use App\Repositories\GalleryRepository;
@@ -64,14 +62,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(
             AttendanceRepository::class,
             AttendanceRepository::class
-        );
-        $this->app->bind(
-            ActivityRepository::class,
-            ActivityRepository::class
-        );
-        $this->app->bind(
-            EventBudgetRepository::class,
-            EventBudgetRepository::class
         );
     }
 }

@@ -33,9 +33,4 @@ class Category extends Model
     {
         return $this->hasMany(Event::class);
     }
-
-    public function activities()
-    {
-        return $this->hasMany(Activity::class);
-    }
 }
