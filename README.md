@@ -115,11 +115,11 @@ app/
 │   ├── Controllers/
 │   │   ├── Admin/       # Web admin controllers
 │   │   └── API/         # REST API controllers
-│   └── Requests/        # 24 form request validation
+│   └── Requests/        # 28 form request validation
 ├── Helpers/             # ImageHelper
 ├── Models/              # 18 models
-├── Repositories/        # 15 repositories (BaseRepository pattern)
-├── Services/            # 10 service classes (business logic layer)
+├── Repositories/        # 16 repositories (BaseRepository pattern)
+├── Services/            # 18 service classes (business logic layer)
 └── DTO/                 # EventDTO, ParticipantDTO, PaymentDTO, UserDTO
 resources/views/
 ├── admin/               # AdminLTE 3 blade views per module
@@ -737,14 +737,14 @@ Layered Architecture:
 
 Presentation Layer     → Blade views, API Resources, Middleware, Form Requests
 Business Layer         → Controllers, Services (18), DTO (4)
-Data Layer             → Repositories (18), Models (20), Migrations (56), Seeders
+Data Layer             → Repositories (16), Models (18), Migrations (56), Seeders
 ```
 
 - Business logic **hanya** di Services — Controller tidak mengandung logika bisnis.
 - Database query **hanya** di Repositories — Service tidak mengandung query langsung.
-- 18 Repositories mewarisi `BaseRepository` (all, find, create, update, delete, paginate).
+- 16 Repositories mewarisi `BaseRepository` (all, find, create, update, delete, paginate).
 - 18 Services: Auth, User, Event, Membership, Payment, Merchandise, Attendance, QRCode, Notification, Sidebar, Gallery, MembershipPricing, ParticipantCode, ParticipantPasswordReset, Cache, Dashboard, File, Profile.
-- 20 Models dengan Eloquent Relationships lengkap.
+- 18 Models dengan Eloquent Relationships lengkap. *(Model `Activity` & `EventBudget` dihapus bersama modul Kegiatan/Anggaran; tabel `activities`/`event_budgets` dipertahankan sebagai data historis.)*
 - 56 Migration files mencakup seluruh tabel.
 
 ## Pengembangan

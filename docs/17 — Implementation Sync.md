@@ -103,15 +103,15 @@ Service yang terimplementasi:
   oleh `BaseRepository::allSorted()/paginateSorted()` dan banyak repository modul.
 - `resources/views/components/th-sort.blade.php` — Blade component `<x-th-sort column="...">`
   untuk header tabel yang bisa diurutkan.
-- `tests/Feature/Admin/` — 11 file test admin (auth, access control, attendance scan, dashboard,
-  participant, membership, membership plan, user management, activity, event budget, gallery album).
+- `tests/Feature/Admin/` — 9 file test admin (auth, access control, attendance scan, dashboard,
+  participant, membership, membership plan, user management, gallery album).
 - `tests/Feature/Sh3ParticipantImportTest.php` — test seeder import peserta.
 - `database/seeders/Sh3ParticipantImportSeeder.php` — import peserta dari data spreadsheet
   (idempotent, keyed on `participant_code`).
 
 ## Models and Relationships
 
-Model terdeteksi: `User`, `UserActivityLog`, `Participant`, `Category`, `Event`, `EventSchedule`, `EventParticipant`, `MembershipPlan`, `MembershipHistory`, `Payment`, `Attendance`, `AttendanceLog`, `Gallery`, `GalleryAlbum`, `Sponsor`, `OrganizationMember`, `Merchandise`, `MerchandiseOrder`, `Activity`, dan `EventBudget`.
+Model terdeteksi: `User`, `UserActivityLog`, `Participant`, `Category`, `Event`, `EventSchedule`, `EventParticipant`, `MembershipPlan`, `MembershipHistory`, `Payment`, `Attendance`, `AttendanceLog`, `Gallery`, `GalleryAlbum`, `Sponsor`, `OrganizationMember`, `Merchandise`, dan `MerchandiseOrder`. *(Modul Kegiatan & Anggaran — model `Activity`/`EventBudget` — dihapus dari kode; tabel `activities`/`event_budgets` masih ada di database sebagai data historis.)*
 
 Relasi utama: user-participant/activity logs; participant-membership histories/event participants/payments/orders/organization members; event-category/schedules/participants/galleries/sponsors; payment morph ke event participant, merchandise order, dan membership history; gallery-event/album; organization hierarchy parent-child; merchandise-orders; attendance-event participant dan attendance logs.
 
