@@ -108,16 +108,18 @@ class Sh3ParticipantImportSeeder extends Seeder
             'email' => $email,
             'phone' => $phone,
             'is_active' => true,
+            // "No Hash" dari form dipertahankan sebagai hash_id permanen agar
+            // identik dengan sistem pendaftaran lama. Hook creating hanya mengisi
+            // hash_id bila kosong, jadi nomor ini tidak ditimpa; pendaftar baru
+            // tetap dapat nomor sequence (ParticipantCodeService melewati kode
+            // yang sudah terpakai di hash_id/non_member_code).
+            'hash_id' => $sourceKey,
         ];
 
         if ($isDuplicate) {
             $existing->update($participantData);
             $this->summary['updated']++;
         } else {
-            // hash_id deliberately NOT set here: the model's creating
-            // hook assigns it from the sequence (membership_type 'none' -> NM\d{4}),
-            // keeping imported codes consistent with the backfill. The legacy
-            // source key ($sourceKey) is NOT a valid hash_id.
             Participant::create(array_merge($participantData, [
                 'membership_type' => 'none',
                 'total_events_participated' => 0,
@@ -330,26 +332,50 @@ class Sh3ParticipantImportSeeder extends Seeder
 
     public function sourceData(): array
     {
+        // Data Pendaftaran Anggota SH3 (Cleaned) — entri duplikat dibuang,
+        // hanya pendaftaran terbaru & unik yang dipertahankan.
         return [
-            ['timestamp' => '8/12/2026 12:43:57', 'name' => 'Cohan Luchas', 'hash_id' => '3690', 'username' => 'Bengkiam', 'password' => '334477', 'phone' => '81617180189', 'email' => ''],
-            ['timestamp' => '8/12/2026 13:52:11', 'name' => 'Riri', 'hash_id' => '3749', 'username' => 'Riri', 'password' => 'Riri2703', 'phone' => '81347286262', 'email' => ''],
-            ['timestamp' => '8/12/2026 13:53:52', 'name' => 'Moka', 'hash_id' => '3317', 'username' => 'Moka', 'password' => 'Moka123', 'phone' => '85250280800', 'email' => ''],
-            ['timestamp' => '8/12/2026 14:11:19', 'name' => 'Yuliani', 'hash_id' => '2976', 'username' => 'Yuliani', 'password' => '123456', 'phone' => '81350673333', 'email' => 'tanyuliani800@gmail.com'],
-            ['timestamp' => '8/12/2026 14:24:48', 'name' => 'Subhan Agus', 'hash_id' => '2790', 'username' => 'Agusoppa', 'password' => 'Agus1973', 'phone' => '85250789247', 'email' => 'subhanagus0@gmail.com'],
-            ['timestamp' => '8/13/2026 9:18:45', 'name' => 'Ming', 'hash_id' => '2898', 'username' => 'Ming2898', 'password' => 'Ming1010', 'phone' => '811555882', 'email' => 'minardis@yahoo.com'],
-            ['timestamp' => '8/13/2026 9:25:28', 'name' => 'Natalia/Afang', 'hash_id' => '2517', 'username' => 'AfangSh3', 'password' => 'NRaSh3', 'phone' => '811555878', 'email' => 'natalia.rosalie_1271@yahoo.com'],
-            ['timestamp' => '8/13/2026 9:39:56', 'name' => 'Teddy Tarmidji', 'hash_id' => '2890', 'username' => 'Teddyt', 'password' => 'Atheng', 'phone' => '8125803738', 'email' => 'banjir06@gmail.com'],
-            ['timestamp' => '8/13/2026 9:46:28', 'name' => 'Budi Kantono', 'hash_id' => '2903', 'username' => 'Budi Kang', 'password' => 'BudiKang88', 'phone' => '811586818', 'email' => 'indianatra@gmail.com'],
-            ['timestamp' => '8/13/2026 10:08:41', 'name' => 'Natasya', 'hash_id' => '3796', 'username' => 'nataaaaaaa_', 'password' => 'Gagab123', 'phone' => '87812358871', 'email' => 'natasyamabe@gmail.com'],
-            ['timestamp' => '8/13/2026 10:19:41', 'name' => 'ARI O', 'hash_id' => '3130', 'username' => 'ArioSH3', 'password' => 'SH3JAYA', 'phone' => '82157390548', 'email' => 'ariokmawanto@gmail.com'],
-            ['timestamp' => '8/13/2026 10:27:09', 'name' => 'Glen', 'hash_id' => '3614', 'username' => 'Glenmario', 'password' => 'Glenmario25', 'phone' => '81244622652', 'email' => 'glenmario888@gmail.com'],
-            ['timestamp' => '8/13/2026 11:57:01', 'name' => 'Aan', 'hash_id' => '3002', 'username' => 'Keanggotaansh3', 'password' => '123456', 'phone' => '811558856', 'email' => 'fkchandra35@gmail.com'],
-            ['timestamp' => '8/13/2026 12:05:33', 'name' => 'Joms oentu', 'hash_id' => '2048', 'username' => 'Joms', 'password' => '220282', 'phone' => '8195508859', 'email' => 'jomsoentu08@gmail.com'],
-            ['timestamp' => '8/13/2026 19:12:38', 'name' => 'Tan lie hui', 'hash_id' => '3180', 'username' => 'Lihui', 'password' => '123456', 'phone' => '82250585583', 'email' => 'tanliehui73@gmail.com'],
-            ['timestamp' => '8/13/2026 20:18:37', 'name' => 'mc. susilowati', 'hash_id' => '3496', 'username' => 'mcsus3496', 'password' => '123456', 'phone' => '811552862', 'email' => 'srwongkojoyo@gmail.com'],
-            ['timestamp' => '8/14/2026 17:59:30', 'name' => 'Megawati', 'hash_id' => '2429', 'username' => 'Ipau', 'password' => '202476', 'phone' => '8115510109', 'email' => 'megawati23tk@gmail.com'],
-            ['timestamp' => '8/14/2026 18:01:14', 'name' => 'Hermawan sulistio', 'hash_id' => '2431', 'username' => 'Asing', 'password' => '202476', 'phone' => '811556349', 'email' => 'megawati23tk@gmail.com'],
-            ['timestamp' => '8/14/2026 18:02:33', 'name' => 'Siti rohmah', 'hash_id' => '3788', 'username' => '888999', 'password' => '888999', 'phone' => '82352395622', 'email' => 'sitirohmah141182@gmail.com'],
+            ['timestamp' => '8/12/2026 12:43:57', 'name' => 'Cohan Luchas', 'hash_id' => '3690', 'username' => 'Bengkiam', 'password' => '334477', 'phone' => '081617180189', 'email' => ''],
+            ['timestamp' => '8/12/2026 13:52:12', 'name' => 'Riri', 'hash_id' => '3749', 'username' => 'Riri', 'password' => 'Riri2703', 'phone' => '081347286262', 'email' => ''],
+            ['timestamp' => '8/12/2026 13:53:53', 'name' => 'Moka', 'hash_id' => '3317', 'username' => 'Moka', 'password' => 'Moka123', 'phone' => '085250280800', 'email' => ''],
+            ['timestamp' => '8/12/2026 14:11:20', 'name' => 'Yuliani', 'hash_id' => '2976', 'username' => 'Yuliani', 'password' => '123456', 'phone' => '081350673333', 'email' => 'tanyuliani800@gmail.com'],
+            ['timestamp' => '8/12/2026 14:24:48', 'name' => 'Subhan Agus', 'hash_id' => '2790', 'username' => 'Agusoppa', 'password' => 'Agus1973', 'phone' => '085250789247', 'email' => 'subhanagus0@gmail.com'],
+            ['timestamp' => '8/13/2026 9:18:45', 'name' => 'Ming', 'hash_id' => '2898', 'username' => 'Ming2898', 'password' => 'Ming1010', 'phone' => '0811555882', 'email' => 'minardis@yahoo.com'],
+            ['timestamp' => '8/13/2026 9:25:29', 'name' => 'Natalia / Afang', 'hash_id' => '2517', 'username' => 'Afang', 'password' => 'Sh3NRaSh3', 'phone' => '0811555878', 'email' => 'natalia.rosalie_1271@yahoo.com'],
+            ['timestamp' => '8/13/2026 9:39:57', 'name' => 'Teddy Tarmidji', 'hash_id' => '2890', 'username' => 'Teddyt', 'password' => 'Atheng', 'phone' => '08125803738', 'email' => 'banjir06@gmail.com'],
+            ['timestamp' => '8/13/2026 9:46:29', 'name' => 'Budi Kantono', 'hash_id' => '2903', 'username' => 'Budi Kang', 'password' => 'BudiKang88', 'phone' => '0811586818', 'email' => 'indianatra@gmail.com'],
+            ['timestamp' => '8/13/2026 10:08:41', 'name' => 'Natasya', 'hash_id' => '3796', 'username' => 'nataaaaaaa_', 'password' => 'Gagab123', 'phone' => '087812358871', 'email' => 'natasyamabe@gmail.com'],
+            ['timestamp' => '8/13/2026 10:19:41', 'name' => 'ARI O', 'hash_id' => '3130', 'username' => 'ArioSH3', 'password' => 'SH3JAYA', 'phone' => '082157390548', 'email' => 'ariokmawanto@gmail.com'],
+            ['timestamp' => '8/13/2026 10:27:09', 'name' => 'Glen', 'hash_id' => '3614', 'username' => 'Glenmario', 'password' => 'Glenmario25', 'phone' => '081244622652', 'email' => 'glenmario888@gmail.com'],
+            ['timestamp' => '8/13/2026 11:57:01', 'name' => 'Aan', 'hash_id' => '3002', 'username' => 'Keanggotaansh3', 'password' => '123456', 'phone' => '0811558856', 'email' => 'fkchandra35@gmail.com'],
+            ['timestamp' => '8/13/2026 12:05:33', 'name' => 'Joms oentu', 'hash_id' => '2048', 'username' => 'Joms', 'password' => '220282', 'phone' => '08195508859', 'email' => 'jomsoentu08@gmail.com'],
+            ['timestamp' => '8/13/2026 19:12:39', 'name' => 'Tan lie hui', 'hash_id' => '3180', 'username' => 'Lihui', 'password' => '123456', 'phone' => '082250585583', 'email' => 'tanliehui73@gmail.com'],
+            ['timestamp' => '8/13/2026 20:18:37', 'name' => 'mc. susilowati', 'hash_id' => '3496', 'username' => 'mcsus3496', 'password' => '123456', 'phone' => '0811552862', 'email' => 'srwongkojoyo@gmail.com'],
+            ['timestamp' => '8/14/2026 17:59:31', 'name' => 'Megawati', 'hash_id' => '2429', 'username' => 'Ipau', 'password' => '202476', 'phone' => '08115510109', 'email' => 'megawati23tk@gmail.com'],
+            ['timestamp' => '8/14/2026 18:01:14', 'name' => 'Hermawan sulistio', 'hash_id' => '2431', 'username' => 'asing', 'password' => '202476', 'phone' => '0811556349', 'email' => 'megawati23tk@gmail.com'],
+            ['timestamp' => '8/14/2026 18:02:34', 'name' => 'Siti rohmah', 'hash_id' => '3788', 'username' => '888999', 'password' => '888999', 'phone' => '082352395622', 'email' => 'sitirohmah141182@gmail.com'],
+            ['timestamp' => '8/15/2026 14:39:38', 'name' => 'Suriani rasafam', 'hash_id' => '4030', 'username' => 'sbm181', 'password' => '081253333168', 'phone' => '081253333168', 'email' => 'ronsur18@gmail.com'],
+            ['timestamp' => '8/15/2026 14:42:18', 'name' => 'rich kenny kasrilio', 'hash_id' => '4029', 'username' => 'sbm182', 'password' => '082311102878', 'phone' => '+6282311102878', 'email' => 'ronsur18@gmail.com'],
+            ['timestamp' => '8/15/2026 14:44:54', 'name' => 'Richeline kasrilio', 'hash_id' => '4028', 'username' => 'sbm183', 'password' => '082227046316', 'phone' => '+6282227046316', 'email' => 'ronsur18@gmail.com'],
+            ['timestamp' => '8/15/2026 15:19:12', 'name' => 'Ronny kasrilio', 'hash_id' => '3908', 'username' => 'sbs77', 'password' => '081351688882', 'phone' => '081351688882', 'email' => 'ronsur18@gmail.com'],
+            ['timestamp' => '10/5/2026 12:40:48', 'name' => 'Hendra Ang', 'hash_id' => '3631', 'username' => 'anx77', 'password' => 'Ang331977', 'phone' => '0811554377', 'email' => 'hendra.ang77@gmail.com'],
+            ['timestamp' => '10/5/2026 12:47:26', 'name' => 'Sukmawati', 'hash_id' => '4238', 'username' => 'Sukma', 'password' => '140491', 'phone' => '085348963524', 'email' => 'sukmawati1444@gmail.com'],
+            ['timestamp' => '10/5/2026 12:48:11', 'name' => 'SISWANTO KU', 'hash_id' => '3647', 'username' => 'setjetsamarinda64', 'password' => '082123830056', 'phone' => '082123830056', 'email' => 'siswantoku64@gmail.com'],
+            ['timestamp' => '10/5/2026 12:49:44', 'name' => 'Kianto', 'hash_id' => '2030', 'username' => 'Kianto', 'password' => 'Kianto123', 'phone' => '082255070601', 'email' => 'gunawankianto@gmail.com'],
+            ['timestamp' => '10/5/2026 12:57:50', 'name' => 'Ronny Chandra', 'hash_id' => '3188', 'username' => 'snipper2000', 'password' => 'Snipper2000', 'phone' => '081350037711', 'email' => 'sn1pp3r2000@gmail.com'],
+            ['timestamp' => '10/5/2026 13:09:16', 'name' => 'Irawati Sugianto', 'hash_id' => '4299', 'username' => 'Irawati82', 'password' => 'iRa234', 'phone' => '08115800812', 'email' => 'irawatisugianto82.is@gmail.com'],
+            ['timestamp' => '10/5/2026 13:56:14', 'name' => 'Edbert Gunawan', 'hash_id' => '2514', 'username' => 'JourneyEG', 'password' => 'sayakanlawan', 'phone' => '087852555069', 'email' => 'edbertgunawan31@gmail.com'],
+            ['timestamp' => '10/5/2026 14:40:47', 'name' => 'Henny Suryani', 'hash_id' => '4283', 'username' => 'Henny652', 'password' => 'Kaltim18#', 'phone' => '089635599545', 'email' => 'hennysrikandi652@gmail.com'],
+            ['timestamp' => '10/5/2026 15:08:10', 'name' => 'Widya Agustina', 'hash_id' => '4068', 'username' => 'Widya1208', 'password' => 'Widya89$', 'phone' => '082121333346', 'email' => 'widya.agustina1208@gmail.com'],
+            ['timestamp' => '10/5/2026 15:28:12', 'name' => 'I wayan darmawan', 'hash_id' => '3734', 'username' => 'Wayan2373', 'password' => 'Way4n!23', 'phone' => '082157126774', 'email' => 'wayan.darmawan999@gmail.com'],
+            ['timestamp' => '10/5/2026 15:34:48', 'name' => 'Sony sarsono', 'hash_id' => '3710', 'username' => 'Sony', 'password' => 'Jenengku', 'phone' => '08125268912', 'email' => 'sony.sarsono@gmail.com'],
+            ['timestamp' => '10/5/2026 15:54:54', 'name' => 'Ozan MTF', 'hash_id' => '3629', 'username' => 'RahmadJanuardi', 'password' => 'rahmadJ1989', 'phone' => '08115564888', 'email' => 'rjaunardi21@gmail.com'],
+            ['timestamp' => '10/5/2026 17:11:20', 'name' => 'Henry Suciatmaja', 'hash_id' => '4161', 'username' => 'HENRYBEST82', 'password' => 'Hen4161', 'phone' => '08125301982', 'email' => 'henrybest82@gmail.com'],
+            ['timestamp' => '10/5/2026 17:57:39', 'name' => 'Susilowati Oeij', 'hash_id' => '1852', 'username' => '7438', 'password' => '27438', 'phone' => '082112894067', 'email' => 'Susilowati.Oeij@yahoo.co.id'],
+            ['timestamp' => '10/5/2026 18:20:39', 'name' => 'Ekang / Riani Giansari', 'hash_id' => '2816', 'username' => 'Riani', 'password' => '121212', 'phone' => '081350446988', 'email' => 'rianigiansari@gmail.com'],
+            ['timestamp' => '10/5/2026 18:24:20', 'name' => 'Aka Andhika', 'hash_id' => '1782', 'username' => 'Aka', 'password' => '121212', 'phone' => '08125810693', 'email' => 'aka.andhika8899@gmail.com'],
+            ['timestamp' => '10/5/2026 18:50:18', 'name' => 'Dhonny', 'hash_id' => '4168', 'username' => 'inododon', 'password' => '126128', 'phone' => '085246874902', 'email' => 'inododon@gmail.com'],
+            ['timestamp' => '10/5/2026 22:33:33', 'name' => 'Tony Gunawan', 'hash_id' => '3584', 'username' => 'tonigunawanguy68', 'password' => 'Tonygunawan68', 'phone' => '085393345359', 'email' => 'tonigunawanguy68@gmail.com'],
         ];
     }
 }

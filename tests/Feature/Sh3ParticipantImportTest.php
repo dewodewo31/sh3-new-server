@@ -18,22 +18,26 @@ class Sh3ParticipantImportTest extends TestCase
         $this->seed(Sh3ParticipantImportSeeder::class);
     }
 
-    public function test_import_creates_19_participants_with_unique_permanent_codes(): void
+    public function test_import_creates_41_participants_with_unique_permanent_codes(): void
     {
         $this->runImport();
 
         $participants = Participant::where('hash_id', '!=', Participant::OTS_AGGREGATOR_CODE)->get();
 
-        $this->assertSame(19, $participants->count());
-        $this->assertSame(19, $participants->pluck('hash_id')->unique()->count());
-        $this->assertSame(19, $participants->pluck('non_member_code')->unique()->count());
+        $this->assertSame(41, $participants->count());
+        $this->assertSame(41, $participants->pluck('hash_id')->unique()->count());
+        $this->assertSame(41, $participants->pluck('non_member_code')->unique()->count());
+
+        // hash_id = "No Hash" dari data pendaftaran, bukan nomor sequence.
+        $this->assertSame('3690', $participants->firstWhere('name', 'Cohan Luchas')?->hash_id);
+        $this->assertSame('3584', $participants->firstWhere('name', 'Tony Gunawan')?->hash_id);
 
         foreach ($participants as $participant) {
             $this->assertMatchesRegularExpression('/^\d{4}$/', $participant->hash_id);
             $this->assertMatchesRegularExpression('/^NM\d{4}$/', $participant->non_member_code);
         }
 
-        foreach (['Bengkiam', 'Riri', 'Moka', 'Yuliani', '888999', 'Ipau'] as $username) {
+        foreach (['Bengkiam', 'Riri', 'Moka', 'Yuliani', '888999', 'Ipau', 'sbm181', '7438', 'tonigunawanguy68'] as $username) {
             $user = User::where('username', $username)->first();
             $this->assertNotNull($user, "username {$username} harus ada");
             $this->assertSame('participant', $user->role);
@@ -79,9 +83,9 @@ class Sh3ParticipantImportTest extends TestCase
         $this->runImport();
         $this->runImport();
 
-        $this->assertSame(19, Participant::where('hash_id', '!=', Participant::OTS_AGGREGATOR_CODE)->count());
+        $this->assertSame(41, Participant::where('hash_id', '!=', Participant::OTS_AGGREGATOR_CODE)->count());
         $this->assertSame(1, Participant::where('hash_id', Participant::OTS_AGGREGATOR_CODE)->count());
-        $this->assertSame(19, User::where('role', 'participant')->count());
+        $this->assertSame(41, User::where('role', 'participant')->count());
         $this->assertSame(0, Participant::select('hash_id')->groupBy('hash_id')->havingRaw('count(*) > 1')->count());
         $this->assertSame(0, User::select('username')->whereNotNull('username')->groupBy('username')->havingRaw('count(*) > 1')->count());
     }
