@@ -40,19 +40,6 @@ class MembershipPlanSeeder extends Seeder
                 'is_active' => true,
                 'sort_order' => 2,
             ],
-            [
-                'key' => 'mingguan',
-                'name' => 'Mingguan',
-                'description' => 'Membership 7 hari',
-                'price' => 25000,
-                'base_event_price' => 25000,
-                'discount_percentage' => 0,
-                'reference_event_count' => 1,
-                'duration' => 7,
-                'duration_unit' => 'days',
-                'is_active' => true,
-                'sort_order' => 3,
-            ],
         ];
 
         foreach ($plans as $plan) {
