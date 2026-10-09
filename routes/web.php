@@ -1,10 +1,8 @@
 <?php
 
-use App\Http\Controllers\Admin\ActivityController;
 use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\EventBudgetController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\GalleryAlbumController;
 use App\Http\Controllers\Admin\GalleryController;
@@ -94,9 +92,6 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/payments/{id}/confirm', [PaymentController::class, 'confirm'])->name('payments.confirm');
             Route::put('/payments/{id}/reject', [PaymentController::class, 'reject'])->name('payments.reject');
             Route::put('/payments/{id}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
-
-            Route::resource('activities', ActivityController::class);
-            Route::resource('event-budgets', EventBudgetController::class);
         });
 
         Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
