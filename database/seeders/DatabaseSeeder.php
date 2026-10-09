@@ -19,8 +19,6 @@ class DatabaseSeeder extends Seeder
             MerchandiseSeeder::class,
             OrganizationMemberSeeder::class,
             GallerySeeder::class,
-            ActivitySeeder::class,
-            EventBudgetSeeder::class,
         ]);
     }
 }
