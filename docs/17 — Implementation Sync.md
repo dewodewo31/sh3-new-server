@@ -62,7 +62,7 @@ Routes + Middleware + Form Requests + Resources
 - Role user: `admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, `merchandise`, `gallery`, **`guest_sponsor`** (sejak 2026-08-18), `participant`.
 - Gate yang didefinisikan di `AppServiceProvider`: `admin_full_access`, `admin_laman`, `admin_member`, `admin_bnh`, `organizer`, `bendahara`, `sponsor`, dan `merchandise`.
 - `participant` tidak memiliki Gate admin; aksesnya berjalan melalui API authenticated atau endpoint publik.
-- Role `sponsor` dan `guest_sponsor` **tidak dapat login ke web admin** (login web ditolak). Role `sponsor` sejak 2026-08-18 **tidak lagi memiliki akses Admin Panel** (breaking).
+- Role `guest_sponsor` **tidak dapat login ke web admin** (login web ditolak). Role `sponsor` sejak 2026-10-09 **dapat login kembali** dan hanya melihat menu **Sponsors** (sidebar dibatasi satu item; `/admin/dashboard` me-redirect ke `/admin/sponsors`).
 
 ## Route and API Index
 
@@ -78,7 +78,7 @@ Auth, profile, participant, event registration/management, payment, membership, 
 
 ### Admin Web
 
-Semua route admin memakai `/admin` dan session `auth`. Resource routes tersedia untuk users, participants, events, categories, galleries, gallery-albums, organization, sponsors, dan merchandise. Route khusus meliputi dashboard, notification actions, membership plans, membership grant/cancel, event publish, payment confirm/reject, serta attendance scan/report/generate QR. Role `sponsor` **tidak diizinkan** pada grup route sponsors. Detail role per route adalah sumber otoritatif `routes/web.php`, bukan tabel lama di README.
+Semua route admin memakai `/admin` dan session `auth`. Resource routes tersedia untuk users, participants, events, categories, galleries, gallery-albums, organization, sponsors, dan merchandise. Route khusus meliputi dashboard, notification actions, membership plans, membership grant/cancel, event publish, payment confirm/reject, serta attendance scan/report/generate QR. Role `sponsor` **diizinkan** pada grup route sponsors (dan dashboard, untuk redirect). Detail role per route adalah sumber otoritatif `routes/web.php`, bukan tabel lama di README.
 
 ## Controllers and Services
 

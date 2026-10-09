@@ -2,6 +2,17 @@
 
 Kumpulan perbaikan dan penambahan terbaru pada sistem SH3 (backend Laravel + frontend Next.js).
 
+## 2026-10-09 — Role Sponsor Bisa Login Admin Panel (Menu Terbatas)
+
+- **Masalah**: role `sponsor` diblokir login web admin (`AuthenticatedSessionController`) sejak 2026-08-18.
+- **Solusi**: blok login hanya untuk `guest_sponsor`; `sponsor` kembali bisa login.
+- Akses `sponsor` dibatasi **hanya menu Sponsors**:
+  - `routes/web.php` — role `sponsor` ditambahkan ke route `/admin/dashboard` dan grup resource `sponsors`.
+  - `DashboardController::index()` — redirect `sponsor` ke `/admin/sponsors` sebelum query stats (link brand/footer tetap aman).
+  - `config/sidebar.php` — item **Sponsors** menerima role `sponsor`; item lain tidak, sehingga sidebar hanya menampilkan `Content > Sponsors`.
+- Role lain (`participant`, `guest_sponsor`) tetap 403 di dashboard; `sponsor` tetap 403 di module lain (mis. merchandise).
+- Test: `AdminAuthTest` (login sponsor sukses, guest_sponsor tetap ditolak), `AdminAccessControlTest` (dashboard redirect, sponsors OK, sidebar hanya `['Sponsors']`).
+
 ## 2026-08-19 — Architecture Refactoring: Controller → Service Delegation
 
 Seluruh business logic yang sebelumnya inline di controllers dipindahkan ke services.

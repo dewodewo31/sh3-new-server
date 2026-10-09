@@ -652,7 +652,7 @@ Semua route admin berada di prefix `/admin` (wajib login session-based).
 | GET/POST/PUT/DELETE | `/admin/categories` | admin_full_access, admin_laman |
 | GET/POST/PUT/DELETE | `/admin/galleries` | admin_full_access, admin_laman |
 | GET/POST/PUT/DELETE | `/admin/organization` | admin_full_access, admin_laman |
-| GET/POST/PUT/DELETE | `/admin/sponsors` | admin_full_access, admin_laman |
+| GET/POST/PUT/DELETE | `/admin/sponsors` | admin_full_access, admin_laman, sponsor |
 | GET/POST/PUT/DELETE | `/admin/merchandise` | admin_full_access, admin_laman, merchandise |
 | GET | `/admin/payments` | admin_full_access, bendahara |
 | GET | `/admin/payments/{id}` | admin_full_access, bendahara |
@@ -719,7 +719,7 @@ Sponsor: tiers platinum/gold/silver/bronze, logo, website, tahun, many-to-many d
 Struktur kepengurusan hierarkis (parent-child). Active/inactive, periode jabatan (start/end), sort_order. API: index, show, stats, tree (pohon), years (filter tahun).
 
 ### 9. Manajemen User & Role
-10 level role: admin_full_access, admin_laman, admin_member, admin_bnh, organizer, bendahara, sponsor, merchandise, gallery, participant. CRUD user, toggle active/inactive, avatar upload. User activity logging (login, logout, CRUD). Role `sponsor` dan `guest_sponsor` tidak dapat login ke web admin.
+10 level role: admin_full_access, admin_laman, admin_member, admin_bnh, organizer, bendahara, sponsor, merchandise, gallery, participant. CRUD user, toggle active/inactive, avatar upload. User activity logging (login, logout, CRUD). Role `sponsor` hanya dapat login ke web admin dan hanya melihat menu **Sponsors** (route dashboard me-redirect ke `/admin/sponsors`); role `guest_sponsor` tidak dapat login ke web admin.
 
 ### 10. Kategori Event
 Kategori: nama, deskripsi, icon, slug, distance_km, sort_order, is_active. Seed: Long Run, Short Run, Major Events, Super Long. API dengan `events_count`.
