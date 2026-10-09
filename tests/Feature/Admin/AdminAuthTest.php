@@ -47,6 +47,39 @@ class AdminAuthTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_sponsor_can_login(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'sponsor@example.com',
+            'password' => 'password',
+            'role' => 'sponsor',
+        ]);
+
+        $this->post('/login', [
+            'email' => 'sponsor@example.com',
+            'password' => 'password',
+        ])->assertRedirect(route('admin.dashboard'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_guest_sponsor_cannot_login(): void
+    {
+        User::factory()->create([
+            'email' => 'guest.sponsor@example.com',
+            'password' => 'password',
+            'role' => 'guest_sponsor',
+        ]);
+
+        $this->from('/login')->post('/login', [
+            'email' => 'guest.sponsor@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/login')
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
     public function test_login_with_wrong_password_is_rejected(): void
     {
         User::factory()->create([

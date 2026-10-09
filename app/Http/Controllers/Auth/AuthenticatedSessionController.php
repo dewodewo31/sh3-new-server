@@ -23,7 +23,7 @@ class AuthenticatedSessionController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = Auth::user();
 
-            if (in_array($user->role, ['sponsor', 'guest_sponsor'], true)) {
+            if ($user->role === 'guest_sponsor') {
                 Auth::logout();
 
                 $request->session()->invalidate();

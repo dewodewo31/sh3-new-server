@@ -50,8 +50,25 @@ class AdminAccessControlTest extends TestCase
     public function test_dashboard_is_forbidden_for_non_admin_roles(): void
     {
         $this->actingAs($this->user('participant'))->get('/admin/dashboard')->assertForbidden();
-        $this->actingAs($this->user('sponsor'))->get('/admin/dashboard')->assertForbidden();
         $this->actingAs($this->user('guest_sponsor'))->get('/admin/dashboard')->assertForbidden();
+    }
+
+    public function test_sponsor_dashboard_redirects_to_sponsors_page(): void
+    {
+        $this->actingAs($this->user('sponsor'))
+            ->get('/admin/dashboard')
+            ->assertRedirect(route('admin.sponsors.index'));
+    }
+
+    public function test_sponsor_sees_only_sponsors_menu(): void
+    {
+        $this->actingAs($this->user('sponsor'));
+
+        $labels = collect($this->app->make(\App\Services\SidebarService::class)->getMenus())
+            ->flatMap(fn ($section) => collect($section['items'])->pluck('label'))
+            ->all();
+
+        $this->assertSame(['Sponsors'], $labels);
     }
 
     public function test_notifications_are_accessible_by_any_authenticated_user(): void
@@ -116,10 +133,10 @@ class AdminAccessControlTest extends TestCase
         $this->actingAs($this->user('admin_full_access'))->get('/admin/organization')->assertOk();
     }
 
-    public function test_sponsors_allow_admin_full_access_and_admin_laman(): void
+    public function test_sponsors_allow_admin_full_access_admin_laman_and_sponsor(): void
     {
         $this->actingAs($this->user('organizer'))->get('/admin/sponsors')->assertForbidden();
-        $this->actingAs($this->user('sponsor'))->get('/admin/sponsors')->assertForbidden();
+        $this->actingAs($this->user('sponsor'))->get('/admin/sponsors')->assertOk();
         $this->actingAs($this->user('admin_laman'))->get('/admin/sponsors')->assertOk();
         $this->actingAs($this->user('admin_full_access'))->get('/admin/sponsors')->assertOk();
     }

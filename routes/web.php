@@ -30,7 +30,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
 
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware(RoleMiddleware::class.':admin_full_access,admin_laman,admin_member,admin_bnh,organizer,bendahara,merchandise,gallery');
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware(RoleMiddleware::class.':admin_full_access,admin_laman,admin_member,admin_bnh,organizer,bendahara,merchandise,gallery,sponsor');
 
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::get('/', [NotificationController::class, 'index'])->name('index');
@@ -78,7 +78,7 @@ Route::middleware(['auth'])->group(function () {
             Route::resource('organization', OrganizationController::class);
         });
 
-        Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman'])->group(function () {
+        Route::middleware([RoleMiddleware::class.':admin_full_access,admin_laman,sponsor'])->group(function () {
             Route::resource('sponsors', SponsorController::class);
         });
 

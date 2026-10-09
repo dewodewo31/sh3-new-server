@@ -21,6 +21,12 @@ class DashboardController extends Controller
 
     public function index()
     {
+        // ponytail: sponsor has dashboard route access only so login/brand links
+        // resolve; redirect straight to their single menu (Sponsors) before stats.
+        if (request()->user()?->role === 'sponsor') {
+            return redirect()->route('admin.sponsors.index');
+        }
+
         $stats = [
             'total_events' => $this->eventRepository->count(),
             'total_participants' => $this->participantRepository->count(),
