@@ -84,6 +84,19 @@ class GalleryService
             unset($data['file']);
         }
 
+        // Sinkronkan File ID tiap kali link Google Drive ikut dikirim (mis. saat
+        // item lokal diganti sumbernya menjadi gdrive) agar preview tidak
+        // jatuh ke URL mentah yang tidak bisa ditampilkan.
+        if (($data['source'] ?? null) === 'gdrive' && ! empty($data['google_drive_url'])) {
+            $fileId = $this->extractDriveFileId($data['google_drive_url']);
+
+            if (! $fileId) {
+                throw new \InvalidArgumentException('Google Drive link is invalid or inaccessible.');
+            }
+
+            $data['google_drive_file_id'] = $fileId;
+        }
+
         return $this->galleryRepository->update($gallery, $data);
     }
 
@@ -113,55 +126,61 @@ class GalleryService
         return $file->store($path, 'public');
     }
 
-    private function generateThumbnail(UploadedFile $file, string $path): string
+    /**
+     * Thumbnail hanya untuk gambar. Video tidak di-generate (sebelumnya seluruh
+     * file video disalin ulang ke folder thumbnails sehingga storage dobel).
+     *
+     * @return string|null path thumbnail, atau null jika bukan gambar
+     */
+    private function generateThumbnail(UploadedFile $file, string $path): ?string
     {
         $extension = strtolower($file->getClientOriginalExtension());
 
-        if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
-            $sourcePath = $file->getPathname();
-
-            match ($extension) {
-                'jpg', 'jpeg' => $sourceImage = imagecreatefromjpeg($sourcePath),
-                'png' => $sourceImage = imagecreatefrompng($sourcePath),
-                'webp' => $sourceImage = imagecreatefromwebp($sourcePath),
-                default => $sourceImage = null,
-            };
-
-            if (! $sourceImage) {
-                return $this->uploadFile($file, $path);
-            }
-
-            $origWidth = imagesx($sourceImage);
-            $origHeight = imagesy($sourceImage);
-            $targetSize = 300;
-
-            $thumbImage = imagecreatetruecolor($targetSize, $targetSize);
-            imagecopyresampled(
-                $thumbImage, $sourceImage,
-                0, 0, 0, 0,
-                $targetSize, $targetSize,
-                $origWidth, $origHeight
-            );
-
-            $filename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'_thumb.'.$extension;
-            $storagePath = $path.'/'.$filename;
-            $tempPath = sys_get_temp_dir().'/'.$filename;
-
-            match ($extension) {
-                'jpg', 'jpeg' => imagejpeg($thumbImage, $tempPath, 80),
-                'png' => imagepng($thumbImage, $tempPath, 8),
-                'webp' => imagewebp($thumbImage, $tempPath, 80),
-            };
-
-            Storage::disk('public')->put($storagePath, file_get_contents($tempPath));
-            unlink($tempPath);
-            imagedestroy($sourceImage);
-            imagedestroy($thumbImage);
-
-            return $storagePath;
+        if (! in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
+            return null;
         }
 
-        return $this->uploadFile($file, $path);
+        $sourcePath = $file->getPathname();
+
+        match ($extension) {
+            'jpg', 'jpeg' => $sourceImage = imagecreatefromjpeg($sourcePath),
+            'png' => $sourceImage = imagecreatefrompng($sourcePath),
+            'webp' => $sourceImage = imagecreatefromwebp($sourcePath),
+            default => $sourceImage = null,
+        };
+
+        if (! $sourceImage) {
+            return $this->uploadFile($file, $path);
+        }
+
+        $origWidth = imagesx($sourceImage);
+        $origHeight = imagesy($sourceImage);
+        $targetSize = 300;
+
+        $thumbImage = imagecreatetruecolor($targetSize, $targetSize);
+        imagecopyresampled(
+            $thumbImage, $sourceImage,
+            0, 0, 0, 0,
+            $targetSize, $targetSize,
+            $origWidth, $origHeight
+        );
+
+        $filename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'_thumb.'.$extension;
+        $storagePath = $path.'/'.$filename;
+        $tempPath = sys_get_temp_dir().'/'.$filename;
+
+        match ($extension) {
+            'jpg', 'jpeg' => imagejpeg($thumbImage, $tempPath, 80),
+            'png' => imagepng($thumbImage, $tempPath, 8),
+            'webp' => imagewebp($thumbImage, $tempPath, 80),
+        };
+
+        Storage::disk('public')->put($storagePath, file_get_contents($tempPath));
+        unlink($tempPath);
+        imagedestroy($sourceImage);
+        imagedestroy($thumbImage);
+
+        return $storagePath;
     }
 
     private function extractDriveFileId(string $url): ?string

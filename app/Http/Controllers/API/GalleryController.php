@@ -38,11 +38,11 @@ class GalleryController extends Controller
 
         if ($validated['source'] === 'local') {
             $request->validate([
-                'file' => ['required', 'file', 'max:10240'],
+                'file' => ['required', 'file', 'max:'.($validated['type'] === 'video' ? 51200 : 10240)],
             ]);
         } else {
             $request->validate([
-                'google_drive_url' => ['required', 'string'],
+                'google_drive_url' => ['required', 'string', 'max:2048', 'url', 'regex:/drive\.google\.com/i'],
             ]);
         }
 
@@ -52,7 +52,7 @@ class GalleryController extends Controller
                 $request->file('file')
             );
         } else {
-            $gallery = $galleryService->storeGoogleDrive(
+            $gallery = $this->galleryService->storeGoogleDrive(
                 array_merge($validated, ['type' => $validated['type'] ?? 'image'])
             );
         }

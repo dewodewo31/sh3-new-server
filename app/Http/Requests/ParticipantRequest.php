@@ -14,7 +14,11 @@ class ParticipantRequest extends FormRequest
 
     public function rules(): array
     {
-        $participantId = $this->route('participant')?->id ?? $this->route('id');
+        // Route::resource admin melewatkan {participant} sebagai string id, route
+        // API memakai {id}. Keduanya string, jadi jangan di-deref ->id (menyebabkan
+        // ErrorException) dan jangan dianggap null (unique ignore jadi tidak bekerja,
+        // email sendiri dianggap "sudah dipakai").
+        $participantId = $this->route('participant') ?? $this->route('id');
 
         return [
             'user_id' => ['nullable', 'exists:users,id'],

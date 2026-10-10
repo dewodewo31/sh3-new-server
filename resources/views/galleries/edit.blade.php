@@ -54,8 +54,8 @@
                     @error('source') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="form-group" id="field-file">
-                    <label class="form-label">File (Max 10MB) — Kosongkan jika tidak diganti</label>
-                    <input type="file" name="file" class="form-input @error('file') error @enderror">
+                    <label class="form-label">File (Gambar maks 10MB / Video maks 50MB) — Kosongkan jika tidak diganti</label>
+                    <input type="file" name="file" accept="image/*,video/*" class="form-input @error('file') error @enderror">
                     @error('file') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="form-group" id="field-gdrive-url" style="display:none;">
@@ -118,5 +118,9 @@ function toggleSourceFields() {
         gdriveInput.setAttribute('required', 'required');
     }
 }
+
+// Sinkronkan tampilan field saat halaman dibuka, mis. setelah validasi gagal
+// (old input source=gdrive) field Google Drive tetap terlihat untuk diperbaiki.
+toggleSourceFields();
 </script>
 @endsection

@@ -14,7 +14,10 @@ class CategoryRequest extends FormRequest
 
     public function rules(): array
     {
-        $categoryId = $this->route('category')?->id;
+        // Route::resource melewatkan {category} sebagai string id biasa (tanpa
+        // model binding). Deref ->id memunculkan ErrorException "Attempt to read
+        // property on string" sehingga update selalu 500. Lihat juga UserRequest.
+        $categoryId = $this->route('category');
 
         return [
             'name' => ['required', 'string', 'max:255'],

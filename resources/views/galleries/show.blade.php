@@ -49,10 +49,16 @@
             <div class="md:col-span-2">
                 <label class="form-label">Preview</label>
                 <div class="mt-2">
-                    @if($gallery->source === 'gdrive')
-                        <img src="{{ $gallery->google_drive_url }}" alt="{{ $gallery->title }}" class="max-h-64 rounded-md border border-slate-200">
+                    @if($gallery->source === 'gdrive' && $gallery->type === 'video' && $gallery->google_drive_file_id)
+                        <iframe src="https://drive.google.com/file/d/{{ $gallery->google_drive_file_id }}/preview"
+                                class="w-full max-w-xl h-64 rounded-md border border-slate-200 dark:border-slate-700"
+                                allow="autoplay" allowfullscreen></iframe>
+                    @elseif($gallery->source === 'gdrive')
+                        <img src="{{ \App\Helpers\ImageHelper::gdriveThumbUrl($gallery->google_drive_url, $gallery->google_drive_file_id) }}" alt="{{ $gallery->title }}" class="max-h-64 rounded-md border border-slate-200 dark:border-slate-700">
+                    @elseif($gallery->file_path && $gallery->type === 'video')
+                        <video src="{{ \App\Helpers\ImageHelper::getUrl($gallery->file_path) }}" controls class="max-h-64 rounded-md border border-slate-200 dark:border-slate-700"></video>
                     @elseif($gallery->file_path)
-                        <img src="{{ \App\Helpers\ImageHelper::getUrl($gallery->file_path) }}" alt="{{ $gallery->title }}" class="max-h-64 rounded-md border border-slate-200">
+                        <img src="{{ \App\Helpers\ImageHelper::getUrl($gallery->file_path) }}" alt="{{ $gallery->title }}" class="max-h-64 rounded-md border border-slate-200 dark:border-slate-700">
                     @else
                         <p class="text-gray-500">No preview available</p>
                     @endif

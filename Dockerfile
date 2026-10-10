@@ -26,6 +26,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-enable redis \
     && echo "opcache.jit_buffer_size=64M" > /usr/local/etc/php/conf.d/opcache-jit.ini
 
+# Batas upload: default PHP (upload_max_filesize=2M, post_max_size=8M) membuat
+# upload gallery/galeri video lokal gagal. Gambar s/d 10MB, video s/d 50MB
+# (lihat GalleryRequest) harus lolos, jadi limit dinaikkan di sini.
+RUN { \
+      echo 'upload_max_filesize = 64M'; \
+      echo 'post_max_size = 72M'; \
+      echo 'max_execution_time = 300'; \
+      echo 'max_input_time = 300'; \
+    } > /usr/local/etc/php/conf.d/uploads.ini
+
 ARG GOOGLE_DRIVE_API_KEY=""
 
 WORKDIR /var/www/html
